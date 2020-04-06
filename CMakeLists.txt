@@ -24,14 +24,24 @@ compiler_set_compilation_options()
 
 # Compile
 ## Headers for some targets
+include_directories(
+    include
+    external/include
+)
+
+## Libraries for some targets
+link_directories(
+    external/lib
+)
+
 ## Sources for some targets
 set(V_main_src main.cpp)
-## Libraries for some targets
 
 
 # Product
 ## Targets and properties
 add_executable(main ${V_main_src})
+target_link_libraries(main json-c)
 
 
 # Test
