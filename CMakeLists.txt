@@ -1,5 +1,5 @@
 # Prologue
-cmake_minimum_required(VERSION 2.8.1)
+cmake_minimum_required(VERSION 3.0)
 project(cpp-toolkit C CXX)
 
 # Prepare
@@ -43,5 +43,6 @@ set(V_main_src main.cpp)
 add_executable(main ${V_main_src})
 target_link_libraries(main json-c)
 
+add_dependencies(main ep_json-c)
 
 # Test
