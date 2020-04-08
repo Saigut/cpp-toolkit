@@ -27,6 +27,7 @@ compiler_set_compilation_options()
 include_directories(
     include
     external/include
+    external/include/boost-1_72
 )
 
 ## Libraries for some targets
@@ -43,6 +44,6 @@ set(V_main_src main.cpp)
 add_executable(main ${V_main_src})
 target_link_libraries(main json-c)
 
-add_dependencies(main ep_json-c)
+add_dependencies(main ep_json-c ep_boost)
 
 # Test
