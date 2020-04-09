@@ -43,6 +43,7 @@ set(V_main_src main.cpp)
 ## Targets and properties
 add_executable(main ${V_main_src})
 target_link_libraries(main json-c)
+target_link_boost_libraries(main boost_atomic boost_chrono)
 
 add_dependencies(main ep_json-c ep_boost)
 

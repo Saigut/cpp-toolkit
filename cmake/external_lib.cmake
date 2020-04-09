@@ -26,9 +26,10 @@ function(external_lib_setup)
 
     # boost_1_72_0
     ExternalProject_Add(ep_boost
+#        URL https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.zip
         URL ${PROJECT_SOURCE_DIR}/package/boost_1_72_0.zip
         CONFIGURE_COMMAND ./bootstrap
         BUILD_IN_SOURCE true
-        BUILD_COMMAND ./b2 ${PARALLEL_ARG}
-        INSTALL_COMMAND ./b2 --prefix=${PROJECT_SOURCE_DIR}/external link=static install)
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ./b2 --layout=system --prefix=${PROJECT_SOURCE_DIR}/external ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
 endfunction()
