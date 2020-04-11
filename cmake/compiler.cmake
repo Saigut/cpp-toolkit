@@ -2,7 +2,7 @@ include_guard()
 
 include(common_var)
 
-function(compiler_set_compilation_options)
+macro(compiler_set_compilation_options)
     # Compiler
     ## Firstly, chose generator, this is chosing build toochain. It's like only can chose generator on cmake command line.
 
@@ -42,9 +42,13 @@ function(compiler_set_compilation_options)
     if(OS_LINUX AND GCC)
         add_definitions(-D_GNU_SOURCE)
     endif()
+    if (MSVC)
+        add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+    endif ()
+    add_definitions(-DBOOST_ALL_NO_LIB)
 
     ## Standard
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_CXX_STANDARD 11)
 
-endfunction()
+endmacro()

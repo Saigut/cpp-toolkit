@@ -36,14 +36,24 @@ link_directories(
 )
 
 ## Sources for some targets
-set(V_main_src main.cpp)
+set(GV_main_src main.cpp src/program_main.cpp)
+
+get_filename_component(GV_src_path "src" ABSOLUTE)
+file(GLOB GV_all_mod "${GV_src_path}/mod_*")
+file(GLOB GV_all_app "${GV_src_path}/app_*")
+foreach(one_dir ${GV_all_mod} ${GV_all_app})
+    get_filename_component(tmp_name ${one_dir} NAME)
+    file(GLOB GV_${tmp_name}_src "${one_dir}/*.cpp")
+    add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
+    set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen/lib")
+endforeach()
 
 
 # Product
 ## Targets and properties
-add_executable(main ${V_main_src})
-target_link_libraries(main json-c)
-target_link_boost_libraries(main boost_atomic boost_chrono)
+add_executable(main ${GV_main_src})
+target_link_libraries(main app_chat app_socket mod_socket json-c)
+target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
 
 add_dependencies(main ep_json-c ep_boost)
 
