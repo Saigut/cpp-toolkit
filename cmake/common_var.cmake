@@ -13,3 +13,6 @@ set(OS_DARWIN false)
 
 # Logic cores
 cmake_host_system_information(RESULT LCORES QUERY NUMBER_OF_LOGICAL_CORES)
+
+# Link libraries
+set(PLATFORM_LINK_LIB "")

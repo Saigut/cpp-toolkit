@@ -39,6 +39,9 @@ macro(compiler_set_compilation_options)
     message("OS: " ${CMAKE_HOST_SYSTEM_NAME})
 
     ## Settings for diferent OSes and compilers
+    if (OS_LINUX)
+        set(PLATFORM_LINK_LIB pthread dl m)
+    endif ()
     if(OS_LINUX AND GCC)
         add_definitions(-D_GNU_SOURCE)
     endif()

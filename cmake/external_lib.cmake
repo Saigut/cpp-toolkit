@@ -13,6 +13,13 @@ function(external_lib_setup)
         endif()
     endif()
 
+    set(BOOST_BS_SUFFIX "")
+    if(OS_WINDOWS)
+        set(BOOST_BS_SUFFIX ".bat")
+    else()
+        set(BOOST_BS_SUFFIX ".sh")
+    endif()
+
     # json-c
     ExternalProject_Add(ep_json-c
         URL https://github.com/json-c/json-c/archive/master.zip
@@ -28,7 +35,7 @@ function(external_lib_setup)
     ExternalProject_Add(ep_boost
 #        URL https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.zip
         URL ${PROJECT_SOURCE_DIR}/package/boost_1_72_0.zip
-        CONFIGURE_COMMAND ./bootstrap
+        CONFIGURE_COMMAND ./bootstrap${BOOST_BS_SUFFIX}
         BUILD_IN_SOURCE true
         BUILD_COMMAND ""
         INSTALL_COMMAND ./b2 --layout=system --prefix=${PROJECT_SOURCE_DIR}/external ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)

@@ -12,11 +12,11 @@ include(helper)
 include(compiler)
 include(external_lib)
 
-## Setup dependency libraries
-external_lib_setup()
-
 ## Setup compilation options
 compiler_set_compilation_options()
+
+## Setup dependency libraries
+external_lib_setup()
 
 ## Setup product options
 ### set_product_options()
@@ -54,7 +54,9 @@ endforeach()
 add_executable(main ${GV_main_src})
 target_link_libraries(main app_chat app_socket mod_socket json-c)
 target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
+target_link_libraries(main ${PLATFORM_LINK_LIB})
 
+add_dependencies(app_chat ep_boost)
 add_dependencies(main ep_json-c ep_boost)
 
 # Test
