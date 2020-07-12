@@ -47,6 +47,7 @@ macro(compiler_set_compilation_options)
     endif()
     if (MSVC)
         add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+        add_definitions(-D_WIN32_WINNT=0x0601)
     endif ()
     add_definitions(-DBOOST_ALL_NO_LIB)
 

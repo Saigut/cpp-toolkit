@@ -52,7 +52,7 @@ endforeach()
 # Product
 ## Targets and properties
 add_executable(main ${GV_main_src})
-target_link_libraries(main app_chat app_socket mod_socket json-c)
+target_link_libraries(main app_chat app_asio_socket app_socket mod_socket json-c)
 target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
 target_link_libraries(main ${PLATFORM_LINK_LIB})
 

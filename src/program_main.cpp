@@ -9,6 +9,7 @@
 #include <mod_socket/mod_socket.h>
 #include <app_socket/app_socket.h>
 #include <app_chat/app_chat.h>
+#include <app_asio_socket/app_asio_socket.h>
 
 
 int program_main(int argc, char** argv)
@@ -23,7 +24,8 @@ int program_main(int argc, char** argv)
 //    std::cout << boost::format("%1% %2% %3% %2% %1% \n") % "11" % "22" % "333";
 //    mod_socket();
 //    app_socket(argc, argv);
-    ret = app_chat(argc, argv);
+//    ret = app_chat(argc, argv);
+    ret = app_asio_socket(argc, argv);
 
     return ret;
 }
