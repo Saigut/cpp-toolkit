@@ -10,13 +10,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(common_var)
 include(helper)
 include(compiler)
-include(external_lib)
+#include(external_lib)
 
 ## Setup compilation options
 compiler_set_compilation_options()
 
 ## Setup dependency libraries
-external_lib_setup()
+#external_lib_setup(${PROJECT_SOURCE_DIR})
 
 ## Setup product options
 ### set_product_options()
@@ -56,7 +56,7 @@ target_link_libraries(main app_chat app_asio_socket app_socket mod_socket json-c
 target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
 target_link_libraries(main ${PLATFORM_LINK_LIB})
 
-add_dependencies(app_chat ep_boost)
-add_dependencies(main ep_json-c ep_boost)
+#add_dependencies(app_chat ep_boost)
+#add_dependencies(main ep_json-c ep_boost)
 
 # Test
