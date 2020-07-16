@@ -44,6 +44,19 @@ static int asio_server()
         log_info("New client, ip: %s, port: %u",
                 remote_ep.address().to_string().c_str(),
                 remote_ep.port());
+
+        size_t n;
+        char recv_buf[1024];
+        boost::asio::mutable_buffer recv_buf_wrap{recv_buf, sizeof(recv_buf)};
+        n = client_socket.read_some(recv_buf_wrap, ec);
+        check_ec(ec, "read_some");
+        std::string recv_str{recv_buf, n};
+        log_info("read: %s", recv_str.c_str());
+
+        std::string send_str= "I'm server";
+        boost::asio::const_buffer send_buf_wrap{send_str.c_str(), send_str.length()};
+        client_socket.write_some(send_buf_wrap, ec);
+        check_ec(ec, "write_some");
     }
 
     return 0;

@@ -46,6 +46,14 @@ do { \
     } \
 } while (0)
 
+#define check_ec(_ec, _prompt) \
+do { \
+    if (_ec) { \
+        log_error("error: %s, %s", \
+            _prompt, ec.message().c_str()); \
+    } \
+} while (0)
+
 #define check_ec_ret(_ec, _prompt) \
 do { \
     if (_ec) { \
