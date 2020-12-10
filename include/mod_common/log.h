@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static char *log_basename(char const *path)
+static const char *log_basename(char const *path)
 {
 #if defined(_WIN32)
     const char *s = strrchr(path, '\\');
@@ -12,9 +12,9 @@ static char *log_basename(char const *path)
     const char *s = strrchr(path, '/');
 #endif
     if (!s)
-        return strdup(path);
+        return path;
     else
-        return strdup(s + 1);
+        return s + 1;
 }
 
 // green

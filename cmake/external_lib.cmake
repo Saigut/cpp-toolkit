@@ -29,7 +29,7 @@ function(external_lib_setup baseDir)
             -DBUILD_SHARED_LIBS=OFF
             -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external
             -DBUILD_TESTING=OFF
-        BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG} --target install)
+        BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 
     # boost_1_72_0
     ExternalProject_Add(ep_boost
