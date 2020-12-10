@@ -12,10 +12,26 @@ include(helper)
 include(compiler)
 include(external_lib)
 
-## Setup compilation options
-compiler_set_compilation_options()
+macro(setup_platform_environment)
+    ## Setup compilation options
+    compiler_set_compilation_options()
+endmacro()
 
-## Setup dependency libraries
-external_lib_setup(${PROJECT_SOURCE_DIR}/..)
+macro(setup_build_environment)
+    ## Setup dependency libraries
+    external_lib_setup(${PROJECT_SOURCE_DIR}/..)
+endmacro()
 
-add_custom_target(ExternalLibs ALL DEPENDS ep_json-c ep_boost)
+macro(setup_targets)
+    add_custom_target(ExternalLibs ALL DEPENDS ep_json-c ep_boost)
+endmacro()
+
+
+macro(main)
+    setup_platform_environment()
+    setup_build_environment()
+    setup_targets()
+endmacro()
+
+
+main()
