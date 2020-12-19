@@ -39,4 +39,15 @@ function(external_lib_setup baseDir)
         BUILD_IN_SOURCE true
         BUILD_COMMAND ""
         INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
+
+    # grpc-1.34.0
+    ExternalProject_Add(ep_grpc
+#        git clone -b v1.34.0 https://github.com/grpc/grpc
+#        URL https://github.com/Saigut/grpc/releases/download/v1.34.0/grpc-1.34.0.zip
+        URL ${baseDir}/package/grpc-1.34.0.zip
+        DOWNLOAD_NAME grpc-1.34.0.zip
+        UPDATE_COMMAND git submodule update --init
+        CMAKE_ARGS
+            -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external
+        BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 endfunction()
