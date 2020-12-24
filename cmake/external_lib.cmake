@@ -20,10 +20,23 @@ function(external_lib_setup baseDir)
         set(BOOST_BS_SUFFIX ".sh")
     endif()
 
+    # setup package URL
+    set(V_JSON_C_URL ${baseDir}/package/json-c.zip)
+    set(V_BOOST_URL ${baseDir}/package/boost_1_72_0.zip)
+    set(V_GRPC_URL ${baseDir}/package/grpc-1.34.0_with_deps.zip)
+    if(NOT EXISTS "${V_JSON_C_URL}")
+        set(V_JSON_C_URL https://github.com/json-c/json-c/archive/master.zip)
+    endif()
+    if(NOT EXISTS "${V_BOOST_URL}")
+        set(V_BOOST_URL https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.zip)
+    endif()
+    if(NOT EXISTS "${V_GRPC_URL}")
+        set(V_GRPC_URL https://github.com/Saigut/grpc/releases/download/v1.34.0/grpc-1.34.0_with_deps.zip)
+    endif()
+
     # json-c
     ExternalProject_Add(ep_json-c
-#        URL https://github.com/json-c/json-c/archive/master.zip
-        URL ${baseDir}/package/json-c.zip
+        URL ${V_JSON_C_URL}
         DOWNLOAD_NAME json-c.zip
         CMAKE_ARGS
             -DBUILD_SHARED_LIBS=OFF
@@ -33,8 +46,7 @@ function(external_lib_setup baseDir)
 
     # boost_1_72_0
     ExternalProject_Add(ep_boost
-#        URL https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.zip
-        URL ${baseDir}/package/boost_1_72_0.zip
+        URL ${V_BOOST_URL}
         CONFIGURE_COMMAND ./bootstrap${BOOST_BS_SUFFIX}
         BUILD_IN_SOURCE true
         BUILD_COMMAND ""
@@ -43,10 +55,9 @@ function(external_lib_setup baseDir)
     # grpc-1.34.0
     ExternalProject_Add(ep_grpc
 #        git clone -b v1.34.0 https://github.com/grpc/grpc
-#        URL https://github.com/Saigut/grpc/releases/download/v1.34.0/grpc-1.34.0.zip
-        URL ${baseDir}/package/grpc-1.34.0.zip
-        DOWNLOAD_NAME grpc-1.34.0.zip
-        UPDATE_COMMAND git submodule update --init
+        URL ${V_GRPC_URL}
+        DOWNLOAD_NAME grpc-1.34.0_with_deps.zip
+#        UPDATE_COMMAND git submodule update --init
         CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
