@@ -40,8 +40,10 @@ function(external_lib_setup baseDir)
         DOWNLOAD_NAME json-c.zip
         CMAKE_ARGS
             -DBUILD_SHARED_LIBS=OFF
-            -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external
+            -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
             -DBUILD_TESTING=OFF
+            -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_C_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 
     # boost_1_72_0
@@ -50,7 +52,7 @@ function(external_lib_setup baseDir)
         CONFIGURE_COMMAND ./bootstrap${BOOST_BS_SUFFIX}
         BUILD_IN_SOURCE true
         BUILD_COMMAND ""
-        INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
+        INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external/${CMAKE_CXX_COMPILER_ID} ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
 
     # grpc-1.34.0
     ExternalProject_Add(ep_grpc
@@ -59,6 +61,8 @@ function(external_lib_setup baseDir)
         DOWNLOAD_NAME grpc-1.34.0_with_deps.zip
 #        UPDATE_COMMAND git submodule update --init
         CMAKE_ARGS
-            -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external
+            -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
+            -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_C_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 endfunction()

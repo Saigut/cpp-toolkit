@@ -26,12 +26,12 @@ macro(setup_build_environment)
     ## Headers
     include_directories(
         include
-        external/include
-        external/include/boost
+        external/${CMAKE_CXX_COMPILER_ID}/include
+        external/${CMAKE_CXX_COMPILER_ID}/include/boost
     )
     ## Libraries
     link_directories(
-        external/lib
+        external/${CMAKE_CXX_COMPILER_ID}/lib
     )
 endmacro()
 
