@@ -7,9 +7,8 @@ function(external_lib_setup baseDir)
     # Parallel argument of build
     set(PARALLEL_ARG "")
     if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12")
-        if(LCORES GREATER 0)
-            math(EXPR LCORES_PLUS1 "${LCORES} + 1")
-            set(PARALLEL_ARG "-j ${LCORES_PLUS1}")
+        if(GV_LCORES GREATER 0)
+            set(PARALLEL_ARG "-j ${GV_LCORES_PLUS1}")
         endif()
     endif()
 
