@@ -7,7 +7,7 @@ macro(compiler_set_compilation_options)
     set(CMAKE_CXX_STANDARD 11)
     ## Firstly, chose generator, this is chosing build toochain. It's like only can chose generator on cmake command line.
 
-    message("Number of logic cores of hardware: " ${LCORES})
+    message("Number of logic cores of hardware: " ${GV_LCORES})
     ## Which compiler
     if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
         # Using Clang

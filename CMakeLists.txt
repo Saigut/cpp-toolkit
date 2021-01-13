@@ -22,16 +22,18 @@ macro(setup_build_environment)
     ### set_product_options()
 
     # Paths
+    set(GV_external_dir external/${CMAKE_CXX_COMPILER_ID})
+    get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
     include_directories(
         include
         gen/grpc/cpp
-        external/${CMAKE_CXX_COMPILER_ID}/include
-        external/${CMAKE_CXX_COMPILER_ID}/include/boost
+        ${GV_external_dir}/include
+        ${GV_external_dir}/include/boost
     )
     ## Libraries
     link_directories(
-        external/${CMAKE_CXX_COMPILER_ID}/lib
+        ${GV_external_dir}/lib
     )
 endmacro()
 
@@ -76,11 +78,11 @@ macro(setup_grpc_target)
         list(APPEND GV_gen_cpp_grpc_srcs ${V_gen_cpp_grpc_srcs})
 
         if(OS_WINDOWS)
-            set(V_ptotoc_cmd ${PROJECT_SOURCE_DIR}/external/bin/protoc.exe)
-            set(V_ptotoc_cpp_plugin ${PROJECT_SOURCE_DIR}/external/bin/grpc_cpp_plugin.exe)
+            set(V_ptotoc_cmd ${GV_external_dir_a}/bin/protoc.exe)
+            set(V_ptotoc_cpp_plugin ${GV_external_dir_a}/bin/grpc_cpp_plugin.exe)
         else()
-            set(V_ptotoc_cmd ${PROJECT_SOURCE_DIR}/external/bin/protoc)
-            set(V_ptotoc_cpp_plugin ${PROJECT_SOURCE_DIR}/external/bin/grpc_cpp_plugin)
+            set(V_ptotoc_cmd ${GV_external_dir_a}/bin/protoc)
+            set(V_ptotoc_cpp_plugin ${GV_external_dir_a}/bin/grpc_cpp_plugin)
         endif()
 
         add_custom_command(
