@@ -1,0 +1,4 @@
+#ifndef CPP_TOOLKIT_APP_IM_H
+#define CPP_TOOLKIT_APP_IM_H
+
+#endif //CPP_TOOLKIT_APP_IM_H

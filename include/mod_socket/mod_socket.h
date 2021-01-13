@@ -11,5 +11,4 @@ int mod_socket();
 }
 #endif
 
-
 #endif //CPP_TOOLKIT_MOD_SOCKET_H
