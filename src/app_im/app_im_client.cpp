@@ -28,3 +28,10 @@ int app_im_client_send_msg(app_im_client_msg_t* msg)
     return 0;
 }
 
+int app_im_client(int argc, char** argv)
+{
+    // create client
+    // receiving and deal with message in a thread
+    // put sending message in sending queues
+    return 0;
+}

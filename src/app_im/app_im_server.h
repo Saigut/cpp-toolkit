@@ -16,6 +16,8 @@ int app_im_server_destroy(app_im_server_t app_im_server);
 
 int app_im_server_start(app_im_server_t app_im_server);
 
+int app_im_server(int argc, char** argv);
+
 #ifdef __cplusplus
 }
 #endif

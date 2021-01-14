@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package cpt_im;
+
+service CptImServer {
+    rpc ServerIntf (ServerIntfReq) returns (ServerIntfRes) {}
+}
+
+service CptImClient {
+    rpc ClientIntf (ClientIntfReq) returns (ClientIntfRes) {}
+}
+
+enum ErrCode {
+    emErrCode_Ok = 0;
+    emErrCode_Failed = 1;
+    // Register
+    emErrCode_NotRegistered = 10;
+    emErrCode_AlreadyRegistered = 11;
+    // Online
+    emErrCode_DstUserOffline = 20;
+    // Message error
+    emErrCode_UnknownErrorWhenSend = 30;
+    emErrCode_NetworkErrorWhenSend = 31;
+    emErrCode_ServerErrorWhenSend = 32;
+    emErrCode_ClientErrorWhenSend = 33;
+}
+
+enum ServerMsgType {
+    emServerMsgType_Control = 0;
+    emServerMsgType_Chat = 1;
+}
+
+enum ControlMsgType {
+    emControlMsgType_Register = 0;
+    emControlMsgType_GoOnline = 1;
+    emControlMsgType_HeartBeat = 2;
+}
+message ControlMsg {
+    ControlMsgType control_type = 1;
+    uint64 user_id = 2;
+}
+
+enum ChatMsgType {
+    emChatMsgType_Text = 0;
+}
+message ChatMsg {
+    uint64 msg_id = 5;
+    uint64 src_user_id = 1;
+    uint64 dst_user_id = 2;
+    ChatMsgType msg_type = 3;
+    string msg_text = 4;
+}
+
+message ServerIntfReq {
+    ServerMsgType msg_type = 1;
+    ControlMsg control_msg = 2;
+    ChatMsg chat_msg = 3;
+}
+
+message ServerIntfRes {
+    ErrCode err_code = 1;
+    string err_msg = 2;
+}
+
+
+enum ClientMsgType {
+  emClientMsgType_Control = 0;
+  emClientMsgType_Chat = 1;
+}
+
+message ClientIntfReq {
+    ClientMsgType msg_type = 1;
+    ChatMsg chat_msg = 3;
+
+}
+
+message ClientIntfRes {
+    ErrCode err_code = 1;
+    string err_msg = 2;
+}
