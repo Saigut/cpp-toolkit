@@ -2,44 +2,73 @@
 #define CPP_TOOLKIT_MOD_HASH_TABLE_H
 
 #include <stdint.h>
+#include <memory>
+#include <map>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <mod_common/timeout.h>
 
-#define cpt_htable_t void*
-#define cpt_htable_key_t void*
-#define cpt_htable_val_t void*
+template <typename K, typename V>
+class cpt_hash_table {
+public:
+    cpt_hash_table() : table() {}
+    bool insert(const K& key, const V &val);
+    bool del(const K& key);
+    bool find(const K& key, V& val);
+    ~cpt_hash_table();
+private:
+    std::map<K, V> table;
+    struct timeouts* m_to;
+};
 
-typedef uint64_t (*cpt_htable_hash_func_t)(
-        cpt_htable_key_t key, void* ctx);
-// ret, 0 equal, 1 key1 bigger, -1 key2 bigger
-typedef int (*cpt_htable_cmp_func_t)(
-        cpt_htable_key_t key1, cpt_htable_key_t key2, void* ctx);
-typedef int (*cpt_htable_free_val_func_t)(
-        cpt_htable_val_t val, void* ctx);
+//template<typename K, typename V>
+//bool cpt_hash_table<K, V>::init() {
+//    if (!this->table) {
+//        this->table = std::make_shared<std::map<K, V>>();
+//    }
+//    int err;
+//    this->m_to = timeouts_open(TIMEOUT_mHZ, &err);
+//    expect_ret_val(this->m_to, false);
+//    return true;
+//}
 
-typedef struct {
-    size_t key_sz;
-    cpt_htable_hash_func_t hash_func;
-    cpt_htable_cmp_func_t cmp_func;
-    cpt_htable_free_val_func_t free_val_func;
-    size_t timeout_ms;  // 0, not timeout
-    void* user_ctx;
-} cpt_htable_param_t;
+template<typename K, typename V>
+bool cpt_hash_table<K, V>::insert(const K &key, const V &val) {
+//    auto to = (struct timeout*)malloc(sizeof(struct timeout));
+//    expect_ret_val(to, false);
+//    timeout_init(to, 0);
+//    K* p_key = (K*)malloc(sizeof(K));
+//    *p_key = key;
+//    to->callback.arg = p_key;
+    this->table.insert({key, val});
 
-cpt_htable_t cpt_htable_create(cpt_htable_param_t* param);
-int cpt_htable_destroy(cpt_htable_t hash_table);
-
-cpt_htable_val_t cpt_htable_find(cpt_htable_key_t key);
-int cpt_htable_add(cpt_htable_key_t key, cpt_htable_val_t val);
-int cpt_htable_del(cpt_htable_key_t key);
-
-// for timeout
-int cpt_htable_timeout_step(cpt_htable_t hash_table);
-
-#ifdef __cplusplus
+//    timeouts_add(m_to, to, 10000);
+    return true;
 }
-#endif
+
+template<typename K, typename V>
+bool cpt_hash_table<K, V>::del(const K &key) {
+    this->table.erase(key);
+    return true;
+}
+
+template<typename K, typename V>
+bool cpt_hash_table<K, V>::find(const K &key, V &val) {
+    std::map<K, V>::iterator itr;
+    itr = this->table.find(key);
+    if (itr != this->table.end()) {
+        val = itr->second;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+template<typename K, typename V>
+cpt_hash_table<K, V>::~cpt_hash_table() {
+    if (this->m_to) {
+        timeouts_close(this->m_to);
+    }
+}
 
 #endif //CPP_TOOLKIT_MOD_HASH_TABLE_H

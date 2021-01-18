@@ -4,6 +4,11 @@
 #include "log.h"
 
 
+#define expect(_exp) \
+do { \
+    if (!(_exp)) log_error("%s check failed!", #_exp); \
+} while (0)
+
 #define expect_ret(_exp) \
 do { \
     if (!(_exp)) log_error("%s check failed!", #_exp); return; \
@@ -11,12 +16,12 @@ do { \
 
 #define expect_ret_val(_exp, _val) \
 do { \
-    if (!(_exp)) log_error("%s check failed!", #_exp); return _val; \
+    if (!(_exp)) { log_error("%s check failed!", #_exp); return _val; } \
 } while (0)
 
 #define expect_goto(_exp, _goto_flag) \
 do { \
-    if (!(_exp)) log_error("%s check failed!", #_exp); goto _goto_flag; \
+    if (!(_exp)) { log_error("%s check failed!", #_exp); goto _goto_flag; } \
 } while (0)
 
 #define expect_ret_p(_exp, _prompt_fmt, ...) \

@@ -1,7 +1,25 @@
 #include "app_im/app_im.h"
 
+#include <mod_common/log.h>
+
+#include "app_im_client.h"
+#include "app_im_server.h"
 
 int app_im(int argc, char** argv)
 {
-    return 0;
+    if (argc < 2) {
+        log_error("wrong parameters.");
+//        print_usage();
+        return -1;
+    }
+
+    if (0 == strcmp(argv[1], "c")) {
+        return app_im_client(argc - 1, argv + 1);
+    } else if (0 == strcmp(argv[1], "s")) {
+        return app_im_server(argc - 1, argv + 1);
+    } else {
+        log_error("wrong parameters.");
+//        print_usage();
+        return -1;
+    }
 }

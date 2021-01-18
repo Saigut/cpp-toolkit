@@ -34,6 +34,7 @@ macro(setup_build_environment)
     ## Libraries
     link_directories(
         ${GV_external_dir}/lib
+        gen/lib
     )
 endmacro()
 
@@ -120,7 +121,7 @@ macro(setup_targets)
     # Modules library
     foreach(one_dir ${GV_all_mod} ${GV_all_app})
         get_filename_component(tmp_name ${one_dir} NAME)
-        file(GLOB GV_${tmp_name}_src "${one_dir}/*.cpp")
+        file(GLOB GV_${tmp_name}_src "${one_dir}/*.cpp" "${one_dir}/*.c")
         add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
         set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/gen/lib")
         add_dependencies(${tmp_name} GT_gen_grpc_src GT_dir_gen_lib)
@@ -128,7 +129,57 @@ macro(setup_targets)
 
     # Main executable
     add_executable(main ${GV_main_src})
-    target_link_libraries(main app_chat app_asio_socket app_socket mod_socket json-c ${GV_gen_grpc_cpp_lib_bname})
+    target_link_libraries(main
+            app_chat app_asio_socket app_socket
+            app_im app_grpc_hw
+            mod_socket
+            mod_hash_table mod_queue
+            mod_common
+            grpc++_reflection
+            grpc++
+            grpc
+            gpr
+            libprotobuf-lited
+            libprotobufd
+            libprotocd
+
+            address_sorting
+            upb
+            re2
+            cares
+            ssl
+            crypto
+            zlibstaticd
+
+            absl_synchronization
+            absl_raw_logging_internal
+            absl_spinlock_wait
+            absl_time
+            absl_time_zone
+            absl_int128
+            absl_strings
+            absl_strings_internal
+            absl_str_format_internal
+            absl_cord
+            absl_stacktrace
+            absl_symbolize
+            absl_status
+            absl_city
+            absl_civil_time
+            absl_bad_optional_access
+            absl_bad_variant_access
+            absl_debugging_internal
+            absl_demangle_internal
+            absl_exponential_biased
+            absl_graphcycles_internal
+            absl_hash
+            absl_raw_hash_set
+            absl_hashtablez_sampler
+            absl_base
+            absl_throw_delegate
+            absl_malloc_internal
+
+            json-c ${GV_gen_grpc_cpp_lib_bname})
     target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
     target_link_libraries(main ${PLATFORM_LINK_LIB})
 endmacro()

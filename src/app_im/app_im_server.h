@@ -1,22 +1,28 @@
 #ifndef CPP_TOOLKIT_APP_IM_SERVER_H
 #define CPP_TOOLKIT_APP_IM_SERVER_H
 
+#include <cpt_im.grpc.pb.h>
+#include <mod_queue/mod_queue.h>
+#include <mod_hash_table/mod_hash_table.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define app_im_server_t void*
-
-typedef struct {
-
-} app_im_server_param_t;
-
-app_im_server_t app_im_server_create(app_im_server_param_t* param);
-int app_im_server_destroy(app_im_server_t app_im_server);
-
-int app_im_server_start(app_im_server_t app_im_server);
-
 int app_im_server(int argc, char** argv);
+
+class im_server {
+public:
+    int init();
+    void start();
+//private:
+    int deal_with_msg(const ::cpt_im::ServerIntfReq& req);
+    cpt_queue<::cpt_im::ServerIntfReq> r_queue;
+    cpt_queue<::cpt_im::ClientIntfReq> s_queue;
+
+    cpt_hash_table<uint64_t, std::string> uid_uport_table;
+};
+
 
 #ifdef __cplusplus
 }

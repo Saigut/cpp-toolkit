@@ -13,6 +13,7 @@
 #include <app_socket/app_socket.h>
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
+#include <app_im/app_im.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -69,7 +70,8 @@ int program_main(int argc, char** argv)
 //    mod_socket();
 //    app_socket(argc, argv);
 //    ret = app_chat(argc, argv);
-    ret = app_asio_socket(argc, argv);
+//    ret = app_asio_socket(argc, argv);
+    ret = app_im(argc, argv);
 
     return ret;
 }

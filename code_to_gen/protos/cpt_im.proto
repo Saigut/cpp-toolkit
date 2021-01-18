@@ -55,6 +55,8 @@ message ServerIntfReq {
     ServerMsgType msg_type = 1;
     ControlMsg control_msg = 2;
     ChatMsg chat_msg = 3;
+    string client_listen_port = 4;
+    uint64 client_user_id = 5;
 }
 
 message ServerIntfRes {
@@ -64,14 +66,13 @@ message ServerIntfRes {
 
 
 enum ClientMsgType {
-  emClientMsgType_Control = 0;
-  emClientMsgType_Chat = 1;
+    emClientMsgType_Control = 0;
+    emClientMsgType_Chat = 1;
 }
 
 message ClientIntfReq {
     ClientMsgType msg_type = 1;
-    ChatMsg chat_msg = 3;
-
+    ChatMsg chat_msg = 2;
 }
 
 message ClientIntfRes {

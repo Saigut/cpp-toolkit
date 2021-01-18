@@ -57,6 +57,9 @@ macro(compiler_set_compilation_options)
     if (OS_WINDOWS AND GCC)
         set(PLATFORM_LINK_LIB ${PLATFORM_LINK_LIB} ws2_32)
     endif()
+    if (OS_WINDOWS AND CLANG)
+        set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /EHa")
+    endif()
     add_definitions(-DBOOST_ALL_NO_LIB)
 
     ## Standard

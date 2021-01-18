@@ -2,28 +2,37 @@
 #define CPP_TOOLKIT_APP_IM_CLIENT_H
 
 #include <mod_queue/mod_queue.h>
+#include <memory>
+#include <cpt_im.grpc.pb.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define app_im_client_t void*
 
-typedef struct {
-} app_im_client_param_t;
+class im_client {
+public:
+    im_client(std::string& list_port, uint64_t peer_user_id)
+    :m_list_port(list_port),
+    m_peer_user_id(peer_user_id),
+    r_queue(),
+    s_queue() {}
+    int init();
+    void start();
+    int send_msg(const std::string& msg);
+    int send_hb();
+//    void send_msg_thread(im_client&);
 
-app_im_client_t app_im_client_create(app_im_client_param_t* param);
-int app_im_client_destroy(app_im_client_t app_im_client);
+//private:
+    int deal_with_msg(const ::cpt_im::ClientIntfReq& req);
 
-int app_im_client_start(app_im_client_t app_im_client);
+    uint64_t m_user_id;
+    uint64_t m_peer_user_id;
+    cpt_queue<::cpt_im::ClientIntfReq> r_queue;
+    cpt_queue<::cpt_im::ServerIntfReq> s_queue;
 
-typedef struct {
-    char* msg_buf;
-    size_t msg_len;
-} app_im_client_msg_t;
-int app_im_client_send_msg(app_im_client_msg_t* msg);
-
-cpt_queue_t app_im_client_get_receiving_queue(app_im_client_t app_im_client);
+    std::string m_list_port;
+};
 
 int app_im_client(int argc, char** argv);
 
