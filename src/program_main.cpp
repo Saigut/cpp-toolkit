@@ -8,8 +8,9 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/yield.hpp>
 
-#include <mod_socket/mod_socket.h>
 #include <mod_common/log.h>
+#include <mod_socket/mod_socket.h>
+#include <mod_hash_table/mod_hash_table.h>
 #include <app_socket/app_socket.h>
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
@@ -57,6 +58,32 @@ int test()
     return 0;
 }
 
+void test_timeout_hash_table()
+{
+    std::string out_str;
+    cpt_hash_table<int, std::string> table;
+    expect_ret(table.init());
+    table.insert(1, "111");
+
+    out_str = "nothing";
+    table.find(1, out_str);
+    std::cout << "1st: " << out_str << std::endl;
+    std::this_thread::sleep_for (
+            std::chrono::seconds (1));
+
+    out_str = "nothing";
+    table.timeout_update();
+    table.find(1, out_str);
+    std::cout << "2nd: " << out_str << std::endl;
+    std::this_thread::sleep_for (
+            std::chrono::seconds (5));
+
+    out_str = "nothing";
+    table.timeout_update();
+    table.find(1, out_str);
+    std::cout << "3rd: " << out_str << std::endl;
+}
+
 int program_main(int argc, char** argv)
 {
     int ret = 0;
@@ -72,6 +99,7 @@ int program_main(int argc, char** argv)
 //    ret = app_chat(argc, argv);
 //    ret = app_asio_socket(argc, argv);
     ret = app_im(argc, argv);
+//    test_timeout_hash_table();
 
     return ret;
 }

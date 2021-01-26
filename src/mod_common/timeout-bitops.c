@@ -47,9 +47,9 @@ static __inline int ctz64(uint64_t val)
 }
 static __inline int clz64(uint64_t val)
 {
-	DWORD zeros = 0;
-	_BitScanReverse64(&zeros, val);
-	return zeros;
+	DWORD index = 0;
+	_BitScanReverse64(&index, val);
+	return 64 - (index + 1);
 }
 #else
 static __inline int ctz64(uint64_t val)

@@ -6,12 +6,12 @@
 
 #define expect(_exp) \
 do { \
-    if (!(_exp)) log_error("%s check failed!", #_exp); \
+    if (!(_exp)) { log_error("%s check failed!", #_exp); } \
 } while (0)
 
 #define expect_ret(_exp) \
 do { \
-    if (!(_exp)) log_error("%s check failed!", #_exp); return; \
+    if (!(_exp)) { log_error("%s check failed!", #_exp); return; } \
 } while (0)
 
 #define expect_ret_val(_exp, _val) \
