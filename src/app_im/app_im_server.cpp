@@ -35,6 +35,7 @@ int im_server::init() {
 
     expect_ret_val(this->r_queue.init(), -1);
     expect_ret_val(this->s_queue.init(), -1);
+    expect_ret_val(this->uid_uport_table.init(), -1);
 
     return 0;
 }
@@ -54,10 +55,10 @@ private:
     im_server* m_server;
 };
 
-void grpc_receive(im_server& the_im_server)
+void im_server::grpc_receive()
 {
     std::string server_address("0.0.0.0:60000");
-    CptImServerServiceImpl service(&the_im_server);
+    CptImServerServiceImpl service(this);
 
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();
@@ -70,13 +71,13 @@ void grpc_receive(im_server& the_im_server)
     server->Wait();
 }
 
-void grpc_send(im_server& server)
+void im_server::grpc_send()
 {
     while (true) {
         ::cpt_im::ClientIntfReq req;
-        if (server.s_queue.read(req)) {
+        if (this->s_queue.read(req)) {
             std::string client_port;
-            if (server.uid_uport_table.find(
+            if (this->uid_uport_table.find(
                     req.chat_msg().dst_user_id(),
                     client_port)) {
                 std::string target_str = "localhost:" + client_port;
@@ -100,8 +101,8 @@ void grpc_send(im_server& server)
 }
 
 void im_server::start() {
-    std::thread thr_grpc_send(grpc_send, std::ref(*this));
-    std::thread thr_grpc_recv(grpc_receive, std::ref(*this));
+    std::thread thr_grpc_send(&im_server::grpc_send, this);
+    std::thread thr_grpc_recv(&im_server::grpc_receive, this);
     while (true) {
         ::cpt_im::ServerIntfReq req;
         if (this->r_queue.read(req)) {

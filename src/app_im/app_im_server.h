@@ -15,8 +15,13 @@ class im_server {
 public:
     int init();
     void start();
-//private:
+    void grpc_receive();
+    void grpc_send();
+
+private:
     int deal_with_msg(const ::cpt_im::ServerIntfReq& req);
+
+    friend class CptImServerServiceImpl;
     cpt_queue<::cpt_im::ServerIntfReq> r_queue;
     cpt_queue<::cpt_im::ClientIntfReq> s_queue;
 

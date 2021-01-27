@@ -12,8 +12,11 @@ extern "C" {
 
 class im_client {
 public:
-    im_client(std::string& list_port, uint64_t peer_user_id)
+    im_client(std::string& list_port,
+              uint64_t user_id,
+              uint64_t peer_user_id)
     :m_list_port(list_port),
+    m_user_id(user_id),
     m_peer_user_id(peer_user_id),
     r_queue(),
     s_queue() {}
@@ -21,13 +24,17 @@ public:
     void start();
     int send_msg(const std::string& msg);
     int send_hb();
-//    void send_msg_thread(im_client&);
+    void grpc_receive();
+    void grpc_send();
+    void send_msg_thread();
 
-//private:
+private:
     int deal_with_msg(const ::cpt_im::ClientIntfReq& req);
 
     uint64_t m_user_id;
     uint64_t m_peer_user_id;
+
+    friend class CptImClientServiceImpl;
     cpt_queue<::cpt_im::ClientIntfReq> r_queue;
     cpt_queue<::cpt_im::ServerIntfReq> s_queue;
 

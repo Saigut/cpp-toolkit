@@ -24,9 +24,9 @@ using grpc::ServerContext;
 int app_im_client(int argc, char** argv)
 {
     std::string port = argv[1];
-    im_client client(port, std::atoi(argv[2]));
-    client.m_user_id = std::atoi(argv[2]);
-    client.m_peer_user_id = std::atoi(argv[3]);
+    im_client client(port,
+                     std::atoi(argv[2]),
+                     std::atoi(argv[3]));
     expect_ret_val(0 == client.init(), -1);
     client.start();
     return 0;
@@ -57,10 +57,10 @@ private:
     im_client* m_client;
 };
 
-static void grpc_receive(im_client& client)
+void im_client::grpc_receive()
 {
-    std::string server_address("0.0.0.0:" + client.m_list_port);
-    CptImClientServiceImpl service(&client);
+    std::string server_address("0.0.0.0:" + this->m_list_port);
+    CptImClientServiceImpl service(this);
 
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();
@@ -73,11 +73,11 @@ static void grpc_receive(im_client& client)
     server->Wait();
 }
 
-static void grpc_send(im_client& client)
+void im_client::grpc_send()
 {
     while (true) {
         ::cpt_im::ServerIntfReq req;
-        if (client.s_queue.read(req)) {
+        if (s_queue.read(req)) {
             std::string target_str = "localhost:60000";
             std::unique_ptr<::cpt_im::CptImServer::Stub> stub;
             stub = ::cpt_im::CptImServer::NewStub(grpc::CreateChannel(
@@ -96,13 +96,13 @@ static void grpc_send(im_client& client)
     }
 }
 
-void send_msg_thread(im_client& client) {
+void im_client::send_msg_thread() {
     std::string input_msg;
     while (true) {
         printf("Input msg > ");
         std::getline (std::cin, input_msg);
         if (!input_msg.empty()) {
-            client.send_msg(input_msg);
+            send_msg(input_msg);
         }
         std::this_thread::sleep_for (
                 std::chrono::milliseconds(5));
@@ -115,9 +115,9 @@ void im_client::start() {
     std::time_t cur_time;
     std::string input_msg;
 
-    std::thread thr_grpc_send(grpc_send, std::ref(*this));
-    std::thread thr(send_msg_thread, std::ref(*this));
-    std::thread thr_grpc_recv(grpc_receive, std::ref(*this));
+    std::thread thr_grpc_send(&im_client::grpc_send, this);
+    std::thread thr(&im_client::send_msg_thread, this);
+    std::thread thr_grpc_recv(&im_client::grpc_receive, this);
 
     while (true) {
         ::cpt_im::ClientIntfReq req;
