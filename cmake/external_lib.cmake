@@ -42,7 +42,7 @@ function(external_lib_setup baseDir)
             -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
             -DBUILD_TESTING=OFF
             -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-            -DCMAKE_CXX_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 
     # boost_1_72_0
@@ -62,6 +62,6 @@ function(external_lib_setup baseDir)
         CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
             -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-            -DCMAKE_CXX_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 endfunction()
