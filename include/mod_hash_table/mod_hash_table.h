@@ -77,7 +77,7 @@ fail_return:
 
 template<typename K, typename V>
 bool cpt_hash_table<K, V>::del(const K &key) {
-    std::map<K, value_wrap_t>::iterator itr;
+    typename std::map<K, value_wrap_t>::iterator itr;
     itr = this->table.find(key);
     if (itr != this->table.end()) {
         timeouts_del(this->m_to, itr->second.to);
@@ -88,7 +88,7 @@ bool cpt_hash_table<K, V>::del(const K &key) {
 
 template<typename K, typename V>
 bool cpt_hash_table<K, V>::find(const K &key, V &val) {
-    std::map<K, value_wrap_t>::iterator itr;
+    typename std::map<K, value_wrap_t>::iterator itr;
     itr = this->table.find(key);
     if (itr != this->table.end()) {
         // update value in timing wheel

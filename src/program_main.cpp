@@ -4,6 +4,7 @@
 #include <json-c/json.h>
 
 #include <iostream>
+#include <thread>
 #include <boost/format.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/yield.hpp>
