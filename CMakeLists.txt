@@ -180,7 +180,7 @@ macro(setup_targets)
             absl_malloc_internal
 
             json-c ${GV_gen_grpc_cpp_lib_bname})
-    target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time)
+    target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context)
     target_link_libraries(main ${PLATFORM_LINK_LIB})
 endmacro()
 

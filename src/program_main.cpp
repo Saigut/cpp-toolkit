@@ -4,6 +4,7 @@
 #include <json-c/json.h>
 
 #include <iostream>
+#include <chrono>
 #include <thread>
 #include <boost/format.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -16,6 +17,7 @@
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
+#include <app_im/thing.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -85,6 +87,74 @@ void test_timeout_hash_table()
     std::cout << "3rd: " << out_str << std::endl;
 }
 
+
+#include <cstdlib>
+
+#include <boost/context/continuation.hpp>
+#include <boost/context/fiber.hpp>
+
+namespace ctx = boost::context;
+
+ctx::continuation foo( ctx::continuation && c)
+{
+    do {
+        std::cout << "foo\n";
+    } while ( ( c = c.resume() ) );
+    std::cout << "before return\n";
+    return std::move( c);
+}
+
+int ctx_main() {
+    ctx::continuation c = ctx::callcc( foo);
+    do {
+        std::cout << "bar\n";
+    } while ( ( c = c.resume() ) );
+    std::cout << "main: done" << std::endl;
+    return EXIT_SUCCESS;
+}
+
+ctx::fiber bar( ctx::fiber && f)
+{
+    do {
+        std::cout << "bar\n";
+        f = std::move( f).resume();
+    } while ( f);
+    return std::move( f);
+}
+
+int fb_main()
+{
+    ctx::fiber f{ bar };
+    do {
+        std::cout << "foo\n";
+        f = std::move( f).resume();
+    } while ( f);
+    std::cout << "main: done" << std::endl;
+    return EXIT_SUCCESS;
+}
+
+int test_thing()
+{
+    Thing thing;
+//    boost::function<context::continuation(context::continuation&&)> func_thing;
+//    func_thing = boost::bind(&Thing::thing, &thing, _1);
+    boost::posix_time::ptime cur_time = boost::posix_time::second_clock::local_time();
+    boost::posix_time::ptime t1 = cur_time;
+    while (true) {
+//        thing.do_main_part(func_thing);
+        thing.do_main_part();
+        cur_time = boost::posix_time::second_clock::local_time();
+        if (cur_time > t1 + boost::posix_time::seconds(5)) {
+            thing.notify_other_part_done();
+            thing.do_main_part();
+            break;
+        } else {
+            std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+        }
+    }
+    return 0;
+}
+
 int program_main(int argc, char** argv)
 {
     int ret = 0;
@@ -99,8 +169,11 @@ int program_main(int argc, char** argv)
 //    app_socket(argc, argv);
 //    ret = app_chat(argc, argv);
 //    ret = app_asio_socket(argc, argv);
-    ret = app_im(argc, argv);
+//    ret = app_im(argc, argv);
 //    test_timeout_hash_table();
+
+//    ret = ctx_main();
+    ret = test_thing();
 
     return ret;
 }
