@@ -155,6 +155,29 @@ int test_thing()
     return 0;
 }
 
+void worker2_thread(Worker<Thing>* worker)
+{
+    worker->run();
+}
+
+int test_worker()
+{
+    Worker<Thing> worker1{};
+    Worker<Thing> worker2{};
+
+    // Add work to worker1
+    Thing_ImSend thing{&worker2};
+    worker1.add_avail_thing(&thing);
+
+    // Start worker2
+    std::thread other_thread(worker2_thread, &worker2);
+
+    // Start worker1
+    worker1.run();
+
+    return 0;
+}
+
 int program_main(int argc, char** argv)
 {
     int ret = 0;
@@ -173,7 +196,8 @@ int program_main(int argc, char** argv)
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
-    ret = test_thing();
+//    ret = test_thing();
+    ret = test_worker();
 
     return ret;
 }
