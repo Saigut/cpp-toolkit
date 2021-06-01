@@ -3,6 +3,7 @@ cmake-build-*
 
 build/
 external/
+!external/CMakeLists.txt
 package/
 gen/
 venv/
