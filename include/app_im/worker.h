@@ -8,90 +8,32 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
-//#include "thing.h"
 
 #include <boost/context/continuation.hpp>
 
+class Worker;
+class Worker_Net;
+#include "work.h"
 
-
-template< typename Th >
 class Worker {
 public:
-    Worker() = default;
-    ~Worker() {}
-    void run();
-
-    // things available to do
-    int add_avail_thing(Th* thing);
-
-    // things waiting other to do
-    int notify_thing_other_part_done(Th* thing);
-
+    virtual void run();
+    virtual int add_work(Work* work);
 protected:
-    // things available to do
-    int do_cur_avail_thing();
-
-    Th* get_cur_avail_thing();
-
-protected:
-//    boost::lockfree::queue<Th*> avail_things_q;
-//    std::queue<Th*> avail_things_q;
-    boost::lockfree::queue<Th*> avail_things_q;
-//    std::set<Th*> waiting_things_set;
-
-    std::mutex mutex_lock;
+    int do_cur_work();
+    Work* get_cur_work();
+    boost::lockfree::queue<Work*, boost::lockfree::capacity<100>> works_q;
 };
 
-template< typename Th >
-void Worker<Th>::run()
-{
-    while(true) {
-        if (0 != do_cur_avail_thing()) {
-            std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-        }
-    }
-}
-
-template< typename Th >
-int Worker<Th>::add_avail_thing(Th* thing)
-{
-    avail_things_q.push(thing);
-    thing->set_main_worker(this);
-    return 0;
-}
-
-template< typename Th >
-int Worker<Th>::notify_thing_other_part_done(Th* thing)
-{
-    thing->notify_other_part_done();
-    // if not finished, avail_things_q push thing
-    return 0;
-}
-
-
-template< typename Th >
-int Worker<Th>::do_cur_avail_thing()
-{
-    Th* cur_thing = get_cur_avail_thing();
-    if (cur_thing) {
-        cur_thing->do_main_part();
-        return 0;
-    } else {
-        return -1;
-    }
-}
-
-template< typename Th >
-Th* Worker<Th>::get_cur_avail_thing()
-{
-    Th* cur_thing;
-    if (avail_things_q.pop(cur_thing)) {
-//        log_info("q %s", avail_things_q.empty() ? "empty" : "not empty");
-        return cur_thing;
-    } else {
-        return nullptr;
-    }
-}
-
+class Worker_Net : public Worker {
+public:
+    void run() override;
+    int add_work(Work* work) override { exit(-1); return -1; };
+    int add_avail_work(Work_GetStdin* work);
+    int add_avail_work(Work_NetIn* work);
+    int add_avail_work(Work_NetOut* work);
+private:
+    int m_epoll_fd = -1;
+};
 
 #endif //CPP_TOOLKIT_WORKER_H

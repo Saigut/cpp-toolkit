@@ -17,7 +17,7 @@
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
-#include <app_im/thing.h>
+#include <app_im/work.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -52,11 +52,14 @@ int test2()
     return 0;
 }
 
-int test()
+int test_reenter()
 {
     Cro c;
+    log_info("-----");
     c();
+    log_info("-----");
     c();
+    log_info("-----");
 
     return 0;
 }
@@ -133,44 +136,23 @@ int fb_main()
     return EXIT_SUCCESS;
 }
 
-int test_thing()
-{
-    Thing thing;
-//    boost::function<context::continuation(context::continuation&&)> func_thing;
-//    func_thing = boost::bind(&Thing::thing, &thing, _1);
-    boost::posix_time::ptime cur_time = boost::posix_time::second_clock::local_time();
-    boost::posix_time::ptime t1 = cur_time;
-    while (true) {
-//        thing.do_main_part(func_thing);
-        thing.do_main_part();
-        cur_time = boost::posix_time::second_clock::local_time();
-        if (cur_time > t1 + boost::posix_time::seconds(5)) {
-            thing.notify_other_part_done();
-            thing.do_main_part();
-            break;
-        } else {
-            std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-        }
-    }
-    return 0;
-}
-
-void worker2_thread(Worker<Thing>* worker)
+void worker2_thread(Worker* worker)
 {
     worker->run();
 }
 
 int test_worker()
 {
-    Worker<Thing> worker1{};
-    Worker<Thing> worker2{};
+    Worker worker1{};
+    Worker_Net worker2{};
 
     // Add work to worker1
-    Thing_ImSend thing{&worker2};
-    worker1.add_avail_thing(&thing);
+    Work_ImSend thing{&worker2};
+    worker1.add_work(&thing);
 
     // Start worker2
     std::thread other_thread(worker2_thread, &worker2);
+    std::this_thread::sleep_for(std::chrono::seconds (1));
 
     // Start worker1
     worker1.run();
@@ -196,7 +178,7 @@ int program_main(int argc, char** argv)
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
-//    ret = test_thing();
+//    ret = test_reenter();
     ret = test_worker();
 
     return ret;
