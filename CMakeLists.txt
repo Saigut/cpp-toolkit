@@ -147,6 +147,8 @@ macro(setup_targets)
     target_link_libraries(main
             app_chat app_asio_socket app_socket
             app_im app_grpc_hw
+            app_worker
+            mod_worker
             mod_socket
             mod_hash_table mod_queue
             mod_common

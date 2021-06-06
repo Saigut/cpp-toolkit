@@ -1,0 +1,94 @@
+#include <mod_worker/mod_worker_netio.h>
+
+#include <mod_common/expect.h>
+
+using boost::asio::ip::tcp;
+using boost::asio::ip::address;
+using boost::asio::io_context;
+
+void Work_NetTcpConnect::do_my_part(io_context &io_ctx)
+{
+    boost::system::error_code ec;
+    Work_NetTcpConnect* this_obj = this;
+    if (!m_socket_to_server) {
+        m_socket_to_server = std::make_shared<tcp::socket>(io_ctx);
+    }
+    m_socket_to_server->connect(m_endpoint, ec);
+    m_socket_to_server->async_connect(m_endpoint,
+                                     [this_obj](const boost::system::error_code& ec)
+                                     {
+                                         check_ec(ec, "connect");
+                                         this_obj->consignor_add_self_back_to_main_worker();
+                                     });
+}
+
+void Work_NetTcpAccept::do_my_part(io_context &io_ctx)
+{
+    boost::system::error_code ec;
+    Work_NetTcpAccept* this_obj = this;
+    if (!m_acceptor) {
+        m_acceptor = std::make_shared<tcp::acceptor>(io_ctx);
+        tcp::acceptor::reuse_address reuse_address_option(true);
+        m_acceptor->open(m_bind_endpoint.protocol(), ec);
+        check_ec_goto(ec, fail_return, "acceptor open");
+        m_acceptor->set_option(reuse_address_option, ec);
+        check_ec_goto(ec, fail_return, "acceptor set_option");
+        m_acceptor->listen(boost::asio::socket_base::max_listen_connections, ec);
+        check_ec_goto(ec, fail_return, "acceptor listen");
+    }
+    m_acceptor->async_accept([this_obj](
+            const boost::system::error_code& ec,
+            tcp::socket peer)
+    {
+        check_ec(ec, "accept");
+        if (!ec) {
+            this_obj->m_socket_to_a_client = std::make_shared<tcp::socket>(std::move(peer));
+        }
+        this_obj->consignor_add_self_back_to_main_worker();
+    });
+
+    return;
+
+fail_return:
+    this->consignor_add_self_back_to_main_worker();
+}
+
+
+void Work_NetTcpIn::do_my_part(io_context &io_ctx)
+{
+    Work_NetTcpIn* this_obj = this;
+    m_socket->async_read_some(in_buf, [this_obj](
+            const boost::system::error_code& ec,
+            std::size_t read_b_num)
+    {
+        check_ec(ec, "read_some");
+    });
+}
+
+void Work_NetTcpOut::do_my_part(io_context &io_ctx)
+{
+    Work_NetTcpOut* this_obj = this;
+    m_socket->async_write_some(out_buf, [this_obj](
+            const boost::system::error_code& ec,
+            std::size_t write_b_num)
+    {
+        check_ec(ec, "write_some");
+        if (!ec) {
+            log_info("wrote bytes: %zu", write_b_num);
+        }
+    });
+}
+
+void Worker_NetIo::run()
+{
+    while (true) {
+        m_io_ctx.run();
+        std::this_thread::sleep_for (
+                std::chrono::nanoseconds(1));
+    }
+}
+
+int Worker_NetIo::add_work(Work_NetIo_Asio *work)
+{
+    work->do_my_part(m_io_ctx);
+}

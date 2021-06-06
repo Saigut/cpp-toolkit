@@ -17,7 +17,7 @@
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
-#include <app_im/work.h>
+#include <app_worker/app_worker.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -91,75 +91,6 @@ void test_timeout_hash_table()
 }
 
 
-#include <cstdlib>
-
-#include <boost/context/continuation.hpp>
-#include <boost/context/fiber.hpp>
-
-namespace ctx = boost::context;
-
-ctx::continuation foo( ctx::continuation && c)
-{
-    do {
-        std::cout << "foo\n";
-    } while ( ( c = c.resume() ) );
-    std::cout << "before return\n";
-    return std::move( c);
-}
-
-int ctx_main() {
-    ctx::continuation c = ctx::callcc( foo);
-    do {
-        std::cout << "bar\n";
-    } while ( ( c = c.resume() ) );
-    std::cout << "main: done" << std::endl;
-    return EXIT_SUCCESS;
-}
-
-ctx::fiber bar( ctx::fiber && f)
-{
-    do {
-        std::cout << "bar\n";
-        f = std::move( f).resume();
-    } while ( f);
-    return std::move( f);
-}
-
-int fb_main()
-{
-    ctx::fiber f{ bar };
-    do {
-        std::cout << "foo\n";
-        f = std::move( f).resume();
-    } while ( f);
-    std::cout << "main: done" << std::endl;
-    return EXIT_SUCCESS;
-}
-
-void worker2_thread(Worker* worker)
-{
-    worker->run();
-}
-
-int test_worker()
-{
-    Worker worker1{};
-    Worker_Net worker2{};
-
-    // Add work to worker1
-    Work_ImSend thing{&worker2};
-    worker1.add_work(&thing);
-
-    // Start worker2
-    std::thread other_thread(worker2_thread, &worker2);
-    std::this_thread::sleep_for(std::chrono::seconds (1));
-
-    // Start worker1
-    worker1.run();
-
-    return 0;
-}
-
 int program_main(int argc, char** argv)
 {
     int ret = 0;
@@ -178,8 +109,7 @@ int program_main(int argc, char** argv)
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
-//    ret = test_reenter();
-    ret = test_worker();
+    ret = app_worker(argc, argv);
 
     return ret;
 }
