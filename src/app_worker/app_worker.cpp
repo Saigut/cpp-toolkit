@@ -116,7 +116,7 @@ public:
         work_connect.m_socket_to_server->close();
 
         recv_buf[work_in.in_buf.size()] = 0;
-//        log_info("received:\n%s!", recv_buf);
+        log_info("received:\n%s!", recv_buf);
     };
     Worker_NetIo* m_other_worker = nullptr;
 };
@@ -137,28 +137,25 @@ int app_worker(int argc, char** argv)
     Worker worker{};
     Worker_NetIo worker_netio{};
 
-    // Add work to worker1
-    std::vector<SomeThing> works;
-
-    // Start worker2
+    // Start other_worker
     std::thread other_worker_thr(worker_thread, &worker_netio);
     std::this_thread::sleep_for(std::chrono::seconds (1));
 
     // Start main worker
     std::thread main_worker_thr(main_worker_thread, &worker);
 
+
+    // Add work to main worker
 //    SomeThing a_work{&worker_netio};
 //    worker.add_work(&a_work);
-
-    int num = 300;
-    for (int j = 0; j < 100; j++) {
-        for (int i = 0; i < num; i++) {
-            works.emplace_back(&worker_netio);
-        }
-        for (int i = 0; i < num; i++) {
-            worker.add_work(&(works.at(j*num + i)));
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds (100));
+    std::vector<SomeThing> works;
+    int i;
+    int num = 3000;
+    for (i = 0; i < num; i++) {
+        works.emplace_back(&worker_netio);
+    }
+    for (i = 0; i < num; i++) {
+        worker.add_work(&(works.at(i)));
     }
 
     while (true)  {

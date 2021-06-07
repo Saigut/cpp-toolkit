@@ -19,10 +19,11 @@ class Worker {
 public:
     virtual void run();
     virtual int add_work(Work* work);
-protected:
     int do_cur_work();
     Work* get_cur_work();
-    boost::lockfree::queue<Work*, boost::lockfree::capacity<5000>> works_q;
+protected:
+    boost::lockfree::queue<Work*, boost::lockfree::capacity<5001>> works_q;
+    std::mutex m_thread_lock;
 };
 
 #endif //CPP_TOOLKIT_MOD_WORKER_H

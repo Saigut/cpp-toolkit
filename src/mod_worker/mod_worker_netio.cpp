@@ -2,6 +2,7 @@
 
 #include <mod_common/expect.h>
 #include <asio/io_context.hpp>
+#include <asio/deadline_timer.hpp>
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::address;
@@ -84,18 +85,32 @@ int Work_NetTcpOut::do_my_part(io_context &io_ctx)
     return 0;
 }
 
+void Worker_NetIo::pop_queue(boost::posix_time::microseconds interval)
+{
+    Worker_NetIo* this_obj = this;
+    boost::asio::deadline_timer timer(m_io_ctx, interval);
+
+    auto timeout_func = [this_obj](const boost::system::error_code& ec) {
+        boost::posix_time::microseconds interval_1(1);
+        boost::posix_time::microseconds interval_0(0);
+        auto cur_work = (Work_NetIo_Asio*)this_obj->get_cur_work();
+        if (cur_work) {
+            cur_work->do_my_part(this_obj->m_io_ctx);
+            this_obj->pop_queue(interval_0);
+        } else {
+            this_obj->pop_queue(interval_1);
+        }
+    };
+    timer.expires_at(timer.expires_at() + interval);
+    timer.async_wait(timeout_func);
+}
+
 void Worker_NetIo::run()
 {
     boost::asio::io_context::work io_work(m_io_ctx);
-    /// fixme   add an io_context task to read queue
-    while (true) {
-        m_io_ctx.run();
-        std::this_thread::sleep_for (
-                std::chrono::nanoseconds(1));
-    }
-}
-
-int Worker_NetIo::add_work(Work_NetIo_Asio *work)
-{
-    return work->do_my_part(m_io_ctx);
+    boost::posix_time::microseconds interval_0(0);
+    pop_queue(interval_0);
+    m_io_ctx.run();
+    std::this_thread::sleep_for (
+            std::chrono::nanoseconds(1));
 }

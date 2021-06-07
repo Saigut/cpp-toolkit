@@ -60,12 +60,12 @@ public:
     std::shared_ptr<tcp::socket> m_socket;
 };
 
-class Worker_NetIo : Worker {
+class Worker_NetIo : public Worker {
 public:
     void run() override;
-    int add_work(Work* work) override { exit(-1); };
-    int add_work(Work_NetIo_Asio* work);
-private:
+//    int add_work(Work* work) override { exit(-1); };
+//    int add_work(Work_NetIo_Asio* work);
+    void pop_queue(boost::posix_time::microseconds interval);
     io_context m_io_ctx;
 };
 
