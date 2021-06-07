@@ -45,6 +45,8 @@ void Work::do_work()
 
 void Work::add_self_back_to_main_worker()
 {
-    m_main_worker->add_work(this);
+    if (m_main_worker) {
+        m_main_worker->add_work(this);
+    }
 }
 

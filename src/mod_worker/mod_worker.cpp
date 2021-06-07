@@ -15,7 +15,10 @@ void Worker::run()
 
 int Worker::add_work(Work* work)
 {
-    works_q.push(work);
+    if (!works_q.push(work)) {
+        log_info("works_q.push failed!");
+        return -1;
+    }
     work->set_main_worker(this);
     return 0;
 }

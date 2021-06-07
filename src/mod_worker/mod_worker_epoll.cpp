@@ -1,4 +1,5 @@
-#ifdef _CPPT_OS_LINUX
+//#ifdef _CPPT_OS_LINUX
+#if 0
 
 #include "worker_epoll.h"
 

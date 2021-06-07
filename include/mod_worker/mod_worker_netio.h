@@ -16,7 +16,7 @@ public:
     {}
     void do_my_part() override { exit(-1);};
     void do_work() override {};
-    virtual void do_my_part(io_context& io_ctx) = 0;
+    virtual int do_my_part(io_context& io_ctx) = 0;
 };
 
 class Work_NetTcpConnect : public Work_NetIo_Asio {
@@ -24,9 +24,9 @@ public:
     explicit Work_NetTcpConnect(Work* consignor)
             : Work_NetIo_Asio(consignor)
     {}
-    void do_my_part(io_context& io_ctx) override;
+    int do_my_part(io_context& io_ctx) override;
     tcp::endpoint m_endpoint;
-    std::shared_ptr<tcp::socket> m_socket_to_server;
+    std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
 };
 
 class Work_NetTcpAccept : public Work_NetIo_Asio {
@@ -34,7 +34,7 @@ public:
     explicit Work_NetTcpAccept(Work* consignor)
             : Work_NetIo_Asio(consignor)
     {}
-    void do_my_part(io_context& io_ctx) override;
+    int do_my_part(io_context& io_ctx) override;
     tcp::endpoint m_bind_endpoint;
     std::shared_ptr<tcp::acceptor> m_acceptor;
     std::shared_ptr<tcp::socket> m_socket_to_a_client;
@@ -45,7 +45,7 @@ public:
     explicit Work_NetTcpIn(Work* consignor)
             : Work_NetIo_Asio(consignor)
     {}
-    void do_my_part(io_context& io_ctx) override;
+    int do_my_part(io_context& io_ctx) override;
     boost::asio::mutable_buffer in_buf;
     std::shared_ptr<tcp::socket> m_socket;
 };
@@ -55,7 +55,7 @@ public:
     explicit Work_NetTcpOut(Work* consignor)
             : Work_NetIo_Asio(consignor)
     {}
-    void do_my_part(io_context& io_ctx) override;
+    int do_my_part(io_context& io_ctx) override;
     boost::asio::mutable_buffer out_buf;
     std::shared_ptr<tcp::socket> m_socket;
 };

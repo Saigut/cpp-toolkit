@@ -1,7 +1,8 @@
 #ifndef CPP_TOOLKIT_WORKER_EPOLL_H
 #define CPP_TOOLKIT_WORKER_EPOLL_H
 
-#ifdef _CPPT_OS_LINUX
+//#ifdef _CPPT_OS_LINUX
+#if 0
 
 class Worker_Net : public Worker {
 public:
