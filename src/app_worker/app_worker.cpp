@@ -81,44 +81,77 @@ public:
             : Work(consignor)
     {}
     explicit SomeThing(Worker_NetIo* other_worker)
-            : m_other_worker(other_worker)
+            : m_net_io_worker(other_worker)
     {}
-    void do_work() override
+
+    int netio_connect(const std::string addr_str, uint16_t port)
     {
         boost::system::error_code ec;
-
         boost::asio::ip::address addr = boost::asio::ip::make_address("127.0.0.1", ec);
-        check_ec_ret(ec, "make_address");
+        check_ec_ret_val(ec, -1, "make_address");
         tcp::endpoint endpoint(addr, 80);
 
         Work_NetTcpConnect work_connect(this);
         work_connect.m_endpoint = endpoint;
-        expect_ret(0 == m_other_worker->add_work(&work_connect));
-        expect_ret(m_wp);
+        expect_ret_val(0 == m_net_io_worker->add_work(&work_connect), -1);
+        expect_ret_val(m_wp, -1);
         m_wp = m_wp.resume();
+        m_socket_to_server = work_connect.m_socket_to_server;
+        return 0;
+    }
 
-        char send_buf[4096];
-        snprintf(send_buf, sizeof(send_buf), "GET / HTTP/1.1\r\n\r\n");
+    int netio_write(char* str_buf, size_t str_len)
+    {
         Work_NetTcpOut work_out(this);
-        work_out.out_buf = boost::asio::mutable_buffer(send_buf, std::strlen(send_buf));
-        work_out.m_socket = work_connect.m_socket_to_server;
-        expect_ret(0 == m_other_worker->add_work(&work_out));
-        expect_ret(m_wp);
+        work_out.out_buf = boost::asio::mutable_buffer(str_buf, str_len);
+        work_out.m_socket = m_socket_to_server;
+        expect_ret_val(0 == m_net_io_worker->add_work(&work_out), -1);
+        expect_ret_val(m_wp, -1);
         m_wp = m_wp.resume();
+        return 0;
+    }
 
-        char recv_buf[4096];
+    int netio_read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz)
+    {
         Work_NetTcpIn work_in(this);
-        work_in.in_buf = boost::asio::mutable_buffer(recv_buf, sizeof(recv_buf));
-        work_in.m_socket = work_connect.m_socket_to_server;
-        expect_ret(0 == m_other_worker->add_work(&work_in));
-        expect_ret(m_wp);
+        work_in.in_buf = boost::asio::mutable_buffer(recv_buf, buf_sz);
+        work_in.m_socket = m_socket_to_server;
+        expect_ret_val(0 == m_net_io_worker->add_work(&work_in), -1);
+        expect_ret_val(m_wp, -1);
         m_wp = m_wp.resume();
-        work_connect.m_socket_to_server->close();
+        recv_data_sz = work_in.in_buf.size();
+        return 0;
+    }
 
-        recv_buf[work_in.in_buf.size()] = 0;
-        log_info("received:\n%s!", recv_buf);
+    void do_work() override
+    {
+        // Connect
+        expect_ret(0 == netio_connect("127.0.0.1", 80));
+
+        for (unsigned i = 0; i < 100; i++) {
+            char send_buf[4096];
+            snprintf(send_buf, sizeof(send_buf), "GET / HTTP/1.1\r\n"
+                                                 "Host: 127.0.0.1\r\n"
+                                                 "Connection: keep-alive\r\n"
+                                                 "User-Agent: curl/7.58.0\r\n"
+                                                 "Accept: */*\r\n\r\n");
+            // Send
+            expect_ret(0 == netio_write(send_buf, std::strlen(send_buf)));
+
+            // Recv
+            char recv_buf[4096] = { 0 };
+            size_t recv_data_sz = 0;
+            expect_ret(0 == netio_read(recv_buf, sizeof(recv_buf), recv_data_sz));
+
+            recv_buf[recv_data_sz < sizeof(recv_buf) ? recv_data_sz : sizeof(recv_buf) - 1] = 0;
+//            log_info("received:\n%s!", recv_buf);
+        }
+        m_socket_to_server->close();
     };
-    Worker_NetIo* m_other_worker = nullptr;
+
+private:
+    Worker_NetIo* m_net_io_worker = nullptr;
+    std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
 };
 
 
@@ -150,12 +183,13 @@ int app_worker(int argc, char** argv)
 //    worker.add_work(&a_work);
     std::vector<SomeThing> works;
     int i;
-    int num = 3000;
+    int num = 500;
     for (i = 0; i < num; i++) {
         works.emplace_back(&worker_netio);
     }
     for (i = 0; i < num; i++) {
         worker.add_work(&(works.at(i)));
+//        std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
 
     while (true)  {
