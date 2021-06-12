@@ -60,6 +60,9 @@ macro(compiler_set_compilation_options)
     if (OS_WINDOWS)
         # _WIN32_WINNT for boost
         add_definitions(-D_WIN32_WINNT=0x0601)
+        add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+        add_definitions(-DJSON_C_HAVE_INTTYPES_H=1) # for json-c
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
     endif()
     if (OS_WINDOWS AND GCC)
         set(PLATFORM_LINK_LIB ${PLATFORM_LINK_LIB} ws2_32)
@@ -72,5 +75,4 @@ macro(compiler_set_compilation_options)
     ## Standard
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_CXX_STANDARD 11)
-
 endmacro()

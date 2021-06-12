@@ -119,7 +119,7 @@ void cpt_hash_table<K, V>::timeout_update() {
     // update timing wheel, time unit: ms
     timeouts_update(this->m_to, std::time(nullptr) * 1000);
     struct timeout* to ;
-    while (to = timeouts_get(this->m_to)) {
+    while ((to = timeouts_get(this->m_to))) {
         this->table.erase(*((K*)(to->callback.arg)));
         free(to->callback.arg);
         free(to);
