@@ -11,10 +11,6 @@ using boost::asio::io_context;
 int Work_NetTcpConnect::do_my_part(io_context &io_ctx)
 {
     Work_NetTcpConnect* this_obj = this;
-    if (!m_socket_to_server) {
-        m_socket_to_server = std::make_shared<tcp::socket>(io_ctx);
-        expect_ret_val(m_socket_to_server, -1);
-    }
     m_socket_to_server->async_connect(m_endpoint,
                                      [this_obj](const boost::system::error_code& ec)
                                      {
@@ -117,4 +113,11 @@ void Worker_NetIo::run()
 int Worker_NetIo::add_work(Work_NetIo_Asio *work)
 {
     return work->do_my_part(m_io_ctx);
+}
+
+void Worker_NetIo::wait_worker_started()
+{
+    while (m_io_ctx.stopped()) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
 }

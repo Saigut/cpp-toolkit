@@ -17,6 +17,23 @@ class Work_NetOut;
 #include "mod_worker.h"
 
 
+class WorkingPoint {
+public:
+    WorkingPoint() = default;
+    bool yield() {
+        if (m_wp) {
+            m_wp = m_wp.resume();
+            return true;
+        } else {
+            return false;
+        }
+    }
+    void set_wp(context::continuation&& wp) {
+        m_wp = std::move(wp);
+    }
+    context::continuation m_wp;
+};
+
 class Work {
 public:
     Work() = default;
@@ -30,7 +47,7 @@ protected:
     void add_self_back_to_main_worker();
 
     Worker* m_main_worker = nullptr;
-    context::continuation m_wp;     // working point
+    WorkingPoint m_wp;
 
     Work* m_consignor = nullptr;
 

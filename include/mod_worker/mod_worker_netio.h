@@ -21,9 +21,14 @@ public:
 
 class Work_NetTcpConnect : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpConnect(Work* consignor)
-            : Work_NetIo_Asio(consignor)
-    {}
+    explicit Work_NetTcpConnect(Work* consignor,
+                                std::shared_ptr<tcp::socket> socket_to_server,
+                                const std::string& addr_str, uint16_t port)
+            : Work_NetIo_Asio(consignor), m_socket_to_server(socket_to_server)
+    {
+        boost::asio::ip::address addr = boost::asio::ip::make_address(addr_str);
+        m_endpoint = tcp::endpoint(addr, port);
+    }
     int do_my_part(io_context& io_ctx) override;
     tcp::endpoint m_endpoint;
     std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
@@ -42,8 +47,9 @@ public:
 
 class Work_NetTcpIn : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpIn(Work* consignor)
-            : Work_NetIo_Asio(consignor)
+    explicit Work_NetTcpIn(Work* consignor,
+                           std::shared_ptr<tcp::socket> socket, char* buf, size_t buf_sz)
+            : Work_NetIo_Asio(consignor), m_socket(socket), in_buf(buf, buf_sz)
     {}
     int do_my_part(io_context& io_ctx) override;
     boost::asio::mutable_buffer in_buf;
@@ -52,8 +58,9 @@ public:
 
 class Work_NetTcpOut : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpOut(Work* consignor)
-            : Work_NetIo_Asio(consignor)
+    explicit Work_NetTcpOut(Work* consignor,
+                            std::shared_ptr<tcp::socket> socket, char* buf, size_t buf_sz)
+            : Work_NetIo_Asio(consignor), m_socket(socket), out_buf(buf, buf_sz)
     {}
     int do_my_part(io_context& io_ctx) override;
     boost::asio::mutable_buffer out_buf;
@@ -66,6 +73,7 @@ public:
     int add_work(Work* work) override { exit(-1); };
     int add_work(Work_NetIo_Asio* work);
 //    void pop_queue(boost::posix_time::microseconds interval);
+    void wait_worker_started() override;
     io_context m_io_ctx;
 };
 

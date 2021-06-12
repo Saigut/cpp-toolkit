@@ -12,17 +12,16 @@ void Work::do_my_part()
     if (!began) {
         began = true;
         class Work* t_this = this;
-        m_wp = context::callcc([t_this](context::continuation && c){
-            t_this->m_wp = std::move(c);
-            t_this->do_work();
-            t_this->stopped = true;
-            t_this->consignor_add_self_back_to_main_worker();
-            return std::move(t_this->m_wp);
-        });
+        m_wp.set_wp(context::callcc(
+                [t_this](context::continuation && c) {
+                    t_this->m_wp.set_wp(std::move(c));
+                    t_this->do_work();
+                    t_this->stopped = true;
+                    t_this->consignor_add_self_back_to_main_worker();
+                    return std::move(t_this->m_wp.m_wp);
+                }));
     } else {
-        if (m_wp) {
-            m_wp = m_wp.resume();
-        }
+        m_wp.yield();
     }
 }
 
