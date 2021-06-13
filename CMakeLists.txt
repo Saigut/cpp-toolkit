@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 project(cpp-toolkit C CXX)
 
 # Include
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+set(GV_other_dir z_other)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${GV_other_dir}/cmake")
 include(common_var)
 include(helper)
 include(compiler)
@@ -22,24 +23,24 @@ macro(setup_build_environment)
     ### set_product_options()
 
     # Paths
-    set(GV_external_dir external/${CMAKE_CXX_COMPILER_ID})
+    set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
     include_directories(
         include
-        gen/grpc/cpp
+        ${GV_other_dir}/gen/grpc/cpp
         ${GV_external_dir}/include
         ${GV_external_dir}/include/boost
     )
     ## Libraries
     link_directories(
         ${GV_external_dir}/lib
-        gen/lib
+        ${GV_other_dir}/gen/lib
     )
 endmacro()
 
 macro(setup_directries)
-    set(V_dir_gen ${PROJECT_SOURCE_DIR}/gen)
+    set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_other_dir}/gen)
     set(V_dir_gen_grpc ${V_dir_gen}/grpc/cpp)
     set(V_dir_gen_lib ${V_dir_gen}/lib)
     add_custom_command(
@@ -62,7 +63,7 @@ endmacro()
 
 macro(setup_grpc_target)
     # Target T_gen_grpc, for every proto file, generate code to gen/pb/
-    set(V_dir_grpc_proto_r code_to_gen/protos)
+    set(V_dir_grpc_proto_r ${GV_other_dir}/code_to_gen/protos)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 
@@ -105,8 +106,8 @@ macro(setup_grpc_target)
     set(GV_gen_grpc_cpp_lib_bname gen_grpc_cpp_src)
     add_library(${GV_gen_grpc_cpp_lib_bname} STATIC ${GV_gen_cpp_grpc_srcs})
     add_dependencies(${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src)
-    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/gen/lib")
-    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/gen/lib")
+    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
+    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
 endmacro()
 
 macro(setup_targets)
@@ -138,7 +139,7 @@ macro(setup_targets)
         get_filename_component(tmp_name ${one_dir} NAME)
         file(GLOB GV_${tmp_name}_src "${one_dir}/*.cpp" "${one_dir}/*.c")
         add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
-        set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/gen/lib")
+        set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
         add_dependencies(${tmp_name} GT_gen_grpc_src GT_dir_gen_lib)
     endforeach()
 

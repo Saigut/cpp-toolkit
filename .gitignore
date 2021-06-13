@@ -1,9 +1,9 @@
 .idea/
 cmake-build-*
 
-build/
-external/
-!external/CMakeLists.txt
-package/
-gen/
-venv/
+build/*
+z_other/external/*
+!z_other/external/CMakeLists.txt
+z_other/package/*
+z_other/gen/*
+z_other/venv/*
