@@ -78,8 +78,8 @@ int test_worker()
 
 class SomeThing : public Work {
 public:
-    explicit SomeThing(Work* consignor)
-            : Work(consignor)
+    explicit SomeThing(Work* consignor_work)
+            : Work(consignor_work)
     {}
     explicit SomeThing(Worker_NetIo* other_worker)
             : m_net_io_worker(other_worker)

@@ -37,11 +37,11 @@ public:
 class Work {
 public:
     Work() = default;
-    explicit Work(Work* consignor) : m_consignor(consignor)
+    explicit Work(Work* consignor_work) : m_consignor_work(consignor_work)
     {}
     virtual void do_my_part();
     void set_main_worker(Worker* main_worker);
-    void consignor_add_self_back_to_main_worker();
+    void finish_handler();
 protected:
     virtual void do_work();
     void add_self_back_to_main_worker();
@@ -49,7 +49,7 @@ protected:
     Worker* m_main_worker = nullptr;
     WorkingPoint m_wp;
 
-    Work* m_consignor = nullptr;
+    Work* m_consignor_work = nullptr;
 
     bool began = false;
     bool stopped = false;

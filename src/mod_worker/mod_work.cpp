@@ -17,7 +17,7 @@ void Work::do_my_part()
                     t_this->m_wp.set_wp(std::move(c));
                     t_this->do_work();
                     t_this->stopped = true;
-                    t_this->consignor_add_self_back_to_main_worker();
+                    t_this->finish_handler();
                     return std::move(t_this->m_wp.m_wp);
                 }));
     } else {
@@ -30,11 +30,11 @@ void Work::set_main_worker(Worker* main_worker)
     m_main_worker = main_worker;
 }
 
-void Work::consignor_add_self_back_to_main_worker()
+void Work::finish_handler()
 {
-    if (m_consignor) {
-        m_consignor->add_self_back_to_main_worker();
-        m_consignor = nullptr;
+    if (m_consignor_work) {
+        m_consignor_work->add_self_back_to_main_worker();
+        m_consignor_work = nullptr;
     }
 }
 

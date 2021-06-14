@@ -15,7 +15,7 @@ int Work_NetTcpConnect::do_my_part(io_context &io_ctx)
                                      [this_obj](const boost::system::error_code& ec)
                                      {
                                          check_ec(ec, "connect");
-                                         this_obj->consignor_add_self_back_to_main_worker();
+                                         this_obj->finish_handler();
                                      });
     return 0;
 }
@@ -42,7 +42,7 @@ int Work_NetTcpAccept::do_my_part(io_context &io_ctx)
         if (!ec) {
             this_obj->m_socket_to_a_client = std::make_shared<tcp::socket>(std::move(peer));
         }
-        this_obj->consignor_add_self_back_to_main_worker();
+        this_obj->finish_handler();
     });
 
     return 0;
@@ -60,7 +60,7 @@ int Work_NetTcpIn::do_my_part(io_context &io_ctx)
             std::size_t read_b_num)
     {
         check_ec(ec, "read_some");
-        this_obj->consignor_add_self_back_to_main_worker();
+        this_obj->finish_handler();
     });
     return 0;
 }
@@ -77,8 +77,23 @@ int Work_NetTcpOut::do_my_part(io_context &io_ctx)
 //            log_info("wrote bytes: %zu", write_b_num);
             printf("wrote bytes: %zu\n", write_b_num);
         }
-        this_obj->consignor_add_self_back_to_main_worker();
+        this_obj->finish_handler();
     });
+    return 0;
+}
+
+int Work_TimerWaitUntil::do_my_part(io_context &io_ctx)
+{
+    return 0;
+}
+
+int Work_TimerWaitFor::do_my_part(io_context &io_ctx)
+{
+    return 0;
+}
+
+int Work_TimerCancel::do_my_part(io_context &io_ctx)
+{
     return 0;
 }
 

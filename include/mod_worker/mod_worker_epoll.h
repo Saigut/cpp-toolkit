@@ -30,8 +30,8 @@ private:
 class Work_GetStdin : public Work {
 public:
     Work_GetStdin() = default;
-    explicit Work_GetStdin(Work* consignor)
-            : Work(consignor)
+    explicit Work_GetStdin(Work* consignor_work)
+            : Work(consignor_work)
     {}
     void do_my_part() override;
     uint8_t* data_buf = nullptr;
@@ -40,8 +40,8 @@ public:
 class Work_NetIn : public Work {
 public:
     Work_NetIn() = default;
-    explicit Work_NetIn(Work* consignor)
-            : Work(consignor)
+    explicit Work_NetIn(Work* consignor_work)
+            : Work(consignor_work)
     {}
     void do_my_part() override;
     buf_wrap in_buf = {nullptr, 0};
@@ -51,8 +51,8 @@ public:
 class Work_NetOut : public Work {
 public:
     Work_NetOut() = default;
-    explicit Work_NetOut(Work* consignor)
-            : Work(consignor)
+    explicit Work_NetOut(Work* consignor_work)
+            : Work(consignor_work)
     {}
     void do_my_part() override;
     buf_wrap out_buf = {nullptr, 0};
