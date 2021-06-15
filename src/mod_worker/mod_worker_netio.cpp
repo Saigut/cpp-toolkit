@@ -8,19 +8,20 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::address;
 using boost::asio::io_context;
 
-int Work_NetTcpConnect::do_my_part(io_context &io_ctx)
+int Work_NetTcpConnect::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     Work_NetTcpConnect* this_obj = this;
     m_socket_to_server->async_connect(m_endpoint,
                                      [this_obj](const boost::system::error_code& ec)
                                      {
+                                         int ret = ec ? -1 : 0;
                                          check_ec(ec, "connect");
-                                         this_obj->finish_handler();
+                                         this_obj->finish_handler(this_obj, ret, true);
                                      });
     return 0;
 }
 
-int Work_NetTcpAccept::do_my_part(io_context &io_ctx)
+int Work_NetTcpAccept::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     boost::system::error_code ec;
     Work_NetTcpAccept* this_obj = this;
@@ -38,11 +39,12 @@ int Work_NetTcpAccept::do_my_part(io_context &io_ctx)
             const boost::system::error_code& ec,
             tcp::socket peer)
     {
+        int ret = ec ? -1 : 0;
         check_ec(ec, "accept");
         if (!ec) {
             this_obj->m_socket_to_a_client = std::make_shared<tcp::socket>(std::move(peer));
         }
-        this_obj->finish_handler();
+        this_obj->finish_handler(this_obj, ret, true);
     });
 
     return 0;
@@ -52,47 +54,49 @@ fail_return:
 }
 
 
-int Work_NetTcpIn::do_my_part(io_context &io_ctx)
+int Work_NetTcpIn::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     Work_NetTcpIn* this_obj = this;
     m_socket->async_read_some(in_buf, [this_obj](
             const boost::system::error_code& ec,
             std::size_t read_b_num)
     {
+        int ret = ec ? -1 : 0;
         check_ec(ec, "read_some");
-        this_obj->finish_handler();
+        this_obj->finish_handler(this_obj, ret, true);
     });
     return 0;
 }
 
-int Work_NetTcpOut::do_my_part(io_context &io_ctx)
+int Work_NetTcpOut::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     Work_NetTcpOut* this_obj = this;
     m_socket->async_write_some(out_buf, [this_obj](
             const boost::system::error_code& ec,
             std::size_t write_b_num)
     {
+        int ret = ec ? -1 : 0;
         check_ec(ec, "write_some");
         if (!ec) {
 //            log_info("wrote bytes: %zu", write_b_num);
             printf("wrote bytes: %zu\n", write_b_num);
         }
-        this_obj->finish_handler();
+        this_obj->finish_handler(this_obj, ret, true);
     });
     return 0;
 }
 
-int Work_TimerWaitUntil::do_my_part(io_context &io_ctx)
+int Work_TimerWaitUntil::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     return 0;
 }
 
-int Work_TimerWaitFor::do_my_part(io_context &io_ctx)
+int Work_TimerWaitFor::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     return 0;
 }
 
-int Work_TimerCancel::do_my_part(io_context &io_ctx)
+int Work_TimerCancel::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
 {
     return 0;
 }
@@ -125,11 +129,12 @@ void Worker_NetIo::run()
     m_io_ctx.run();
 }
 
-int Worker_NetIo::add_work(Work_NetIo_Asio *work)
+int Worker_NetIo::add_work(Work_NetIo_Asio_Wrap *work)
 {
-    return work->do_my_part(m_io_ctx);
+    int ret = work->m_work_asio->do_my_part(m_io_ctx, work);
+    delete work;
+    return ret;
 }
-
 void Worker_NetIo::wait_worker_started()
 {
     while (m_io_ctx.stopped()) {

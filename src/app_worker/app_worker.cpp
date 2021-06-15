@@ -139,13 +139,17 @@ int app_worker(int argc, char** argv)
     // Add work to main worker
     worker_net_io.wait_worker_started();
     std::vector<SomeThing> works;
+    std::vector<WorkWrap*> work_wraps;
     int i;
     int num = 500;
     for (i = 0; i < num; i++) {
         works.emplace_back(&worker_net_io);
     }
     for (i = 0; i < num; i++) {
-        worker.add_work(&(works.at(i)));
+        work_wraps.emplace_back(new WorkWrap(&(works.at(i))));
+    }
+    for (i = 0; i < num; i++) {
+        worker.add_work(work_wraps.at(i));
     }
 
     while (true)  {

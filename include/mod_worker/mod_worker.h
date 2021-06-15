@@ -13,17 +13,18 @@
 
 
 class Worker;
+class WorkWrap;
 #include "mod_work.h"
 
 class Worker {
 public:
     virtual void run();
-    virtual int add_work(Work* work);
+    virtual int add_work(WorkWrap* work);
     virtual void wait_worker_started() {};
 protected:
     int do_cur_work();
-    Work* get_cur_work();
-    boost::lockfree::queue<Work*, boost::lockfree::capacity<5001>> works_q;
+    WorkWrap* get_cur_work();
+    boost::lockfree::queue<WorkWrap*, boost::lockfree::capacity<5001>> works_q;
     std::mutex m_thread_lock;
 };
 
