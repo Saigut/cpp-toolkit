@@ -90,7 +90,7 @@ void im_server::grpc_send()
                 ::cpt_im::ClientIntfRes res;
                 Status status = stub->ClientIntf(&context, req, &res);
             } else {
-                log_error("Don't know listen port of user: %llu",
+                log_error("Don't know listen port of user: %lu",
                           req.chat_msg().dst_user_id());
             }
         } else {
@@ -120,7 +120,7 @@ int im_server::deal_with_msg(const cpt_im::ServerIntfReq &req) {
             req.client_listen_port());
     switch (req.msg_type()) {
         case ::cpt_im::emServerMsgType_Chat: {
-            printf("From %llu to %llu, msg > %s\n",
+            printf("From %lu to %lu, msg > %s\n",
                      req.chat_msg().src_user_id(),
                      req.chat_msg().dst_user_id(),
                      req.chat_msg().msg_text().c_str());
