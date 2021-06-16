@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <thread>
 #include <ctime>
 
@@ -155,7 +156,7 @@ int im_client::send_msg(const std::string& msg) {
 int im_client::deal_with_msg(const ::cpt_im::ClientIntfReq& req) {
     switch (req.msg_type()) {
         case ::cpt_im::emClientMsgType_Chat: {
-            printf("\nFrom %lu to %lu, msg > %s\n",
+            printf("\nFrom %" PRIu64 " to %" PRIu64 ", msg > %s\n",
                      req.chat_msg().src_user_id(),
                      req.chat_msg().dst_user_id(),
                      req.chat_msg().msg_text().c_str());
