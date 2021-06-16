@@ -78,7 +78,7 @@ int test_worker()
 
 class SomeThing : public Work {
 public:
-    explicit SomeThing(Work* consignor_work)
+    explicit SomeThing(std::shared_ptr<Work> consignor_work)
             : Work(consignor_work)
     {}
     explicit SomeThing(Worker_NetIo* other_worker)
@@ -88,11 +88,11 @@ public:
     void do_work() override
     {
         // Connect
-        WorkUtils::TcpSocketConnector_Asio tcp_socket(m_net_io_worker, this, m_wp);
+        WorkUtils::TcpSocketConnector_Asio tcp_socket(m_net_io_worker, shared_from_this(), m_wp);
         expect_ret(0 == tcp_socket.connect("127.0.0.1", 80));
 
         unsigned i;
-        for (i = 0; i < 100; i++) {
+        for (i = 0; i < 10; i++) {
             char send_buf[4096];
             snprintf(send_buf, sizeof(send_buf), "GET / HTTP/1.1\r\n"
                                                  "Host: 127.0.0.1\r\n"
@@ -141,18 +141,14 @@ int app_worker(int argc, char** argv)
 
     // Add work to main worker
     worker_net_io.wait_worker_started();
-    std::vector<SomeThing> works;
-    std::vector<WorkWrap> work_wraps;
+    std::vector<std::shared_ptr<WorkWrap>> works;
     int i;
-    int num = 100;
+    int num = 500;
+//    for (i = 0; i < num; i++) {
+//        works.emplace_back(&worker_net_io);
+//    }
     for (i = 0; i < num; i++) {
-        works.emplace_back(&worker_net_io);
-    }
-    for (i = 0; i < num; i++) {
-        work_wraps.emplace_back(&(works.at(i)));
-    }
-    for (i = 0; i < num; i++) {
-        worker.add_work(work_wraps.at(i));
+        worker.add_work(std::make_shared<WorkWrap>(std::make_shared<SomeThing>(&worker_net_io), nullptr));
     }
 
     while (true)  {

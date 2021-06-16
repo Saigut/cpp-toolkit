@@ -10,17 +10,17 @@
 namespace WorkUtils {
     class WorkUtils {
     public:
-        explicit WorkUtils(Worker* worker, Work* consignor_work, WorkingPoint& wp)
+        explicit WorkUtils(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
         : m_worker(worker), m_consignor_work(consignor_work), m_wp(wp) {}
     protected:
         WorkingPoint& m_wp;
-        Work* m_consignor_work = nullptr;
+        std::shared_ptr<Work> m_consignor_work = nullptr;
         Worker* m_worker = nullptr;
     };
 
     class TcpSocketConnector : public WorkUtils {
     public:
-        explicit TcpSocketConnector(Worker* worker, Work* consignor_work, WorkingPoint& wp)
+        explicit TcpSocketConnector(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
         : WorkUtils(worker, consignor_work, wp) {}
         virtual int connect(const std::string& addr_str, uint16_t port) = 0;
         virtual int write(char* str_buf, size_t str_len) = 0;
@@ -28,7 +28,7 @@ namespace WorkUtils {
     };
     class TcpSocketConnector_Asio : public TcpSocketConnector {
     public:
-        explicit TcpSocketConnector_Asio(Worker_NetIo* net_io_worker, Work* consignor_work, WorkingPoint& wp)
+        explicit TcpSocketConnector_Asio(Worker_NetIo* net_io_worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
         : TcpSocketConnector(net_io_worker, consignor_work, wp), m_net_io_worker(net_io_worker) {
             m_socket_to_server = std::make_shared<tcp::socket>(net_io_worker->m_io_ctx);
         }
@@ -43,7 +43,7 @@ namespace WorkUtils {
 
     class Timer : public WorkUtils {
     public:
-        explicit Timer(Worker* worker, Work* consignor_work, WorkingPoint& wp)
+        explicit Timer(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
         : WorkUtils(worker, consignor_work, wp) {}
         virtual int wait_until(unsigned ts_ms) = 0;
         virtual int wait_for(unsigned ts_ms) = 0;
@@ -51,7 +51,7 @@ namespace WorkUtils {
     };
     class Timer_Asio : public Timer {
     public:
-        explicit Timer_Asio(Worker_NetIo* worker, Work* consignor_work, WorkingPoint& wp)
+        explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
         : Timer(worker, consignor_work, wp), m_net_io_worker(worker) {
             m_timer = std::make_shared<boost::asio::deadline_timer>(worker->m_io_ctx);
         }

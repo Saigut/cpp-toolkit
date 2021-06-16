@@ -11,14 +11,14 @@ void Work::do_my_part(int yield_param)
     }
     if (!began) {
         began = true;
-        class Work* t_this = this;
+        std::shared_ptr<Work> cur_work = shared_from_this();
         m_wp.set_wp(context::callcc(
-                [t_this](context::continuation && c) {
-                    t_this->m_wp.set_wp(std::move(c));
-                    t_this->do_work();
-                    t_this->stopped = true;
-                    t_this->finish_handler(t_this, 0, true);
-                    return std::move(t_this->m_wp.m_wp);
+                [cur_work](context::continuation && c) {
+                    cur_work->m_wp.set_wp(std::move(c));
+                    cur_work->do_work();
+                    cur_work->stopped = true;
+                    cur_work->finish_handler();
+                    return std::move(cur_work->m_wp.m_wp);
                 }));
     } else {
         m_wp.yield(yield_param);
@@ -30,10 +30,10 @@ void Work::set_main_worker(Worker* main_worker)
     m_main_worker = main_worker;
 }
 
-void Work::finish_handler(Work* sub_work, int sub_work_ret, bool ret_by_sub_work)
+void Work::finish_handler()
 {
     if (m_consignor_work) {
-        m_consignor_work->add_self_back_to_main_worker(sub_work, sub_work_ret, ret_by_sub_work);
+        m_consignor_work->add_self_back_to_main_worker(shared_from_this());
         m_consignor_work = nullptr;
     }
 }
@@ -42,10 +42,10 @@ void Work::do_work()
 {
 }
 
-void Work::add_self_back_to_main_worker(Work* sub_work, int sub_work_ret, bool ret_by_sub_work)
+void Work::add_self_back_to_main_worker(std::shared_ptr<Work> sub_work)
 {
     if (m_main_worker) {
-        WorkWrap work_connect_wrap(this, sub_work, sub_work_ret, ret_by_sub_work);
-        m_main_worker->add_work(work_connect_wrap);
+        m_main_worker->add_work(std::make_shared<WorkWrap>(shared_from_this(), sub_work));
     }
 }
+
