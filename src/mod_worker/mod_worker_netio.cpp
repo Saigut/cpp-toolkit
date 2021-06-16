@@ -88,16 +88,31 @@ int Work_NetTcpOut::do_my_part(io_context &io_ctx)
 
 int Work_TimerWaitUntil::do_my_part(io_context &io_ctx)
 {
+    std::shared_ptr<Work> this_obj = shared_from_this();
+    m_timer->async_wait([this_obj](const boost::system::error_code& ec)
+                        {
+//                            check_ec(ec, "timer async_wait");
+                            this_obj->m_my_finish_ret_val = 1;
+                            this_obj->finish_handler();
+                        });
     return 0;
 }
 
 int Work_TimerWaitFor::do_my_part(io_context &io_ctx)
 {
+    std::shared_ptr<Work> this_obj = shared_from_this();
+    m_timer->async_wait([this_obj](const boost::system::error_code& ec)
+                        {
+//                            check_ec(ec, "timer async_wait");
+                            this_obj->m_my_finish_ret_val = 1;
+                            this_obj->finish_handler();
+                        });
     return 0;
 }
 
 int Work_TimerCancel::do_my_part(io_context &io_ctx)
 {
+    m_timer->cancel();
     return 0;
 }
 

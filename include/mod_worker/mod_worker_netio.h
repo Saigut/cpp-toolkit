@@ -85,7 +85,6 @@ public:
     : Work_NetIo_Asio(consignor_work), m_timer(timer) {}
     int do_my_part(io_context& io_ctx) override;
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
-
 };
 
 class Work_TimerWaitFor : public Work_NetIo_Asio {
