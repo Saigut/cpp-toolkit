@@ -4,7 +4,7 @@
 /*
  * class Work
  */
-void Work::do_my_part()
+void Work::do_my_part(int yield_param)
 {
     if (stopped) {
         return;
@@ -21,7 +21,7 @@ void Work::do_my_part()
                     return std::move(t_this->m_wp.m_wp);
                 }));
     } else {
-        m_wp.yield();
+        m_wp.yield(yield_param);
     }
 }
 
@@ -45,7 +45,7 @@ void Work::do_work()
 void Work::add_self_back_to_main_worker(Work* sub_work, int sub_work_ret, bool ret_by_sub_work)
 {
     if (m_main_worker) {
-        auto work_connect_wrap = new WorkWrap(this, sub_work, sub_work_ret, ret_by_sub_work);
+        WorkWrap work_connect_wrap(this, sub_work, sub_work_ret, ret_by_sub_work);
         m_main_worker->add_work(work_connect_wrap);
     }
 }

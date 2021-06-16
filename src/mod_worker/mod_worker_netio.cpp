@@ -8,7 +8,7 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::address;
 using boost::asio::io_context;
 
-int Work_NetTcpConnect::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_NetTcpConnect::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     Work_NetTcpConnect* this_obj = this;
     m_socket_to_server->async_connect(m_endpoint,
@@ -21,7 +21,7 @@ int Work_NetTcpConnect::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* wor
     return 0;
 }
 
-int Work_NetTcpAccept::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_NetTcpAccept::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     boost::system::error_code ec;
     Work_NetTcpAccept* this_obj = this;
@@ -54,7 +54,7 @@ fail_return:
 }
 
 
-int Work_NetTcpIn::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_NetTcpIn::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     Work_NetTcpIn* this_obj = this;
     m_socket->async_read_some(in_buf, [this_obj](
@@ -68,7 +68,7 @@ int Work_NetTcpIn::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wra
     return 0;
 }
 
-int Work_NetTcpOut::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_NetTcpOut::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     Work_NetTcpOut* this_obj = this;
     m_socket->async_write_some(out_buf, [this_obj](
@@ -79,24 +79,24 @@ int Work_NetTcpOut::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wr
         check_ec(ec, "write_some");
         if (!ec) {
 //            log_info("wrote bytes: %zu", write_b_num);
-            printf("wrote bytes: %zu\n", write_b_num);
+//            printf("wrote bytes: %zu\n", write_b_num);
         }
         this_obj->finish_handler(this_obj, ret, true);
     });
     return 0;
 }
 
-int Work_TimerWaitUntil::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_TimerWaitUntil::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     return 0;
 }
 
-int Work_TimerWaitFor::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_TimerWaitFor::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     return 0;
 }
 
-int Work_TimerCancel::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap* work_wrap)
+int Work_TimerCancel::do_my_part(io_context &io_ctx, Work_NetIo_Asio_Wrap& work_wrap)
 {
     return 0;
 }
@@ -129,10 +129,9 @@ void Worker_NetIo::run()
     m_io_ctx.run();
 }
 
-int Worker_NetIo::add_work(Work_NetIo_Asio_Wrap *work)
+int Worker_NetIo::add_work(Work_NetIo_Asio_Wrap& work)
 {
-    int ret = work->m_work_asio->do_my_part(m_io_ctx, work);
-    delete work;
+    int ret = work.m_work_asio->do_my_part(m_io_ctx, work);
     return ret;
 }
 void Worker_NetIo::wait_worker_started()

@@ -16,8 +16,8 @@ public:
     explicit Work_NetIo_Asio(Work* consignor_work)
     : Work(consignor_work)
     {}
-    void do_my_part() override { exit(-1);};
-    virtual int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) = 0;
+    void do_my_part(int yield_param) override { exit(-1);};
+    virtual int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) = 0;
     void do_work() override {};
 };
 
@@ -25,23 +25,23 @@ struct Work_NetIo_Asio_Wrap : WorkWrap {
     Work_NetIo_Asio_Wrap(Work_NetIo_Asio* work, Work* sub_work, int sub_work_ret, bool ret_by_sub_work)
     : WorkWrap(work, sub_work, sub_work_ret, ret_by_sub_work), m_work_asio(work)
     {}
-    explicit Work_NetIo_Asio_Wrap(Work_NetIo_Asio* work)
-    : WorkWrap(work, nullptr, 0, false), m_work_asio(work)
+    Work_NetIo_Asio_Wrap(Work_NetIo_Asio* work)
+    : WorkWrap(work), m_work_asio(work)
     {}
     Work_NetIo_Asio* m_work_asio;
 };
 
 class Work_NetTcpConnect : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpConnect(Work* consignor_work,
-                                std::shared_ptr<tcp::socket> socket_to_server,
-                                const std::string& addr_str, uint16_t port)
+    Work_NetTcpConnect(Work* consignor_work,
+                       std::shared_ptr<tcp::socket> socket_to_server,
+                       const std::string& addr_str, uint16_t port)
             : Work_NetIo_Asio(consignor_work), m_socket_to_server(socket_to_server)
     {
         boost::asio::ip::address addr = boost::asio::ip::make_address(addr_str);
         m_endpoint = tcp::endpoint(addr, port);
     }
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     tcp::endpoint m_endpoint;
     std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
 };
@@ -51,7 +51,7 @@ public:
     explicit Work_NetTcpAccept(Work* consignor_work)
             : Work_NetIo_Asio(consignor_work)
     {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     tcp::endpoint m_bind_endpoint;
     std::shared_ptr<tcp::acceptor> m_acceptor;
     std::shared_ptr<tcp::socket> m_socket_to_a_client;
@@ -59,59 +59,59 @@ public:
 
 class Work_NetTcpIn : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpIn(Work* consignor_work,
-                           std::shared_ptr<tcp::socket> socket, char* buf, size_t buf_sz)
+    Work_NetTcpIn(Work* consignor_work,
+                  std::shared_ptr<tcp::socket> socket, char* buf, size_t buf_sz)
             : Work_NetIo_Asio(consignor_work), m_socket(socket), in_buf(buf, buf_sz)
     {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     boost::asio::mutable_buffer in_buf;
     std::shared_ptr<tcp::socket> m_socket;
 };
 
 class Work_NetTcpOut : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpOut(Work* consignor_work,
+    Work_NetTcpOut(Work* consignor_work,
                             std::shared_ptr<tcp::socket> socket, char* buf, size_t buf_sz)
             : Work_NetIo_Asio(consignor_work), m_socket(socket), out_buf(buf, buf_sz)
     {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     boost::asio::mutable_buffer out_buf;
     std::shared_ptr<tcp::socket> m_socket;
 };
 
 class Work_TimerWaitUntil : public Work_NetIo_Asio {
 public:
-    explicit Work_TimerWaitUntil(Work* consignor_work,
+    Work_TimerWaitUntil(Work* consignor_work,
                                  std::shared_ptr<boost::asio::deadline_timer> timer)
     : Work_NetIo_Asio(consignor_work), m_timer(timer) {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
 
 };
 
 class Work_TimerWaitFor : public Work_NetIo_Asio {
 public:
-    explicit Work_TimerWaitFor(Work* consignor_work,
+    Work_TimerWaitFor(Work* consignor_work,
                                std::shared_ptr<boost::asio::deadline_timer> timer)
     : Work_NetIo_Asio(consignor_work), m_timer(timer) {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
 };
 
 class Work_TimerCancel : public Work_NetIo_Asio {
 public:
-    explicit Work_TimerCancel(Work* consignor_work,
+    Work_TimerCancel(Work* consignor_work,
                               std::shared_ptr<boost::asio::deadline_timer> timer)
     : Work_NetIo_Asio(consignor_work), m_timer(timer) {}
-    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap* work_wrap) override;
+    int do_my_part(io_context& io_ctx, Work_NetIo_Asio_Wrap& work_wrap) override;
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
 };
 
 class Worker_NetIo : public Worker {
 public:
     void run() override;
-    int add_work(WorkWrap* work) override { exit(-1); };
-    int add_work(Work_NetIo_Asio_Wrap* work);
+    int add_work(WorkWrap& work) override { exit(-1); };
+    int add_work(Work_NetIo_Asio_Wrap& work);
 //    void pop_queue(boost::posix_time::microseconds interval);
     void wait_worker_started() override;
     io_context m_io_ctx;

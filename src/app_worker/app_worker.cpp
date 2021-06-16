@@ -91,7 +91,8 @@ public:
         WorkUtils::TcpSocketConnector_Asio tcp_socket(m_net_io_worker, this, m_wp);
         expect_ret(0 == tcp_socket.connect("127.0.0.1", 80));
 
-        for (unsigned i = 0; i < 10; i++) {
+        unsigned i;
+        for (i = 0; i < 100; i++) {
             char send_buf[4096];
             snprintf(send_buf, sizeof(send_buf), "GET / HTTP/1.1\r\n"
                                                  "Host: 127.0.0.1\r\n"
@@ -99,16 +100,18 @@ public:
                                                  "User-Agent: curl/7.58.0\r\n"
                                                  "Accept: */*\r\n\r\n");
             // Send
-            expect_ret(0 == tcp_socket.write(send_buf, std::strlen(send_buf)));
+            expect_goto(0 == tcp_socket.write(send_buf, std::strlen(send_buf)), func_return);
 
             // Recv
             char recv_buf[4096] = { 0 };
             size_t recv_data_sz = 0;
-            expect_ret(0 == tcp_socket.read(recv_buf, sizeof(recv_buf), recv_data_sz));
+            expect_goto(0 == tcp_socket.read(recv_buf, sizeof(recv_buf), recv_data_sz), func_return);
 
             recv_buf[recv_data_sz < sizeof(recv_buf) ? recv_data_sz : sizeof(recv_buf) - 1] = 0;
 //            log_info("received:\n%s!", recv_buf);
         }
+        func_return:
+        printf("done %u req\n", i);
     };
 
 private:
@@ -139,14 +142,14 @@ int app_worker(int argc, char** argv)
     // Add work to main worker
     worker_net_io.wait_worker_started();
     std::vector<SomeThing> works;
-    std::vector<WorkWrap*> work_wraps;
+    std::vector<WorkWrap> work_wraps;
     int i;
-    int num = 500;
+    int num = 100;
     for (i = 0; i < num; i++) {
         works.emplace_back(&worker_net_io);
     }
     for (i = 0; i < num; i++) {
-        work_wraps.emplace_back(new WorkWrap(&(works.at(i))));
+        work_wraps.emplace_back(&(works.at(i)));
     }
     for (i = 0; i < num; i++) {
         worker.add_work(work_wraps.at(i));

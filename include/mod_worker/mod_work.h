@@ -20,8 +20,9 @@ class Work_NetOut;
 class WorkingPoint {
 public:
     WorkingPoint() = default;
-    bool yield() {
+    bool yield(int ret) {
         if (m_wp) {
+            yield_param = ret;
             m_wp = m_wp.resume();
             return true;
         } else {
@@ -32,19 +33,24 @@ public:
         m_wp = std::move(wp);
     }
     context::continuation m_wp;
+    int yield_param = 0;    // 0, ok; 1, timeout; < 0, yield with error
 };
 
 class Work {
 public:
     Work() = default;
-    explicit Work(Work* consignor_work) : m_consignor_work(consignor_work)
+    explicit Work(Work* consignor_work)
+    : m_consignor_work(consignor_work), m_my_msg_id(consignor_work->m_my_sub_work_msg_id)
     {}
-    virtual void do_my_part();
+    explicit Work(Work* consignor_work, bool free_me_after_finished)
+    : m_consignor_work(consignor_work), m_my_msg_id(consignor_work->m_my_sub_work_msg_id),
+      m_free_me_after_finished(free_me_after_finished)
+    {}
+    virtual void do_my_part(int yield_param);
     void set_main_worker(Worker* main_worker);
     void finish_handler(Work* sub_work, int sub_work_ret, bool ret_by_sub_work);
-    bool dealed_with_finish = false;
-    int finish_ret = 0;
-//    uint64_t sub_work_id = 0;
+    uint64_t m_my_sub_work_msg_id = 0;
+    uint64_t m_my_msg_id = 0;
 protected:
     virtual void do_work();
     void add_self_back_to_main_worker(Work* sub_work, int sub_work_ret, bool ret_by_sub_work);
@@ -56,22 +62,9 @@ protected:
 
     bool began = false;
     bool stopped = false;
+    const bool m_free_me_after_finished = false;
 };
 
-struct WorkWrap {
-    WorkWrap(Work* work, Work* sub_work, int sub_work_ret, bool ret_by_sub_work)
-            : m_work(work), m_sub_work(sub_work),
-              m_sub_work_ret(sub_work_ret), m_ret_by_sub_work(ret_by_sub_work)
-    {}
-    explicit WorkWrap(Work* work)
-            : m_work(work), m_sub_work(nullptr),
-              m_sub_work_ret(0), m_ret_by_sub_work(false)
-    {}
-    Work* m_work = nullptr;
-    Work* m_sub_work = nullptr;
-    int m_sub_work_ret = 0;
-    bool m_ret_by_sub_work = false;
-};
 
 
 #endif //CPP_TOOLKIT_MOD_WORK_H
