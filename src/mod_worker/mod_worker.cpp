@@ -15,23 +15,22 @@ void Worker::run()
     }
 }
 
-int Worker::add_work(std::shared_ptr<WorkWrap> work)
+int Worker::add_work(WorkWrap* work)
 {
+//    std::lock_guard<std::mutex> lock(m_thread_lock);
     work->m_work->set_main_worker(this);
-    {
-        std::lock_guard<std::mutex> lock(m_thread_lock);
-        works_q.push(work);
-    }
+    expect_ret_val(works_q.push(work), -1);
     return 0;
 }
 
 int Worker::do_cur_work()
 {
-    std::shared_ptr<WorkWrap> cur_work = get_cur_work();
+    WorkWrap* cur_work = get_cur_work();
     if (cur_work) {
         int ret = 0;
         if (cur_work->m_sub_work) {
             if (cur_work->m_work->m_my_sub_work_msg_id != cur_work->m_sub_work->m_my_msg_id) {
+                delete cur_work;
                 return 0;
             } else {
                 ret = cur_work->m_sub_work->m_my_finish_ret_val;
@@ -39,19 +38,19 @@ int Worker::do_cur_work()
         }
         cur_work->m_work->m_my_sub_work_msg_id++;
         cur_work->m_work->do_my_part(ret);
+        delete cur_work;
         return 0;
     } else {
         return -1;
     }
 }
 
-std::shared_ptr<WorkWrap> Worker::get_cur_work()
+WorkWrap* Worker::get_cur_work()
 {
-    std::lock_guard<std::mutex> lock(m_thread_lock);
-    if (works_q.empty()) {
-        return nullptr;
-    }
-    std::shared_ptr<WorkWrap> cur_work = works_q.front();
-    works_q.pop();
-    return cur_work;
+//    std::lock_guard<std::mutex> lock(m_thread_lock);
+//    if (works_q.empty()) {
+//        return nullptr;
+//    }
+    WorkWrap* cur_work;
+    return works_q.pop(cur_work) ? cur_work : nullptr;
 }

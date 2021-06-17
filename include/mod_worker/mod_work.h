@@ -20,7 +20,7 @@ class Work_NetOut;
 class WorkingPoint {
 public:
     WorkingPoint() = default;
-    bool yield(int ret) {
+    bool wp_yield(int ret) {
         if (m_wp) {
             m_yield_param = ret;
             m_wp = m_wp.resume();

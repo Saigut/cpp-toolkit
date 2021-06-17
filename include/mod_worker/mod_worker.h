@@ -31,13 +31,13 @@ struct WorkWrap {
 class Worker {
 public:
     virtual void run();
-    virtual int add_work(std::shared_ptr<WorkWrap> work);
+    virtual int add_work(WorkWrap* work);
     virtual void wait_worker_started() {};
 protected:
     int do_cur_work();
-    std::shared_ptr<WorkWrap> get_cur_work();
-    std::queue<std::shared_ptr<WorkWrap>> works_q;
-    std::mutex m_thread_lock;
+    WorkWrap* get_cur_work();
+    boost::lockfree::queue<WorkWrap*, boost::lockfree::capacity<5001>> works_q;
+//    std::mutex m_thread_lock;
 };
 
 #endif //CPP_TOOLKIT_MOD_WORKER_H

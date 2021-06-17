@@ -18,6 +18,7 @@
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
 #include <app_worker/app_worker.h>
+#include <mod_worker/mod_worker.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -90,6 +91,20 @@ void test_timeout_hash_table()
     std::cout << "3rd: " << out_str << std::endl;
 }
 
+int test_lockfree(int argc, char** argv)
+{
+    boost::lockfree::queue<WorkWrap*, boost::lockfree::capacity<5001>> lf_q;
+
+    WorkWrap* work_wrap = new WorkWrap(std::make_shared<Work>());
+    expect_ret_val(lf_q.push(work_wrap), -1);
+
+    WorkWrap* work_wrap2;
+    expect_ret_val(lf_q.pop(work_wrap2), -1);
+
+    delete work_wrap2;
+
+    return 0;
+}
 
 int program_main(int argc, char** argv)
 {
@@ -110,6 +125,7 @@ int program_main(int argc, char** argv)
 
 //    ret = ctx_main();
     ret = app_worker(argc, argv);
+//    ret = test_lockfree(argc, argv);
 
     return ret;
 }

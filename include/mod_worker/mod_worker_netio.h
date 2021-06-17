@@ -108,7 +108,7 @@ public:
 class Worker_NetIo : public Worker {
 public:
     void run() override;
-    int add_work(std::shared_ptr<WorkWrap> work) override { exit(-1); };
+    int add_work(WorkWrap* work) override { exit(-1); };
     int add_work(std::shared_ptr<Work_NetIo_Asio> work);
 //    void pop_queue(boost::posix_time::microseconds interval);
     void wait_worker_started() override;

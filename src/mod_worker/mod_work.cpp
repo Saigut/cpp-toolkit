@@ -21,7 +21,7 @@ void Work::do_my_part(int yield_param)
                     return std::move(cur_work->m_wp.m_wp);
                 }));
     } else {
-        m_wp.yield(yield_param);
+        m_wp.wp_yield(yield_param);
     }
 }
 
@@ -45,7 +45,6 @@ void Work::do_work()
 void Work::add_self_back_to_main_worker(std::shared_ptr<Work> sub_work)
 {
     if (m_main_worker) {
-        m_main_worker->add_work(std::make_shared<WorkWrap>(shared_from_this(), sub_work));
+        m_main_worker->add_work(new WorkWrap(shared_from_this(), sub_work));
     }
 }
-

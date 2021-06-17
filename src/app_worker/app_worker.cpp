@@ -148,7 +148,7 @@ int app_worker(int argc, char** argv)
 //        works.emplace_back(&worker_net_io);
 //    }
     for (i = 0; i < num; i++) {
-        worker.add_work(std::make_shared<WorkWrap>(std::make_shared<SomeThing>(&worker_net_io), nullptr));
+        worker.add_work(new WorkWrap(std::make_shared<SomeThing>(&worker_net_io), nullptr));
     }
 
     while (true)  {

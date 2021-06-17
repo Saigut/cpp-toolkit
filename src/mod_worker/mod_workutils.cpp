@@ -40,7 +40,7 @@ namespace WorkUtils {
 //        auto work_timer = std::make_shared<Work_TimerWaitFor>(m_consignor_work, timer);
 //        expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_timer)), -1);
 
-        expect_ret_val(m_wp.yield(0), -1);
+        expect_ret_val(m_wp.wp_yield(0), -1);
         CHECK_YIELD_PARAM(m_wp.m_yield_param);
 //        CHECK_YIELD_PARAM_TIMER(m_wp.m_yield_param, timer);
         return 0;
@@ -54,7 +54,7 @@ namespace WorkUtils {
 //        auto work_timer = std::make_shared<Work_TimerWaitFor>(m_consignor_work, timer);
 //        expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_timer)), -1);
 
-        expect_ret_val(m_wp.yield(0), -1);
+        expect_ret_val(m_wp.wp_yield(0), -1);
         CHECK_YIELD_PARAM(m_wp.m_yield_param);
 //        CHECK_YIELD_PARAM_TIMER(m_wp.m_yield_param, timer);
 
@@ -64,7 +64,7 @@ namespace WorkUtils {
     int TcpSocketConnector_Asio::write(char *str_buf, size_t str_len) {
         auto work_out = std::make_shared<Work_NetTcpOut>(m_consignor_work, m_socket_to_server, str_buf, str_len);
         expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_out)), -1);
-        expect_ret_val(m_wp.yield(0), -1);
+        expect_ret_val(m_wp.wp_yield(0), -1);
         CHECK_YIELD_PARAM(m_wp.m_yield_param);
         return 0;
     }
@@ -76,7 +76,7 @@ namespace WorkUtils {
         m_timer->expires_from_now(boost::posix_time::milliseconds(ts_ms));
         auto work_timer = std::make_shared<Work_TimerWaitFor>(m_consignor_work, m_timer);
         expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_timer)), -1);
-        expect_ret_val(m_wp.yield(0), -1);
+        expect_ret_val(m_wp.wp_yield(0), -1);
         return 0;
     }
     int Timer_Asio::cancel() {
