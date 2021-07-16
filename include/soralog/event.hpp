@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstring>
 #include <string_view>
+#include <algorithm>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>

@@ -116,20 +116,19 @@ function(external_lib_setup baseDir)
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 
     # fmt
-    set(V_FMT_URL ${baseDir}/package/fmt-8.0.1.zip)
+    set(V_FMT_URL ${baseDir}/package/fmt-7.1.2.zip)
     if(NOT EXISTS "${V_FMT_URL}")
-        set(V_FMT_URL https://github.com/fmtlib/fmt/releases/download/8.0.1/fmt-8.0.1.zip)
+        set(V_FMT_URL https://github.com/fmtlib/fmt/releases/download/7.1.2/fmt-7.1.2.zip)
     endif()
     ExternalProject_Add(ep_fmt
         URL ${V_FMT_URL}
-        DOWNLOAD_NAME fmt-8.0.1.zip
+        DOWNLOAD_NAME fmt-7.1.2.zip
         CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
         -DFMT_DOC=OFF
         -DFMT_TEST=OFF
         -DFMT_FUZZ=OFF
         -DFMT_CUDA_TEST=OFF
-        -DFMT_MODULE=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
