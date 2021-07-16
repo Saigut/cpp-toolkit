@@ -10,6 +10,8 @@
 #include <libp2p/protocol/kademlia/impl/session.hpp>
 #include <libp2p/protocol/kademlia/message.hpp>
 
+#include <gsl/gsl>
+
 namespace libp2p::protocol::kademlia {
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)

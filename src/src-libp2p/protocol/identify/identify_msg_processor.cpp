@@ -7,7 +7,8 @@
 
 #include <tuple>
 
-#include <generated/protocol/identify/protobuf/identify.pb.h>
+//#include <generated/protocol/identify/protobuf/identify.pb.h>
+#include <identify.pb.h>
 #include <boost/assert.hpp>
 #include <libp2p/basic/protobuf_message_read_writer.hpp>
 #include <libp2p/network/network.hpp>

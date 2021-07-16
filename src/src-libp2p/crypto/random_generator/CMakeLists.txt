@@ -8,5 +8,5 @@ libp2p_add_library(p2p_random_generator
     )
 
 target_link_libraries(p2p_random_generator
-    Boost::random
+    boost_random
     )

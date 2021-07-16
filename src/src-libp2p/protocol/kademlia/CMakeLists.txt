@@ -9,7 +9,9 @@ libp2p_add_library(p2p_kademlia_message
     )
 target_link_libraries(p2p_kademlia_message
     p2p_cid
-    p2p_kademlia_proto
+    #p2p_kademlia_proto
+    gen_grpc_cpp_src
+    protobuf
     p2p_multiaddress
     p2p_peer_id
     )
@@ -18,7 +20,7 @@ libp2p_add_library(p2p_kademlia_error
     error.cpp
     )
 target_link_libraries(p2p_kademlia_error
-    Boost::boost
+    #Boost::boost
     )
 
 add_subdirectory(protobuf)

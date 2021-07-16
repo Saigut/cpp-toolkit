@@ -11,5 +11,6 @@ target_link_libraries(p2p_chachapoly_provider
     p2p_crypto_error
     p2p_byteutil
     p2p_logger
-    OpenSSL::Crypto
+#    OpenSSL::Crypto
+    crypto
     )

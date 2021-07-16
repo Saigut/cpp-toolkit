@@ -16,7 +16,7 @@ libp2p_add_library(p2p_gossip
     stream.cpp
     )
 target_link_libraries(p2p_gossip
-    Boost::boost
+    #Boost::boost
     p2p_byteutil
     p2p_multiaddress
     p2p_varint_reader

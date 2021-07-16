@@ -5,7 +5,8 @@
 
 #include <libp2p/security/secio/secio_dialer.hpp>
 
-#include <generated/security/secio/protobuf/secio.pb.h>
+//#include <generated/security/secio/protobuf/secio.pb.h>
+#include <secio.pb.h>
 #include <libp2p/basic/message_read_writer_bigendian.hpp>
 #include <libp2p/basic/protobuf_message_read_writer.hpp>
 #include <libp2p/crypto/sha/sha256.hpp>

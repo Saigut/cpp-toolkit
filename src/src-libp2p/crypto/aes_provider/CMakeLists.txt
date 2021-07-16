@@ -9,5 +9,6 @@ libp2p_add_library(p2p_aes_provider
 
 target_link_libraries(p2p_aes_provider
     p2p_crypto_error
-    OpenSSL::Crypto
+#    OpenSSL::Crypto
+    crypto
     )

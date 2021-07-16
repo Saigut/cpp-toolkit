@@ -5,7 +5,8 @@
 
 #include <libp2p/security/secio/propose_message_marshaller_impl.hpp>
 
-#include <generated/security/secio/protobuf/secio.pb.h>
+//#include <generated/security/secio/protobuf/secio.pb.h>
+#include <secio.pb.h>
 
 OUTCOME_CPP_DEFINE_CATEGORY(libp2p::security::secio,
                             ProposeMessageMarshallerImpl::Error, e) {

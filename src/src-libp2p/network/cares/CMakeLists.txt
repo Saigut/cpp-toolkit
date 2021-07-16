@@ -7,6 +7,6 @@ libp2p_add_library(p2p_cares
     cares.cpp
     )
 target_link_libraries(p2p_cares
-    c-ares::cares
+    cares
     ${CMAKE_THREAD_LIBS_INIT}
     )

@@ -12,6 +12,8 @@
 #include <openssl/x509.h>
 #include <libp2p/crypto/sha/sha256.hpp>
 
+#include <gsl/gsl>
+
 using Hash256 = libp2p::common::Hash256;
 
 namespace {

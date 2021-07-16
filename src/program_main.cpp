@@ -13,12 +13,13 @@
 #include <mod_common/log.h>
 #include <mod_socket/mod_socket.h>
 #include <mod_hash_table/mod_hash_table.h>
+#include <mod_worker/mod_worker.h>
 #include <app_socket/app_socket.h>
 #include <app_chat/app_chat.h>
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
 #include <app_worker/app_worker.h>
-#include <mod_worker/mod_worker.h>
+#include <app_kademlia/rendezvous_chat.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -124,8 +125,9 @@ int program_main(int argc, char** argv)
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
-    ret = app_worker(argc, argv);
+//    ret = app_worker(argc, argv);
 //    ret = test_lockfree(argc, argv);
+    ret = rendezvous_chat(argc, argv);
 
     return ret;
 }

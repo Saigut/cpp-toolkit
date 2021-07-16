@@ -14,7 +14,7 @@ libp2p_add_library(p2p_converters
     dns_converter.cpp
     )
 target_link_libraries(p2p_converters
-    Boost::boost
+    #Boost::boost
     p2p_hexutil
     p2p_uvarint
     p2p_multibase_codec

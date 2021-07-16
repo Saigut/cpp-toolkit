@@ -27,7 +27,7 @@
  * THE SOFTWARE.
  **/
 
-#include <gsl/span>
+#include <gsl/gsl>
 #include <libp2p/multi/multibase_codec/codecs/base32.hpp>
 #include <libp2p/multi/multibase_codec/codecs/base_error.hpp>
 

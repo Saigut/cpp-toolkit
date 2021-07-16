@@ -10,5 +10,6 @@ libp2p_add_library(p2p_x25519_provider
 target_link_libraries(p2p_x25519_provider
     p2p_crypto_error
     p2p_crypto_common
-    OpenSSL::Crypto
+    #OpenSSL::Crypto
+    crypto
     )

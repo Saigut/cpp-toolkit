@@ -7,7 +7,8 @@
 
 #include <functional>
 
-#include <generated/protocol/kademlia/protobuf/kademlia.pb.h>
+//#include <generated/protocol/kademlia/protobuf/kademlia.pb.h>
+#include <kademlia.pb.h>
 #include <libp2p/multi/uvarint.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY(libp2p::protocol::kademlia, Message::Error, e) {

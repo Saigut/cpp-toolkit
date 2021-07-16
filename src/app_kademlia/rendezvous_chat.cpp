@@ -176,7 +176,7 @@ groups:
   )");
 }  // namespace
 
-int main(int argc, char *argv[]) {
+int rendezvous_chat(int argc, char *argv[]) {
   // prepare log system
   auto logging_system = std::make_shared<soralog::LoggingSystem>(
       std::make_shared<soralog::ConfiguratorFromYAML>(

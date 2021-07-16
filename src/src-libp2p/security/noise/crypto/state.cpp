@@ -9,6 +9,8 @@
 
 #include <libp2p/security/noise/crypto/state.hpp>
 
+#include <gsl/gsl>
+
 OUTCOME_CPP_DEFINE_CATEGORY(libp2p::security::noise, Error, e) {
   using E = libp2p::security::noise::Error;
   switch (e) {

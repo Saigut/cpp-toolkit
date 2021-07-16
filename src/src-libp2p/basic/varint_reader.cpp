@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include <gsl/gsl>
+
 namespace {
   constexpr uint8_t kMaximumVarintLength = 9;  // taken from Go
 }

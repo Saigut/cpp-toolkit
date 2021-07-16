@@ -7,7 +7,7 @@
 
 #include <openssl/aes.h>  // for AES_BLOCK_SIZE
 #include <openssl/evp.h>
-#include <gsl/span>
+#include <gsl/gsl>
 #include <libp2p/crypto/error.hpp>
 
 namespace libp2p::crypto::aes {

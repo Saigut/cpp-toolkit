@@ -9,6 +9,8 @@
 #include <libp2p/crypto/common_functions.hpp>
 #include <libp2p/crypto/error.hpp>
 
+#include <gsl/gsl>
+
 namespace libp2p::crypto::x25519 {
   outcome::result<Keypair> X25519ProviderImpl::generate() const {
     constexpr auto FAILED{KeyGeneratorError::KEY_GENERATION_FAILED};

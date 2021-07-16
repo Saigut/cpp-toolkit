@@ -3,7 +3,7 @@
 
 libp2p_add_library(p2p_tcp_connection tcp_connection.cpp)
 target_link_libraries(p2p_tcp_connection
-    Boost::boost
+    #Boost::boost
     p2p_multiaddress
     p2p_upgrader_session
     p2p_logger

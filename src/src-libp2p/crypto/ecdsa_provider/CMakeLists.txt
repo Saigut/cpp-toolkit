@@ -11,5 +11,6 @@ target_link_libraries(p2p_ecdsa_provider
     p2p_crypto_error
     p2p_crypto_common
     p2p_sha
-    OpenSSL::Crypto
+    #OpenSSL::Crypto
+    crypto
     )

@@ -7,5 +7,5 @@ libp2p_add_library(p2p_ping
     ping_client_session.cpp
     )
 target_link_libraries(p2p_ping
-    Boost::boost
+    #Boost::boost
     )

@@ -11,5 +11,6 @@ target_link_libraries(p2p_secp256k1_provider
     p2p_sha
     p2p_crypto_error
     p2p_crypto_common
-    OpenSSL::Crypto
+    #OpenSSL::Crypto
+    crypto
     )

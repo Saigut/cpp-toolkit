@@ -10,7 +10,7 @@ libp2p_add_library(p2p_uvarint
     uvarint.cpp
     )
 target_link_libraries(p2p_uvarint
-    Boost::boost
+    #Boost::boost
     p2p_hexutil
     p2p_logger
     )
@@ -22,7 +22,7 @@ libp2p_add_library(p2p_multihash
 target_link_libraries(p2p_multihash
     p2p_hexutil
     p2p_uvarint
-    Boost::boost
+    #Boost::boost
     )
 
 
@@ -31,7 +31,7 @@ libp2p_add_library(p2p_multiaddress
     )
 target_link_libraries(p2p_multiaddress
     p2p_converters
-    Boost::boost
+    #Boost::boost
     )
 
 libp2p_add_library(p2p_cid

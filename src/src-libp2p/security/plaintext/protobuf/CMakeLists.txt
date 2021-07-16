@@ -6,6 +6,6 @@
 add_proto_library(p2p_plaintext_proto
     plaintext.proto
     )
-target_link_libraries(p2p_plaintext_proto
-    p2p_keys_proto
-    )
+#target_link_libraries(p2p_plaintext_proto
+#    p2p_keys_proto
+#    )

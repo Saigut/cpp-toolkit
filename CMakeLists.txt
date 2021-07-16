@@ -62,6 +62,11 @@ macro(setup_directries)
 endmacro()
 
 macro(setup_grpc_target)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${V_dir_gen_lib})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${V_dir_gen_lib})
+
+    add_subdirectory(src/src-libp2p)
+
     # Target T_gen_grpc, for every proto file, generate code to gen/pb/
     set(V_dir_grpc_proto_r ${GV_other_dir}/code_to_gen/protos)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
@@ -106,8 +111,8 @@ macro(setup_grpc_target)
     set(GV_gen_grpc_cpp_lib_bname gen_grpc_cpp_src)
     add_library(${GV_gen_grpc_cpp_lib_bname} STATIC ${GV_gen_cpp_grpc_srcs})
     add_dependencies(${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src)
-    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
-    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
+#    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
+#    set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
 endmacro()
 
 macro(setup_targets)
@@ -120,14 +125,14 @@ macro(setup_targets)
     setup_grpc_target()
 
     if (${OS_WINDOWS})
-        set(V_PROTO_libs
+        set(V_PROTOBUF_libs
             libprotobuf-lited
             libprotobufd
             libprotocd)
         set(V_LIBZ_libs
             zlibstaticd)
     else()
-        set(V_PROTO_libs
+        set(V_PROTOBUF_libs
             protobuf-lite
             protoc)
         set(V_LIBZ_libs
@@ -146,6 +151,25 @@ macro(setup_targets)
     # Main executable
     add_executable(main ${GV_main_src})
     target_link_libraries(main
+
+            app_kademlia
+            p2p_chachapoly_provider
+#            mod_kademlia
+            p2p_basic_host
+            p2p_default_network
+            p2p_peer_repository
+            p2p_inmem_address_repository
+            p2p_inmem_key_repository
+            p2p_inmem_protocol_repository
+            p2p_literals
+            p2p_kademlia
+#            asio_scheduler
+            p2p_multiaddress
+            mod_soralog
+            yaml-cpp
+            fmt
+            boost_random
+
             app_chat app_asio_socket app_socket
             app_im app_grpc_hw
             app_worker
@@ -153,11 +177,13 @@ macro(setup_targets)
             mod_socket
             mod_hash_table mod_queue
             mod_common
+
+            ${GV_gen_grpc_cpp_lib_bname}
             grpc++_reflection
             grpc++
             grpc
             gpr
-            ${V_PROTO_libs}
+            ${V_PROTOBUF_libs}
 
             address_sorting
             upb
@@ -195,7 +221,7 @@ macro(setup_targets)
             absl_throw_delegate
             absl_malloc_internal
 
-            json-c ${GV_gen_grpc_cpp_lib_bname})
+            json-c)
     target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context)
     target_link_libraries(main ${PLATFORM_LINK_LIB})
 endmacro()

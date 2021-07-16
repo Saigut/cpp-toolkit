@@ -18,7 +18,7 @@ libp2p_add_library(p2p_noise
     insecure_rw.cpp
     )
 target_link_libraries(p2p_noise
-    Boost::boost
+    #Boost::boost
     p2p_noise_handshake_message_marshaller
     p2p_x25519_provider
     p2p_hmac_provider
@@ -30,7 +30,7 @@ libp2p_add_library(p2p_noise_handshake_message_marshaller
     handshake_message_marshaller_impl.cpp
     )
 target_link_libraries(p2p_noise_handshake_message_marshaller
-    Boost::boost
-    p2p_noise_proto
+    #Boost::boost
+    #p2p_noise_proto
     p2p_key_marshaller
     )

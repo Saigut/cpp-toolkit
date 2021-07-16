@@ -10,6 +10,8 @@ libp2p_add_library(p2p_sha
 target_link_libraries(p2p_sha
     PUBLIC
     p2p_crypto_error
-    OpenSSL::SSL
-    OpenSSL::Crypto
+#    OpenSSL::SSL
+    #OpenSSL::Crypto
+    ssl
+    crypto
     )

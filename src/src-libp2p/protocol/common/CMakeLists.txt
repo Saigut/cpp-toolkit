@@ -5,7 +5,7 @@ libp2p_add_library(p2p_scheduler
     scheduler.cpp
     )
 target_link_libraries(p2p_scheduler
-    Boost::boost
+    #Boost::boost
     p2p_logger
     )
 

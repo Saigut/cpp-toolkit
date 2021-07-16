@@ -10,6 +10,8 @@
 #include <libp2p/crypto/error.hpp>
 #include <libp2p/crypto/sha/sha512.hpp>
 
+#include <gsl/gsl>
+
 namespace libp2p::crypto::ed25519 {
 
   outcome::result<Keypair> Ed25519ProviderImpl::generate() const {
