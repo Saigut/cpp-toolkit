@@ -12,6 +12,7 @@ libp2p_add_library(p2p_converters
     udp_converter.cpp
     ipfs_converter.cpp
     dns_converter.cpp
+    ethernet_converter.cpp
     )
 target_link_libraries(p2p_converters
     #Boost::boost

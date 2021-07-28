@@ -17,6 +17,7 @@
 #include <libp2p/multi/converters/ipfs_converter.hpp>
 #include <libp2p/multi/converters/tcp_converter.hpp>
 #include <libp2p/multi/converters/udp_converter.hpp>
+#include <libp2p/multi/converters/ethernet_converter.hpp>
 #include <libp2p/multi/multiaddress_protocol_list.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/uvarint.hpp>
@@ -90,6 +91,8 @@ namespace libp2p::multi::converters {
         return UdpConverter::addressToHex(addr);
       case Protocol::Code::P2P:
         return IpfsConverter::addressToHex(addr);
+      case Protocol::Code::ETHERNET:
+        return EthernetConverter::addressToHex(addr);
 
       case Protocol::Code::DNS:
       case Protocol::Code::DNS4:

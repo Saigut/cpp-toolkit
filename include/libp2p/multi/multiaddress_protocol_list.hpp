@@ -35,6 +35,7 @@ namespace libp2p::multi {
       DNS6 = 55,
       DNS_ADDR = 56,
       SCTP = 132,
+      ETHERNET = 143,
       UDT = 301,
       UTP = 302,
       UNIX = 400,
@@ -71,7 +72,7 @@ namespace libp2p::multi {
     /**
      * The total number of known protocols
      */
-    static const std::size_t kProtocolsNum = 28;
+    static const std::size_t kProtocolsNum = 29;
 
     /**
      * Returns a protocol with the corresponding name if it exists, or nullptr
@@ -127,6 +128,7 @@ namespace libp2p::multi {
         {Protocol::Code::DNS6, Protocol::kVarLen, "dns6"},
         {Protocol::Code::DNS_ADDR, Protocol::kVarLen, "dnsaddr"},
         {Protocol::Code::SCTP, 16, "sctp"},
+        {Protocol::Code::ETHERNET, 48, "ethernet"},
         {Protocol::Code::UDT, 0, "udt"},
         {Protocol::Code::UTP, 0, "utp"},
         {Protocol::Code::UNIX, Protocol::kVarLen, "unix"},
