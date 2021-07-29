@@ -58,7 +58,7 @@ namespace libp2p::transport::detail {
     using P = multi::Protocol::Code;
     return (ma.hasProtocol(P::IP4) || ma.hasProtocol(P::IP6)
             || ma.hasProtocol(P::DNS4) || ma.hasProtocol(P::DNS6)
-            || ma.hasProtocol(P::DNS))
+            || ma.hasProtocol(P::DNS) || ma.hasProtocol(P::ETHERNET))
         && ma.hasProtocol(P::TCP);
 
     // TODO(xDimon): Support 'DNSADDR' addresses.

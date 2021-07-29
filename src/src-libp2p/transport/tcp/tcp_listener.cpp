@@ -24,6 +24,12 @@ namespace libp2p::transport {
       return std::errc::address_family_not_supported;
     }
 
+    // Fixme:  force to allow ETHERNET for now
+    using P = multi::Protocol::Code;
+    if (address.hasProtocol(P::ETHERNET)) {
+        return outcome::success();
+    }
+
     if (acceptor_.is_open()) {
       return std::errc::already_connected;
     }

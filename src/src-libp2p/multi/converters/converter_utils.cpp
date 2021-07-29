@@ -215,6 +215,18 @@ namespace libp2p::multi::converters {
               // No details
               break;
 
+            case Protocol::Code::ETHERNET: {
+                OUTCOME_TRY(addr_bytes, unhex(address));
+                char mac_str[32];
+                const uint8_t* mac_bytes = addr_bytes.data();
+                results += "/";
+                snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x",
+                         mac_bytes[0], mac_bytes[1], mac_bytes[2],
+                         mac_bytes[3], mac_bytes[4], mac_bytes[5]);
+                results += mac_str;
+                break;
+            }
+
             default:
               return ConversionError::NOT_IMPLEMENTED;
           }

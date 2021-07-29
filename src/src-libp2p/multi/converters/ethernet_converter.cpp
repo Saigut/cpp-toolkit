@@ -17,14 +17,16 @@ namespace libp2p::multi::converters {
       -> outcome::result<std::string> {
       int ret;
       unsigned char mac[6];
-      std::string addr_str = std::string{ addr };
+      char hex_str[13];
+      std::string addr_str{addr};
       ret = sscanf(addr_str.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                    &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
       if (6 != ret) {
           return ConversionError::INVALID_ADDRESS;
       }
-      std::string result;
-      result.assign((const char*)mac, 6);
+      snprintf(hex_str, sizeof(hex_str), "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      std::string result = hex_str;
     return result;
   }
 
