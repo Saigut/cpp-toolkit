@@ -11,6 +11,12 @@ extern "C" {
 
 int app_im_server(int argc, char** argv);
 
+class im_server_base {
+public:
+    virtual void recv_msg(uint64_t& id, std::string& msg) = 0;
+    virtual void relay_msg(uint64_t id, std::string& msg) = 0;
+};
+
 class im_server {
 public:
     int init();

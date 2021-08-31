@@ -9,6 +9,11 @@
 extern "C" {
 #endif
 
+class im_client_base {
+public:
+    virtual void send_msg(uint64_t id, std::string& msg) = 0;
+    virtual void recv_msg(uint64_t& id, std::string& msg) = 0;
+};
 
 class im_client {
 public:
