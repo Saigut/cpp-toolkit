@@ -47,8 +47,9 @@ public:
 
 class Work_NetTcpAccept : public Work_NetIo_Asio {
 public:
-    explicit Work_NetTcpAccept(std::shared_ptr<Work> consignor_work)
-            : Work_NetIo_Asio(consignor_work)
+    explicit Work_NetTcpAccept(std::shared_ptr<Work> consignor_work,
+                               std::shared_ptr<tcp::acceptor> acceptor)
+            : Work_NetIo_Asio(consignor_work), m_acceptor(acceptor)
     {}
     int do_my_part(io_context& io_ctx) override;
     tcp::endpoint m_bind_endpoint;

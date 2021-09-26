@@ -23,18 +23,7 @@ int Work_NetTcpConnect::do_my_part(io_context &io_ctx)
 
 int Work_NetTcpAccept::do_my_part(io_context &io_ctx)
 {
-    boost::system::error_code ec;
     std::shared_ptr<Work> this_obj = shared_from_this();
-    if (!m_acceptor) {
-        m_acceptor = std::make_shared<tcp::acceptor>(io_ctx);
-        tcp::acceptor::reuse_address reuse_address_option(true);
-        m_acceptor->open(m_bind_endpoint.protocol(), ec);
-        check_ec_goto(ec, fail_return, "acceptor open");
-        m_acceptor->set_option(reuse_address_option, ec);
-        check_ec_goto(ec, fail_return, "acceptor set_option");
-        m_acceptor->listen(boost::asio::socket_base::max_listen_connections, ec);
-        check_ec_goto(ec, fail_return, "acceptor listen");
-    }
     m_acceptor->async_accept([this_obj](
             const boost::system::error_code& ec,
             tcp::socket peer)
@@ -62,7 +51,7 @@ int Work_NetTcpIn::do_my_part(io_context &io_ctx)
             std::size_t read_b_num)
     {
         check_ec(ec, "read_some");
-        this_obj->m_my_finish_ret_val = ec ? -1 : 0;
+        this_obj->m_my_finish_ret_val = ec ? -1 : (int)read_b_num;
         this_obj->finish_handler();
     });
     return 0;
@@ -80,7 +69,7 @@ int Work_NetTcpOut::do_my_part(io_context &io_ctx)
 //            log_info("wrote bytes: %zu", write_b_num);
 //            printf("wrote bytes: %zu\n", write_b_num);
         }
-        this_obj->m_my_finish_ret_val = ec ? -1 : 0;
+        this_obj->m_my_finish_ret_val = ec ? -1 : (int)write_b_num;
         this_obj->finish_handler();
     });
     return 0;

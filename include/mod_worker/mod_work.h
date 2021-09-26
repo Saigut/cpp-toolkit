@@ -48,12 +48,13 @@ public:
     uint64_t m_my_sub_work_msg_id = 0;
     uint64_t m_my_msg_id = 0;
     int m_my_finish_ret_val = -1;
+
+    WorkingPoint m_wp;
 protected:
     virtual void do_work();
     void add_self_back_to_main_worker(std::shared_ptr<Work> sub_work);
 
     Worker* m_main_worker = nullptr;
-    WorkingPoint m_wp;
 
     std::shared_ptr<Work> m_consignor_work = nullptr;
 

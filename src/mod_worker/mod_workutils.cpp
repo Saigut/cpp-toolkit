@@ -55,18 +55,19 @@ namespace WorkUtils {
 //        expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_timer)), -1);
 
         expect_ret_val(m_wp.wp_yield(0), -1);
-        CHECK_YIELD_PARAM(m_wp.m_yield_param);
 //        CHECK_YIELD_PARAM_TIMER(m_wp.m_yield_param, timer);
 
-        recv_data_sz = work_in->in_buf.size();
-        return 0;
+        if (m_wp.m_yield_param < 0) {
+            return -1;
+        }
+        recv_data_sz = m_wp.m_yield_param;
+        return m_wp.m_yield_param;
     }
     int TcpSocketConnector_Asio::write(char *str_buf, size_t str_len) {
         auto work_out = std::make_shared<Work_NetTcpOut>(m_consignor_work, m_socket_to_server, str_buf, str_len);
         expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_out)), -1);
         expect_ret_val(m_wp.wp_yield(0), -1);
-        CHECK_YIELD_PARAM(m_wp.m_yield_param);
-        return 0;
+        return m_wp.m_yield_param;
     }
 
     int Timer_Asio::wait_until(unsigned int ts_ms) {
