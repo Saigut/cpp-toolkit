@@ -10,91 +10,86 @@
 namespace WorkUtils {
     class WorkUtils {
     public:
-        explicit WorkUtils(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : m_worker(worker), m_consignor_work(consignor_work), m_wp(wp) {}
-        void set_consignor_work(std::shared_ptr<Work> consignor_work) {
-            m_consignor_work = consignor_work;
-            m_wp = std::move(m_consignor_work->m_wp);
-        }
+        explicit WorkUtils(Worker* worker)
+        : m_worker(worker) {}
     protected:
-        WorkingPoint& m_wp;
-        std::shared_ptr<Work> m_consignor_work = nullptr;
         Worker* m_worker = nullptr;
     };
 
     class TcpSocket : public WorkUtils {
     public:
-        explicit TcpSocket(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : WorkUtils(worker, consignor_work, wp) {}
-        virtual int write(char* str_buf, size_t str_len) = 0;
-        virtual int read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz) = 0;
+        explicit TcpSocket(Worker* worker)
+        : WorkUtils(worker) {}
+        explicit TcpSocket(Worker* worker,
+                           std::string& peer_addr, uint16_t peer_port)
+        : WorkUtils(worker),
+          m_peer_addr(peer_addr), m_peer_port(peer_port) {}
+        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) { return -1; }
+        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) { return -1; }
+        std::string m_peer_addr;
+        uint16_t m_peer_port;
     };
 
     class TcpSocketConnector : public TcpSocket {
     public:
-        explicit TcpSocketConnector(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : TcpSocket(worker, consignor_work, wp) {}
-        virtual int connect(const std::string& addr_str, uint16_t port) = 0;
+        explicit TcpSocketConnector(Worker* worker)
+        : TcpSocket(worker) {}
+        virtual int connect(std::shared_ptr<Work> consignor_work, const std::string& addr_str, uint16_t port) = 0;
     };
     class TcpAcceptor : public WorkUtils {
     public:
-        explicit TcpAcceptor(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-                : WorkUtils(worker, consignor_work, wp) {}
+        explicit TcpAcceptor(Worker* worker)
+                : WorkUtils(worker) {}
         virtual int listen(const std::string& addr_str, uint16_t port) = 0;
-        virtual std::shared_ptr<TcpSocket> accept() = 0;
+        virtual std::shared_ptr<TcpSocket> accept(std::shared_ptr<Work> consignor_work) = 0;
     };
     class TcpSocket_Asio : public TcpSocket {
     public:
-        explicit TcpSocket_Asio(Worker_NetIo* net_io_worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp,
+        explicit TcpSocket_Asio(Worker_NetIo* net_io_worker,
                                 std::shared_ptr<tcp::socket> socket,
                                 std::string& peer_addr,
                                 uint16_t peer_port)
-        : TcpSocket(net_io_worker, consignor_work, wp),
+        : TcpSocket(net_io_worker, peer_addr, peer_port),
         m_net_io_worker(net_io_worker),
-        m_socket(socket),
-//        m_peer_addr(peer_addr),
-        m_peer_port(peer_port)
+        m_socket(socket)
         {}
-        int write(char* str_buf, size_t str_len) override {
-            auto work_out = std::make_shared<Work_NetTcpOut>(m_consignor_work, m_socket, str_buf, str_len);
+        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) {
+            auto work_out = std::make_shared<Work_NetTcpOut>(consignor_work, m_socket, str_buf, str_len);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_out)), -1);
-            expect_ret_val(m_wp.wp_yield(0), -1);
-            return m_wp.m_yield_param;
+            expect_ret_val(consignor_work->m_wp.wp_yield(0), -1);
+            return consignor_work->m_wp.m_yield_param;
         }
-        int read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz) override {
-            auto work_in = std::make_shared<Work_NetTcpIn>(m_consignor_work, m_socket, recv_buf, buf_sz);
+        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) {
+            auto work_in = std::make_shared<Work_NetTcpIn>(consignor_work, m_socket, recv_buf, buf_sz);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_in)), -1);
-            expect_ret_val(m_wp.wp_yield(0), -1);
-            if (m_wp.m_yield_param < 0) {
+            expect_ret_val(consignor_work->m_wp.wp_yield(0), -1);
+            if (consignor_work->m_wp.m_yield_param < 0) {
                 return -1;
             }
-            recv_data_sz = m_wp.m_yield_param;
-            return m_wp.m_yield_param;
+            recv_data_sz = consignor_work->m_wp.m_yield_param;
+            return consignor_work->m_wp.m_yield_param;
         }
     private:
         Worker_NetIo* m_net_io_worker = nullptr;
         std::shared_ptr<tcp::socket> m_socket = nullptr;
-        std::string m_peer_addr;
-        uint16_t m_peer_port;
     };
     class TcpSocketConnector_Asio : public TcpSocketConnector {
     public:
-        explicit TcpSocketConnector_Asio(Worker_NetIo* net_io_worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : TcpSocketConnector(net_io_worker, consignor_work, wp), m_net_io_worker(net_io_worker) {
+        explicit TcpSocketConnector_Asio(Worker_NetIo* net_io_worker)
+        : TcpSocketConnector(net_io_worker), m_net_io_worker(net_io_worker) {
             m_socket_to_server = std::make_shared<tcp::socket>(net_io_worker->m_io_ctx);
         }
         ~TcpSocketConnector_Asio() { m_socket_to_server->close(); }
-        int connect(const std::string& addr_str, uint16_t port) override;
-        int write(char* str_buf, size_t str_len) override;
-        int read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz) override;
-    private:
+        int connect(std::shared_ptr<Work> consignor_work, const std::string& addr_str, uint16_t port) override;
+        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len);
+        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz);
         Worker_NetIo* m_net_io_worker = nullptr;
         std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
     };
     class TcpAcceptor_Asio : public TcpAcceptor {
     public:
-        explicit TcpAcceptor_Asio(Worker_NetIo* net_io_worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : TcpAcceptor(net_io_worker, consignor_work, wp), m_net_io_worker(net_io_worker) {
+        explicit TcpAcceptor_Asio(Worker_NetIo* net_io_worker)
+        : TcpAcceptor(net_io_worker), m_net_io_worker(net_io_worker) {
             m_acceptor = std::make_shared<tcp::acceptor>(m_net_io_worker->m_io_ctx);
         }
         int listen(const std::string& addr_str, uint16_t port) override {
@@ -119,14 +114,14 @@ namespace WorkUtils {
 
             return 0;
         }
-        std::shared_ptr<TcpSocket> accept() override {
+        std::shared_ptr<TcpSocket> accept(std::shared_ptr<Work> consignor_work) override {
 
-            auto work_acceptor = std::make_shared<Work_NetTcpAccept>(m_consignor_work, m_acceptor);
+            auto work_acceptor = std::make_shared<Work_NetTcpAccept>(consignor_work, m_acceptor);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_acceptor)),
                            nullptr);
 
-            expect_ret_val(m_wp.wp_yield(0), nullptr);
-            if (0 != m_wp.m_yield_param) {
+            expect_ret_val(consignor_work->m_wp.wp_yield(0), nullptr);
+            if (0 != consignor_work->m_wp.m_yield_param) {
                 log_error("failed to accept!");
                 return nullptr;
             }
@@ -143,7 +138,6 @@ namespace WorkUtils {
                      remote_ep.port());
             std::string peer_addr(remote_ep.address().to_string()) ;
             return std::make_shared<TcpSocket_Asio>(m_net_io_worker,
-                                                    m_consignor_work, m_consignor_work->m_wp,
                                                     client_socket,
                                                     peer_addr, remote_ep.port());
         }
@@ -154,16 +148,19 @@ namespace WorkUtils {
 
     class Timer : public WorkUtils {
     public:
-        explicit Timer(Worker* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : WorkUtils(worker, consignor_work, wp) {}
+        explicit Timer(Worker* worker, std::shared_ptr<Work> consignor_work)
+        : WorkUtils(worker), m_consignor_work(consignor_work), m_wp(consignor_work->m_wp) {}
         virtual int wait_until(unsigned ts_ms) = 0;
         virtual int wait_for(unsigned ts_ms) = 0;
         virtual int cancel() = 0;
+    protected:
+        std::shared_ptr<Work> m_consignor_work = nullptr;
+        WorkingPoint& m_wp;
     };
     class Timer_Asio : public Timer {
     public:
-        explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work, WorkingPoint& wp)
-        : Timer(worker, consignor_work, wp), m_net_io_worker(worker) {
+        explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work)
+        : Timer(worker, consignor_work), m_net_io_worker(worker) {
             m_timer = std::make_shared<boost::asio::deadline_timer>(worker->m_io_ctx);
         }
         int wait_until(unsigned ts_ms) override ;

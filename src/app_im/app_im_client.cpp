@@ -21,6 +21,48 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 
 
+static void work_recv_msg(im_client_base& the_client)
+{
+    uint64_t id;
+    std::string msg;
+    while (true) {
+        the_client.recv_msg(id, msg);
+        // do something with this msg;
+    }
+}
+
+static void work_send_msg(im_client_base& the_client)
+{
+    uint64_t id;
+    std::string msg = "msg from " + std::to_string(the_client.m_id);
+    while (true) {
+        the_client.send_msg(id, msg);
+
+        std::this_thread::sleep_for (
+                std::chrono::seconds(1));
+    }
+}
+
+void im_client2::recv_msg(uint64_t &id, std::string &msg)
+{
+
+}
+
+void im_client2::send_msg(uint64_t id, std::string &msg)
+{
+
+}
+
+void im_client2::run()
+{
+    uint64_t id;
+    std::string msg;
+    while (true) {
+        this->recv_msg(id, msg);
+        // do something with this msg;
+    }
+}
+
 // program <list_port> <user_id> <peer_user_id>
 int app_im_client(int argc, char** argv)
 {
