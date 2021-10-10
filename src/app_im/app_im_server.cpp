@@ -6,7 +6,9 @@
 #include <grpcpp/grpcpp.h>
 #include <cpt_im.grpc.pb.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
+#include <mod_worker/mod_worker.h>
 
+#include "app_im_client.h"
 
 using grpc::Channel;
 using grpc::Status;
@@ -14,6 +16,65 @@ using grpc::ClientContext;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
+
+
+class ServerWork : public Work {
+public:
+    ServerWork(Worker* main_worker,
+               Worker_NetIo* io_worker,
+               im_server_impl& server)
+            : m_main_worker(main_worker),
+              m_io_worker(io_worker),
+              m_server(server) {}
+
+    void do_work() override
+    {
+        while (m_server.accept_channel(shared_from_this()))
+        {}
+    };
+
+private:
+    Worker* m_main_worker;
+    Worker_NetIo* m_io_worker;
+    im_server_impl& m_server;
+};
+
+static void main_worker_thread(Worker* worker)
+{
+    worker->run();
+}
+
+static void worker_thread(Worker_NetIo* worker)
+{
+    worker->run();
+}
+
+int app_im_server_new(int argc, char** argv)
+{
+    Worker worker{};
+    Worker_NetIo worker_net_io{};
+
+    // Start main worker
+    std::thread main_worker_thr(main_worker_thread, &worker);
+    // Start net io worker
+    std::thread other_worker_thr(worker_thread, &worker_net_io);
+
+
+    std::string addr = "127.0.0.1";
+    im_server_impl server{addr, 12345, &worker, &worker_net_io};
+
+    expect_ret_val(server.listen(), -1);
+
+    // Add work to main worker
+    worker_net_io.wait_worker_started();
+    worker.add_work(new WorkWrap(std::make_shared<ServerWork>(&worker, &worker_net_io, server), nullptr));
+
+    while (true)  {
+        std::this_thread::sleep_for(std::chrono::milliseconds (100));
+    }
+
+    return 0;
+}
 
 int app_im_server(int argc, char** argv)
 {

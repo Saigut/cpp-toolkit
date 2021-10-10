@@ -339,6 +339,60 @@ public:
     std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
 };
 
+class ClientSendMsg : public Work {
+public:
+    explicit ClientSendMsg(std::shared_ptr<im_channel_impl> channel,
+                           uint64_t my_id,
+                           uint64_t peer_id,
+                           std::shared_ptr<Work> consignor_work,
+                           Worker_NetIo* io_worker)
+            : m_channel(channel),
+              m_my_id(my_id),
+              m_peer_id(peer_id),
+              m_consignor_work(consignor_work),
+              m_io_worker(io_worker) {}
+    void do_work() override {
+        std::string msg = "msg from: " + std::to_string(m_my_id);
+        WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
+        while (true) {
+            if (!m_channel->send_msg(m_consignor_work, m_peer_id, msg)) {
+                log_error("failed to send message to server!");
+                break;
+            }
+            timer.wait_for(5000);
+        }
+    }
+private:
+    std::shared_ptr<im_channel_impl> m_channel;
+    uint64_t m_my_id;
+    uint64_t m_peer_id;
+    std::shared_ptr<Work> m_consignor_work;
+    Worker_NetIo* m_io_worker;
+};
+
+class ClientRecvMsg : public Work {
+public:
+    explicit ClientRecvMsg(std::shared_ptr<im_channel_impl> channel,
+                           std::shared_ptr<Work> consignor_work)
+            : m_channel(channel),
+              m_consignor_work(consignor_work)
+              {}
+    void do_work() override {
+        while (true) {
+            uint64_t id;
+            std::string msg;
+            if (!m_channel->recv_msg(m_consignor_work, id, msg)) {
+                log_error("failed to receive message from server!");
+                break;
+            }
+            log_info("[msg:%u] %s", msg.c_str());
+        }
+    }
+private:
+    std::shared_ptr<im_channel_impl> m_channel;
+    std::shared_ptr<Work> m_consignor_work;
+};
+
 class im_client_impl {
 public:
     im_client_impl(uint64_t my_id,
@@ -346,7 +400,7 @@ public:
     : m_server_addr(server_addr), m_server_port(server_port)
     {}
 
-    bool setup_channel(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work) {
+    bool connect(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work) {
         im_channel_builder_impl channel_builder{worker};
         server_msg_channel = channel_builder.connect(consignor_work, m_id, m_server_addr, m_server_port);
         if (!server_msg_channel) {
@@ -364,81 +418,139 @@ public:
         server_msg_channel->recv_msg(consignor_work, id, msg);
     }
 
-    void work_send_msg(std::shared_ptr<Work> consignor_work) {
-        std::string msg = "msg from: " + std::to_string(m_id);
-        while (true) {
-            send_msg(consignor_work, m_id, msg);
-            std::this_thread::sleep_for (
-                    std::chrono::seconds(5));
-        }
-    }
-
-    void work_recv_msg(std::shared_ptr<Work> consignor_work) {
-        uint64_t id;
-        std::string msg;
-        recv_msg(consignor_work, id, msg);
-        log_info("[msg:%u] %s", msg.c_str());
-    }
-
     uint64_t m_id;
     std::string m_server_addr;
     uint16_t m_server_port;
     std::shared_ptr<im_channel_impl> server_msg_channel = nullptr;
 };
 
+class im_server_impl;
+struct channel_info {
+    channel_info(std::shared_ptr<im_channel_impl> _channel)
+            : channel(_channel),
+              msg_q()
+    {}
+    std::shared_ptr<im_channel_impl> channel;
+    std::queue<std::string> msg_q;
+};
+
+// work: recv message from from a client
+class RecvMsgFromClient : public Work {
+public:
+    explicit RecvMsgFromClient(std::shared_ptr<im_channel_impl> client_channel,
+                               std::map<uint64_t, channel_info>& id_channel_map)
+            : m_client_channel(client_channel),
+              m_id_channel_map(id_channel_map) {}
+    void do_work() override {
+        while (true) {
+            uint64_t id;
+            /// Fixme: msg should have dynamic size
+            std::string msg;
+            if (!m_client_channel->recv_msg(shared_from_this(), id, msg)) {
+                log_error("client channel failed to receive message!");
+                break;
+            }
+            auto result = m_id_channel_map.find(id);
+            if (result != m_id_channel_map.end()) {
+                result->second.msg_q.push(msg);
+            } else {
+                log_warn("No channel for client id: %llu!", id);
+            }
+        }
+    }
+private:
+    std::shared_ptr<im_channel_impl> m_client_channel;
+    std::map<uint64_t, channel_info>& m_id_channel_map;
+};
+
+// work: relay message to a client
+class RelayMsgToClient : public Work {
+public:
+    explicit RelayMsgToClient(uint64_t client_id,
+                              std::shared_ptr<im_channel_impl> client_channel,
+                              std::queue<std::string>& msg_q,
+                              Worker_NetIo* io_worker)
+            : m_client_id(client_id),
+              m_client_channel(client_channel),
+              m_msg_q(msg_q),
+              m_io_worker(io_worker)
+    {}
+    void do_work() override {
+        WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
+        while (true) {
+            // Get message from relay queue
+            if (m_msg_q.empty()) {
+                timer.wait_for(1);
+            } else {
+                std::string& msg = m_msg_q.front();
+
+                if (!m_client_channel->send_msg(shared_from_this(), m_client_id, msg)) {
+                    log_error("client channel failed to send message!");
+                    break;
+                }
+                m_msg_q.pop();
+            }
+
+        }
+    }
+private:
+    uint64_t m_client_id;
+    std::shared_ptr<im_channel_impl> m_client_channel;
+    std::queue<std::string>& m_msg_q;
+    Worker_NetIo* m_io_worker = nullptr;
+};
+
 class im_server_impl {
 public:
-    im_server_impl(uint64_t my_id,
-                   std::string& server_addr, uint16_t server_port)
-    : m_server_addr(server_addr), m_server_port(server_port)
+    im_server_impl(std::string& server_addr, uint16_t server_port,
+                   Worker* main_worker,
+                   Worker_NetIo* io_worker)
+    : m_server_addr(server_addr),
+      m_server_port(server_port),
+      m_main_worker(main_worker),
+      m_io_worker(io_worker),
+      m_channel_builder(io_worker)
     {}
 
-    void send_msg(std::shared_ptr<Work> consignor_work, uint64_t id, std::string& msg) {
-        std::shared_ptr<im_channel_impl> channel = find_channel_of_id(id);
-        if (channel) {
-            send_msg_to_channel(consignor_work, id, msg, channel);
-        }
-    }
-    void recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg) {
-        std::map<uint64_t, std::shared_ptr<im_channel_impl>>::iterator itr;
-        for (itr = m_id_channel_map.begin();
-             itr != m_id_channel_map.end();
-             itr++) {
-            itr->second->recv_msg(consignor_work, id, msg);
-            // new work and then, send_msg(work, id, msg);
-        }
-    }
-    void send_msg_to_channel(std::shared_ptr<Work> consignor_work,
-                             uint64_t id, std::string& msg,
-                             std::shared_ptr<im_channel_impl> channel) {
-        channel->send_msg(consignor_work, id, msg);
+    bool listen() {
+        return m_channel_builder.listen(m_server_addr, m_server_port);
     }
 
-    bool work_accept_channel(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work) {
-        im_channel_builder_impl channel_builder{worker};
+    bool accept_channel(std::shared_ptr<Work> consignor_work) {
         uint64_t peer_id;
-        std::shared_ptr<im_channel_impl> client_channel = channel_builder.accept(consignor_work, peer_id);
+        std::shared_ptr<im_channel_impl> client_channel = m_channel_builder.accept(consignor_work, peer_id);
         if (!client_channel) {
             log_error("accept failed!");
             return false;
         } else {
-            m_id_channel_map.emplace(peer_id, client_channel);
+            log_info("Accepted new client: %llu", peer_id);
+            std::lock_guard<std::mutex> lock(this->m_thread_lock);
+            auto ret = m_id_channel_map.emplace(peer_id, client_channel);
+            if (!ret.second) {
+                log_error("failed to insert to map!");
+                return false;
+            }
+            m_main_worker->add_work(new WorkWrap(std::make_shared<RelayMsgToClient>(peer_id,
+                                                                                    client_channel,
+                                                                                    ret.first->second.msg_q,
+                                                                                    m_io_worker),
+                                                 nullptr));
+            m_main_worker->add_work(new WorkWrap(std::make_shared<RecvMsgFromClient>(client_channel,
+                                                                                     m_id_channel_map),
+                                                 nullptr));
             return true;
         }
     }
 
-    std::shared_ptr<im_channel_impl> find_channel_of_id(uint64_t id) {
-        auto result = m_id_channel_map.find(id);
-        if (result != m_id_channel_map.end()) {
-            return result->second;
-        } else {
-            return nullptr;
-        }
-    }
+    Worker* m_main_worker;
+    Worker_NetIo* m_io_worker;
+    im_channel_builder_impl m_channel_builder;
 
+    std::mutex m_thread_lock;
     std::string m_server_addr;
     uint16_t m_server_port;
-    std::map<uint64_t, std::shared_ptr<im_channel_impl>> m_id_channel_map;
+
+    std::map<uint64_t, channel_info> m_id_channel_map;
 };
 
 
@@ -488,6 +600,7 @@ private:
 };
 
 int app_im_client(int argc, char** argv);
+int app_im_client_new(int argc, char** argv);
 
 #ifdef __cplusplus
 }

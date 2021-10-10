@@ -88,8 +88,8 @@ public:
     void do_work() override
     {
         // Connect
-        WorkUtils::TcpSocketConnector_Asio tcp_socket(m_net_io_worker, shared_from_this(), m_wp);
-        expect_ret(0 == tcp_socket.connect("127.0.0.1", 80));
+        WorkUtils::TcpSocketConnector_Asio tcp_socket(m_net_io_worker);
+        expect_ret(0 == tcp_socket.connect(shared_from_this(), "127.0.0.1", 80));
 
         unsigned i;
         for (i = 0; i < 10; i++) {
@@ -100,12 +100,12 @@ public:
                                                  "User-Agent: curl/7.58.0\r\n"
                                                  "Accept: */*\r\n\r\n");
             // Send
-            expect_goto(0 == tcp_socket.write(send_buf, std::strlen(send_buf)), func_return);
+            expect_goto(0 == tcp_socket.write(shared_from_this(), send_buf, std::strlen(send_buf)), func_return);
 
             // Recv
             char recv_buf[4096] = { 0 };
             size_t recv_data_sz = 0;
-            expect_goto(0 == tcp_socket.read(recv_buf, sizeof(recv_buf), recv_data_sz), func_return);
+            expect_goto(0 == tcp_socket.read(shared_from_this(), recv_buf, sizeof(recv_buf), recv_data_sz), func_return);
 
             recv_buf[recv_data_sz < sizeof(recv_buf) ? recv_data_sz : sizeof(recv_buf) - 1] = 0;
 //            log_info("received:\n%s!", recv_buf);
@@ -119,12 +119,12 @@ private:
 };
 
 
-void main_worker_thread(Worker* worker)
+static void main_worker_thread(Worker* worker)
 {
     worker->run();
 }
 
-void worker_thread(Worker_NetIo* worker)
+static void worker_thread(Worker_NetIo* worker)
 {
     worker->run();
 }

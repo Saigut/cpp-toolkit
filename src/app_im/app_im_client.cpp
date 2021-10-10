@@ -63,6 +63,73 @@ void im_client2::run()
     }
 }
 
+class ClientWork : public Work {
+public:
+    ClientWork(Worker* main_worker,
+               Worker_NetIo* io_worker,
+               im_client_impl& client)
+            : m_main_worker(main_worker),
+              m_io_worker(io_worker),
+              m_client(client) {}
+
+    void do_work() override
+    {
+        if (m_client.connect(m_io_worker, shared_from_this())) {
+            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientRecvMsg>(m_client.server_msg_channel,
+                                                                                 shared_from_this()),
+                                                 nullptr));
+            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientSendMsg>(m_client.server_msg_channel,
+                                                                                 m_client.m_id,
+                                                                                 11111,
+                                                                                 shared_from_this(),
+                                                                                 m_io_worker),
+                                                 nullptr));
+        } else {
+            log_error("client failed to connect!");
+        }
+    };
+
+private:
+    Worker* m_main_worker;
+    Worker_NetIo* m_io_worker;
+    im_client_impl& m_client;
+};
+
+static void main_worker_thread(Worker* worker)
+{
+    worker->run();
+}
+
+static void worker_thread(Worker_NetIo* worker)
+{
+    worker->run();
+}
+
+int app_im_client_new(int argc, char** argv)
+{
+    Worker worker{};
+    Worker_NetIo worker_net_io{};
+
+    // Start main worker
+    std::thread main_worker_thr(main_worker_thread, &worker);
+    // Start net io worker
+    std::thread other_worker_thr(worker_thread, &worker_net_io);
+
+
+    std::string server_addr = "127.0.0.1";
+    im_client_impl client{11111, server_addr, 12345};
+
+    // Add work to main worker
+    worker_net_io.wait_worker_started();
+    worker.add_work(new WorkWrap(std::make_shared<ClientWork>(&worker, &worker_net_io, client), nullptr));
+
+    while (true)  {
+        std::this_thread::sleep_for(std::chrono::milliseconds (100));
+    }
+
+    return 0;
+}
+
 // program <list_port> <user_id> <peer_user_id>
 int app_im_client(int argc, char** argv)
 {
