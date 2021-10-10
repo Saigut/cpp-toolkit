@@ -24,8 +24,14 @@ namespace WorkUtils {
                            std::string& peer_addr, uint16_t peer_port)
         : WorkUtils(worker),
           m_peer_addr(peer_addr), m_peer_port(peer_port) {}
-        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) { return -1; }
-        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) { return -1; }
+        virtual int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) {
+            log_error("Should not call this!");
+            return -1;
+        }
+        virtual int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) {
+            log_error("Should not call this!");
+            return -1;
+        }
         std::string m_peer_addr;
         uint16_t m_peer_port;
     };
@@ -53,13 +59,13 @@ namespace WorkUtils {
         m_net_io_worker(net_io_worker),
         m_socket(socket)
         {}
-        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) {
+        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) override {
             auto work_out = std::make_shared<Work_NetTcpOut>(consignor_work, m_socket, str_buf, str_len);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_out)), -1);
             expect_ret_val(consignor_work->m_wp.wp_yield(0), -1);
             return consignor_work->m_wp.m_yield_param;
         }
-        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) {
+        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) override {
             auto work_in = std::make_shared<Work_NetTcpIn>(consignor_work, m_socket, recv_buf, buf_sz);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_in)), -1);
             expect_ret_val(consignor_work->m_wp.wp_yield(0), -1);
@@ -81,8 +87,8 @@ namespace WorkUtils {
         }
         ~TcpSocketConnector_Asio() { m_socket_to_server->close(); }
         int connect(std::shared_ptr<Work> consignor_work, const std::string& addr_str, uint16_t port) override;
-        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len);
-        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz);
+        int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) override;
+        int read(std::shared_ptr<Work> consignor_work, char* recv_buf, size_t buf_sz, size_t& recv_data_sz) override;
         Worker_NetIo* m_net_io_worker = nullptr;
         std::shared_ptr<tcp::socket> m_socket_to_server = nullptr;
     };

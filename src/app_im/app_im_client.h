@@ -176,13 +176,16 @@ public:
         while (remain_data_sz > 0) {
             ret = write_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
             if (ret <= 0) {
+                log_error("write_some failed! ret: %d", ret);
                 return false;
             } else if (ret > remain_data_sz) {
+                log_error("write_some failed! ret: %d, remain_data_sz: %zu", ret, remain_data_sz);
                 return false;
             } else {
                 remain_data_sz -= ret;
             }
         }
+        return true;
     }
     virtual bool read(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
         size_t remain_data_sz = data_sz;
@@ -190,13 +193,16 @@ public:
         while (remain_data_sz > 0) {
             ret = read_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
             if (ret <= 0) {
+                log_error("read_some failed! ret: %d", ret);
                 return false;
             } else if (ret > remain_data_sz) {
+                log_error("read_some failed! ret: %d, remain_data_sz: %zu", ret, remain_data_sz);
                 return false;
             } else {
                 remain_data_sz -= ret;
             }
         }
+        return true;
     }
 
 private:
@@ -246,20 +252,20 @@ public:
 // impl
 class im_tcp_socket_impl : public im_tcp_socket_ab6 {
 public:
-    explicit im_tcp_socket_impl(WorkUtils::TcpSocket& tcp_socket)
+    explicit im_tcp_socket_impl(std::shared_ptr<WorkUtils::TcpSocket> tcp_socket)
     : m_tcp_socket(tcp_socket)
     {}
     int write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) override {
-        return m_tcp_socket.write(consignor_work, (char *)buf, data_sz);
+        return m_tcp_socket->write(consignor_work, (char *)buf, data_sz);
     }
     int read_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t buf_sz) override {
         size_t recv_data_sz;
         int ret;
-        ret = m_tcp_socket.read(consignor_work, (char *)buf, buf_sz, recv_data_sz);
+        ret = m_tcp_socket->read(consignor_work, (char *)buf, buf_sz, recv_data_sz);
         return ret;
     }
 private:
-    WorkUtils::TcpSocket m_tcp_socket;
+    std::shared_ptr<WorkUtils::TcpSocket> m_tcp_socket;
 };
 
 class im_channel_impl {
@@ -298,8 +304,8 @@ public:
     : WorkUtils(worker) {}
 
     std::shared_ptr<im_channel_impl> connect(std::shared_ptr<Work> consignor_work, uint64_t my_id, const std::string& addr_str, uint16_t port) {
-        ::WorkUtils::TcpSocketConnector_Asio connector_asio{(Worker_NetIo*)m_worker};
-        expect_ret_val(0 == connector_asio.connect(consignor_work, addr_str, port), nullptr);
+        auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>((Worker_NetIo*)m_worker);
+        expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
         auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(connector_asio));
         /// Fixme: exchange information with peer
         uint64_t id = 0;
@@ -326,7 +332,7 @@ public:
             return nullptr;
         }
         std::shared_ptr<::WorkUtils::TcpSocket> socket_asio = acceptor_asio->accept(consignor_work);
-        auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(*socket_asio));
+        auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(socket_asio));
         /// Fixme: exchange information with peer
         uint64_t id;
         std::string msg;
