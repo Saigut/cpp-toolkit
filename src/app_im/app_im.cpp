@@ -79,7 +79,7 @@ std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(std::shared_ptr
     if (!acceptor_asio) {
         return nullptr;
     }
-    std::shared_ptr<::WorkUtils::TcpSocket> socket_asio = acceptor_asio->accept(consignor_work);
+    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept(consignor_work);
     auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(socket_asio));
     uint64_t id;
     std::string msg;

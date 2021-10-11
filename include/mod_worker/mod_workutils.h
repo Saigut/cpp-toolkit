@@ -16,14 +16,10 @@ namespace WorkUtils {
         Worker* m_worker = nullptr;
     };
 
-    class TcpSocket : public WorkUtils {
+    class TcpSocketAb : public WorkUtils {
     public:
-        explicit TcpSocket(Worker* worker)
+        explicit TcpSocketAb(Worker* worker)
         : WorkUtils(worker) {}
-        explicit TcpSocket(Worker* worker,
-                           std::string& peer_addr, uint16_t peer_port)
-        : WorkUtils(worker),
-          m_peer_addr(peer_addr), m_peer_port(peer_port) {}
         virtual int write(std::shared_ptr<Work> consignor_work, char* str_buf, size_t str_len) {
             log_error("Should not call this!");
             return -1;
@@ -32,14 +28,12 @@ namespace WorkUtils {
             log_error("Should not call this!");
             return -1;
         }
-        std::string m_peer_addr;
-        uint16_t m_peer_port;
     };
 
-    class TcpSocketConnector : public TcpSocket {
+    class TcpSocketConnector : public TcpSocketAb {
     public:
         explicit TcpSocketConnector(Worker* worker)
-        : TcpSocket(worker) {}
+        : TcpSocketAb(worker) {}
         virtual int connect(std::shared_ptr<Work> consignor_work, const std::string& addr_str, uint16_t port) = 0;
     };
     class TcpAcceptor : public WorkUtils {
@@ -47,15 +41,15 @@ namespace WorkUtils {
         explicit TcpAcceptor(Worker* worker)
                 : WorkUtils(worker) {}
         virtual int listen(const std::string& addr_str, uint16_t port) = 0;
-        virtual std::shared_ptr<TcpSocket> accept(std::shared_ptr<Work> consignor_work) = 0;
+        virtual std::shared_ptr<TcpSocketAb> accept(std::shared_ptr<Work> consignor_work) = 0;
     };
-    class TcpSocket_Asio : public TcpSocket {
+    class TcpSocket_Asio : public TcpSocketAb {
     public:
         explicit TcpSocket_Asio(Worker_NetIo* net_io_worker,
                                 std::shared_ptr<tcp::socket> socket,
                                 std::string& peer_addr,
                                 uint16_t peer_port)
-        : TcpSocket(net_io_worker, peer_addr, peer_port),
+        : TcpSocketAb((Worker*)net_io_worker),
         m_net_io_worker(net_io_worker),
         m_socket(socket)
         {}
@@ -82,7 +76,7 @@ namespace WorkUtils {
     class TcpSocketConnector_Asio : public TcpSocketConnector {
     public:
         explicit TcpSocketConnector_Asio(Worker_NetIo* net_io_worker)
-        : TcpSocketConnector(net_io_worker), m_net_io_worker(net_io_worker) {
+        : TcpSocketConnector((Worker*)net_io_worker), m_net_io_worker(net_io_worker) {
             m_socket_to_server = std::make_shared<tcp::socket>(net_io_worker->m_io_ctx);
         }
         ~TcpSocketConnector_Asio() { m_socket_to_server->close(); }
@@ -95,7 +89,7 @@ namespace WorkUtils {
     class TcpAcceptor_Asio : public TcpAcceptor {
     public:
         explicit TcpAcceptor_Asio(Worker_NetIo* net_io_worker)
-        : TcpAcceptor(net_io_worker), m_net_io_worker(net_io_worker) {
+        : TcpAcceptor((Worker*)net_io_worker), m_net_io_worker(net_io_worker) {
             m_acceptor = std::make_shared<tcp::acceptor>(m_net_io_worker->m_io_ctx);
         }
         int listen(const std::string& addr_str, uint16_t port) override {
@@ -120,7 +114,7 @@ namespace WorkUtils {
 
             return 0;
         }
-        std::shared_ptr<TcpSocket> accept(std::shared_ptr<Work> consignor_work) override {
+        std::shared_ptr<TcpSocketAb> accept(std::shared_ptr<Work> consignor_work) override {
 
             auto work_acceptor = std::make_shared<Work_NetTcpAccept>(consignor_work, m_acceptor);
             expect_ret_val(0 == m_net_io_worker->add_work(std::static_pointer_cast<Work_NetIo_Asio>(work_acceptor)),
@@ -166,7 +160,7 @@ namespace WorkUtils {
     class Timer_Asio : public Timer {
     public:
         explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work)
-        : Timer(worker, consignor_work), m_net_io_worker(worker) {
+        : Timer((Worker*)worker, consignor_work), m_net_io_worker(worker) {
             m_timer = std::make_shared<boost::asio::deadline_timer>(worker->m_io_ctx);
         }
         int wait_until(unsigned ts_ms) override ;
@@ -175,6 +169,79 @@ namespace WorkUtils {
     private:
         Worker_NetIo* m_net_io_worker = nullptr;
         std::shared_ptr<boost::asio::deadline_timer> m_timer;
+    };
+
+    class tcp_socket {
+    public:
+        explicit tcp_socket(std::shared_ptr<TcpSocketAb> tcp_socket)
+                : m_tcp_socket(tcp_socket)
+        {}
+        virtual int write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
+            return m_tcp_socket->write(consignor_work, (char *)buf, data_sz);
+        }
+        virtual int read_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t buf_sz) {
+            size_t recv_data_sz;
+            int ret;
+            ret = m_tcp_socket->read(consignor_work, (char *)buf, buf_sz, recv_data_sz);
+            return ret;
+        }
+        virtual bool write(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
+            size_t remain_data_sz = data_sz;
+            int ret;
+            while (remain_data_sz > 0) {
+                ret = write_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
+                if (ret <= 0) {
+                    log_error("write_some failed! ret: %d", ret);
+                    return false;
+                } else if (ret > remain_data_sz) {
+                    log_error("write_some failed! ret: %d, remain_data_sz: %zu", ret, remain_data_sz);
+                    return false;
+                } else {
+                    remain_data_sz -= ret;
+                }
+            }
+            return true;
+        }
+        virtual bool read(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
+            size_t remain_data_sz = data_sz;
+            int ret;
+            while (remain_data_sz > 0) {
+                ret = read_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
+                if (ret <= 0) {
+                    log_error("read_some failed! ret: %d", ret);
+                    return false;
+                } else if (ret > remain_data_sz) {
+                    log_error("read_some failed! ret: %d, remain_data_sz: %zu", ret, remain_data_sz);
+                    return false;
+                } else {
+                    remain_data_sz -= ret;
+                }
+            }
+            return true;
+        }
+    private:
+        std::shared_ptr<TcpSocketAb> m_tcp_socket;
+    };
+
+    class channel_ab {
+    public:
+        channel_ab(std::shared_ptr<tcp_socket> tcp)
+                : m_tcp(tcp) {}
+        virtual bool send_msg(std::shared_ptr<Work> consignor_work, std::string& msg) = 0;
+        virtual bool recv_msg(std::shared_ptr<Work> consignor_work, std::string& msg) = 0;
+    protected:
+        std::shared_ptr<tcp_socket> m_tcp;
+    };
+
+    class channel_builder_ab : public WorkUtils::WorkUtils {
+    public:
+        explicit channel_builder_ab(Worker_NetIo* worker)
+                : WorkUtils((Worker*)worker) {}
+        // for client
+        virtual std::shared_ptr<channel_ab> connect(std::shared_ptr<Work> consignor_work) = 0;
+        // for server
+        virtual bool listen() = 0;
+        virtual std::shared_ptr<channel_ab> accept(std::shared_ptr<Work> consignor_work) = 0;
     };
 }
 

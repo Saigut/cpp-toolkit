@@ -254,13 +254,13 @@ public:
 // impl
 class im_tcp_socket_impl : public im_tcp_socket_ab6 {
 public:
-    explicit im_tcp_socket_impl(std::shared_ptr<WorkUtils::TcpSocket> tcp_socket)
+    explicit im_tcp_socket_impl(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket)
     : m_tcp_socket(tcp_socket)
     {}
     int write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) override;
     int read_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t buf_sz) override;
 private:
-    std::shared_ptr<WorkUtils::TcpSocket> m_tcp_socket;
+    std::shared_ptr<WorkUtils::TcpSocketAb> m_tcp_socket;
 };
 
 class im_channel_impl {
@@ -276,7 +276,7 @@ private:
 class im_channel_builder_impl : public WorkUtils::WorkUtils {
 public:
     explicit im_channel_builder_impl(Worker_NetIo* worker)
-    : WorkUtils(worker) {}
+    : WorkUtils((Worker*)worker) {}
     std::shared_ptr<im_channel_impl> connect(std::shared_ptr<Work> consignor_work,
                                              uint64_t my_id,
                                              const std::string& addr_str,
