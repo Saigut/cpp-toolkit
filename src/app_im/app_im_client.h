@@ -341,7 +341,6 @@ public:
         }
         std::shared_ptr<::WorkUtils::TcpSocket> socket_asio = acceptor_asio->accept(consignor_work);
         auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(socket_asio));
-        /// Fixme: exchange information with peer
         uint64_t id;
         std::string msg;
         channel->recv_msg(consignor_work, id, msg);

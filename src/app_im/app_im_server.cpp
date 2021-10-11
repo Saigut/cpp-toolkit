@@ -53,19 +53,17 @@ int app_im_server_new(int argc, char** argv)
 {
     Worker worker{};
     Worker_NetIo worker_net_io{};
-
     // Start main worker
     std::thread main_worker_thr(main_worker_thread, &worker);
     // Start net io worker
     std::thread other_worker_thr(worker_thread, &worker_net_io);
 
 
-    std::string addr = "127.0.0.1";
+    std::string addr = "0.0.0.0";
     im_server_impl server{addr, 12345, &worker, &worker_net_io};
 
     expect_ret_val(server.listen(), -1);
 
-    // Add work to main worker
     worker_net_io.wait_worker_started();
     worker.add_work(new WorkWrap(std::make_shared<ServerWork>(&worker, &worker_net_io, server), nullptr));
 

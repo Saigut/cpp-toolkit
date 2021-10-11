@@ -67,10 +67,12 @@ class ClientWork : public Work {
 public:
     ClientWork(Worker* main_worker,
                Worker_NetIo* io_worker,
-               im_client_impl& client)
+               im_client_impl& client,
+               uint64_t peer_id)
             : m_main_worker(main_worker),
               m_io_worker(io_worker),
-              m_client(client) {}
+              m_client(client),
+              m_peer_id(peer_id) {}
 
     void do_work() override
     {
@@ -79,7 +81,7 @@ public:
                                                  nullptr));
             m_main_worker->add_work(new WorkWrap(std::make_shared<ClientSendMsg>(m_client.server_msg_channel,
                                                                                  m_client.m_id,
-                                                                                 11111,
+                                                                                 m_peer_id,
                                                                                  m_io_worker),
                                                  nullptr));
         } else {
@@ -91,6 +93,7 @@ private:
     Worker* m_main_worker;
     Worker_NetIo* m_io_worker;
     im_client_impl& m_client;
+    uint64_t m_peer_id;
 };
 
 static void main_worker_thread(Worker* worker)
@@ -103,23 +106,39 @@ static void worker_thread(Worker_NetIo* worker)
     worker->run();
 }
 
+// program <server_ip> <my_id> <peer_id>
 int app_im_client_new(int argc, char** argv)
 {
+    int my_id;
+    int peer_id;
+    const char* server_ip;
+    if (4 != argc) {
+        log_error("Invalid arguments!\n");
+        return -1;
+    } else {
+        server_ip = argv[1];
+        my_id = atoi(argv[2]);
+        expect_ret_val(my_id >= 0, -1);
+        peer_id = atoi(argv[3]);
+        expect_ret_val(peer_id >= 0, -1);
+    }
+
     Worker worker{};
     Worker_NetIo worker_net_io{};
-
     // Start main worker
     std::thread main_worker_thr(main_worker_thread, &worker);
     // Start net io worker
     std::thread other_worker_thr(worker_thread, &worker_net_io);
 
+    std::string server_addr = server_ip;
+    im_client_impl client{(uint64_t)my_id, server_addr, 12345};
 
-    std::string server_addr = "127.0.0.1";
-    im_client_impl client{11111, server_addr, 12345};
-
-    // Add work to main worker
     worker_net_io.wait_worker_started();
-    worker.add_work(new WorkWrap(std::make_shared<ClientWork>(&worker, &worker_net_io, client), nullptr));
+    worker.add_work(new WorkWrap(std::make_shared<ClientWork>(&worker,
+                                                              &worker_net_io,
+                                                              client,
+                                                              (uint64_t)peer_id),
+                                 nullptr));
 
     while (true)  {
         std::this_thread::sleep_for(std::chrono::milliseconds (100));
