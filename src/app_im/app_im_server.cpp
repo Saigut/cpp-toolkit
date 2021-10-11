@@ -18,6 +18,72 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 
 
+void RecvMsgFromClient::do_work() {
+    while (true) {
+        uint64_t id;
+        std::string msg;
+        if (!m_client_channel->recv_msg(shared_from_this(), id, msg)) {
+            log_error("client channel failed to receive message!");
+            m_id_channel_map.erase(m_client_id);
+            break;
+        }
+        auto result = m_id_channel_map.find(id);
+        if (result != m_id_channel_map.end()) {
+            result->second.msg_q->push(msg);
+        } else {
+            log_warn("No channel for client id: %llu!", id);
+        }
+    }
+}
+
+void RelayMsgToClient::do_work() {
+    WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
+    while (true) {
+        // Get message from relay queue
+        if (m_msg_q->empty()) {
+            timer.wait_for(1);
+        } else {
+            std::string& msg = m_msg_q->front();
+
+            if (!m_client_channel->send_msg(shared_from_this(), m_client_id, msg)) {
+                log_error("client channel failed to send message!");
+                break;
+            }
+            m_msg_q->pop();
+        }
+    }
+}
+
+bool im_server_impl::listen() {
+    return m_channel_builder.listen(m_server_addr, m_server_port);
+}
+
+bool im_server_impl::accept_channel(std::shared_ptr<Work> consignor_work) {
+    uint64_t peer_id;
+    std::shared_ptr<im_channel_impl> client_channel = m_channel_builder.accept(consignor_work, peer_id);
+    if (!client_channel) {
+        log_error("accept failed!");
+        return false;
+    } else {
+        log_info("Accepted new client: %llu", peer_id);
+        auto ret = m_id_channel_map.emplace(peer_id, client_channel);
+        if (!ret.second) {
+            log_error("failed insert to map!");
+            return false;
+        }
+        m_main_worker->add_work(new WorkWrap(std::make_shared<RelayMsgToClient>(peer_id,
+                                                                                client_channel,
+                                                                                ret.first->second.msg_q,
+                                                                                m_io_worker),
+                                             nullptr));
+        m_main_worker->add_work(new WorkWrap(std::make_shared<RecvMsgFromClient>(peer_id,
+                                                                                 client_channel,
+                                                                                 m_id_channel_map),
+                                             nullptr));
+        return true;
+    }
+}
+
 class ServerWork : public Work {
 public:
     ServerWork(Worker* main_worker,

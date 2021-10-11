@@ -21,53 +21,59 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 
 
-static void work_recv_msg(im_client_base& the_client)
+void ClientSendMsg::do_work()
 {
-    uint64_t id;
-    std::string msg;
+    std::string msg = "msg from: " + std::to_string(m_my_id);
+    WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
     while (true) {
-        the_client.recv_msg(id, msg);
-        // do something with this msg;
+        if (!m_client->send_msg(shared_from_this(), m_peer_id, msg)) {
+            log_error("failed to send message to server!");
+            break;
+        }
+        timer.wait_for(5000);
     }
 }
 
-static void work_send_msg(im_client_base& the_client)
+void ClientRecvMsg::do_work()
 {
-    uint64_t id;
-    std::string msg = "msg from " + std::to_string(the_client.m_id);
     while (true) {
-        the_client.send_msg(id, msg);
-
-        std::this_thread::sleep_for (
-                std::chrono::seconds(1));
+        uint64_t id;
+        std::string msg;
+        if (!m_client->recv_msg(shared_from_this(), id, msg)) {
+            log_error("failed to receive message from server!");
+            break;
+        }
+        log_info("[msg:%llu] %s", id, msg.c_str());
     }
 }
 
-void im_client2::recv_msg(uint64_t &id, std::string &msg)
+bool im_client_impl::connect(Worker_NetIo* worker,
+                             std::shared_ptr<Work> consignor_work)
 {
-
-}
-
-void im_client2::send_msg(uint64_t id, std::string &msg)
-{
-
-}
-
-void im_client2::run()
-{
-    uint64_t id;
-    std::string msg;
-    while (true) {
-        this->recv_msg(id, msg);
-        // do something with this msg;
+    im_channel_builder_impl channel_builder{worker};
+    server_msg_channel = channel_builder.connect(consignor_work, m_id, m_server_addr, m_server_port);
+    if (!server_msg_channel) {
+        log_error("connect failed!");
+        return false;
+    } else {
+        return true;
     }
+}
+
+bool im_client_impl::send_msg(std::shared_ptr<Work> consignor_work, uint64_t id, std::string& msg)
+{
+    return server_msg_channel->send_msg(consignor_work, id, msg);
+}
+bool im_client_impl::recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg)
+{
+    return server_msg_channel->recv_msg(consignor_work, id, msg);
 }
 
 class ClientWork : public Work {
 public:
     ClientWork(Worker* main_worker,
                Worker_NetIo* io_worker,
-               im_client_impl& client,
+               std::shared_ptr<im_client_impl> client,
                uint64_t peer_id)
             : m_main_worker(main_worker),
               m_io_worker(io_worker),
@@ -76,14 +82,16 @@ public:
 
     void do_work() override
     {
-        if (m_client.connect(m_io_worker, shared_from_this())) {
-            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientRecvMsg>(m_client.server_msg_channel),
-                                                 nullptr));
-            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientSendMsg>(m_client.server_msg_channel,
-                                                                                 m_client.m_id,
-                                                                                 m_peer_id,
-                                                                                 m_io_worker),
-                                                 nullptr));
+        if (m_client->connect(m_io_worker, shared_from_this())) {
+            m_main_worker->add_work(
+                    new WorkWrap(std::make_shared<ClientRecvMsg>(m_client),
+                                 nullptr));
+            m_main_worker->add_work(
+                    new WorkWrap(std::make_shared<ClientSendMsg>(m_client,
+                                                                 m_client->m_id,
+                                                                 m_peer_id,
+                                                                 m_io_worker),
+                                 nullptr));
         } else {
             log_error("client failed to connect!");
         }
@@ -92,7 +100,7 @@ public:
 private:
     Worker* m_main_worker;
     Worker_NetIo* m_io_worker;
-    im_client_impl& m_client;
+    std::shared_ptr<im_client_impl> m_client;
     uint64_t m_peer_id;
 };
 
@@ -131,7 +139,7 @@ int app_im_client_new(int argc, char** argv)
     std::thread other_worker_thr(worker_thread, &worker_net_io);
 
     std::string server_addr = server_ip;
-    im_client_impl client{(uint64_t)my_id, server_addr, 12345};
+    auto client = std::make_shared<im_client_impl>((uint64_t)my_id, server_addr, 12345);
 
     worker_net_io.wait_worker_started();
     worker.add_work(new WorkWrap(std::make_shared<ClientWork>(&worker,
