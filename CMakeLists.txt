@@ -128,7 +128,7 @@ macro(setup_targets)
             zlibstaticd)
     else()
         set(V_PROTO_libs
-            protobuf-lite
+            protobuf
             protoc)
         set(V_LIBZ_libs
             z)
@@ -163,8 +163,6 @@ macro(setup_targets)
             upb
             re2
             cares
-            ssl
-            crypto
             ${V_LIBZ_libs}
 
             absl_synchronization
@@ -173,10 +171,10 @@ macro(setup_targets)
             absl_time
             absl_time_zone
             absl_int128
+            absl_cord
             absl_strings
             absl_strings_internal
             absl_str_format_internal
-            absl_cord
             absl_stacktrace
             absl_symbolize
             absl_status
@@ -194,6 +192,9 @@ macro(setup_targets)
             absl_base
             absl_throw_delegate
             absl_malloc_internal
+
+            ssl
+            crypto
 
             json-c ${GV_gen_grpc_cpp_lib_bname})
     target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context)

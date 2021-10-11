@@ -228,6 +228,7 @@ public:
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&id_net_byte), sizeof(uint64_t)), false);
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(msg.data()), msg.size()), false);
+        return true;
     }
     virtual bool recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg) {
         uint64_t msg_size;
@@ -244,6 +245,7 @@ public:
             /// fixme!!
             expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size - sizeof(uint64_t)), false);
         }
+        return true;
     }
 
     im_tcp_socket_ab6* m_tcp;
@@ -278,6 +280,7 @@ public:
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&id_net_byte), sizeof(uint64_t)), false);
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(msg.data()), msg.size()), false);
+        return true;
     }
     bool recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg) {
         uint64_t msg_size;
@@ -290,10 +293,14 @@ public:
         expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&read_id), sizeof(uint64_t)), false);
         boost::endian::big_to_native_inplace(read_id);
 
+        id = read_id;
         if (msg_size > sizeof(uint64_t)) {
-            /// fixme!!
+            msg.reserve(msg_size - sizeof(uint64_t) + 1);
+            msg.resize(msg_size - sizeof(uint64_t));
             expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size - sizeof(uint64_t)), false);
+            ((uint8_t*)(msg.data()))[msg_size - sizeof(uint64_t)] = 0;
         }
+        return true;
     }
     std::shared_ptr<im_tcp_socket_impl> m_tcp;
 };
@@ -307,10 +314,11 @@ public:
         auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>((Worker_NetIo*)m_worker);
         expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
         auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(connector_asio));
-        /// Fixme: exchange information with peer
         uint64_t id = 0;
         std::string msg;
-        msg.assign((const char*)(&my_id), sizeof(my_id));
+        uint64_t sending_my_id = my_id;
+        boost::endian::native_to_big_inplace(sending_my_id);
+        msg.assign((const char*)(&sending_my_id), sizeof(sending_my_id));
         channel->send_msg(consignor_work, id, msg);
         return channel;
     }
@@ -350,18 +358,16 @@ public:
     explicit ClientSendMsg(std::shared_ptr<im_channel_impl> channel,
                            uint64_t my_id,
                            uint64_t peer_id,
-                           std::shared_ptr<Work> consignor_work,
                            Worker_NetIo* io_worker)
             : m_channel(channel),
               m_my_id(my_id),
               m_peer_id(peer_id),
-              m_consignor_work(consignor_work),
               m_io_worker(io_worker) {}
     void do_work() override {
         std::string msg = "msg from: " + std::to_string(m_my_id);
         WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
         while (true) {
-            if (!m_channel->send_msg(m_consignor_work, m_peer_id, msg)) {
+            if (!m_channel->send_msg(shared_from_this(), m_peer_id, msg)) {
                 log_error("failed to send message to server!");
                 break;
             }
@@ -372,39 +378,36 @@ private:
     std::shared_ptr<im_channel_impl> m_channel;
     uint64_t m_my_id;
     uint64_t m_peer_id;
-    std::shared_ptr<Work> m_consignor_work;
     Worker_NetIo* m_io_worker;
 };
 
 class ClientRecvMsg : public Work {
 public:
-    explicit ClientRecvMsg(std::shared_ptr<im_channel_impl> channel,
-                           std::shared_ptr<Work> consignor_work)
-            : m_channel(channel),
-              m_consignor_work(consignor_work)
+    explicit ClientRecvMsg(std::shared_ptr<im_channel_impl> channel)
+            : m_channel(channel)
               {}
     void do_work() override {
         while (true) {
             uint64_t id;
             std::string msg;
-            if (!m_channel->recv_msg(m_consignor_work, id, msg)) {
+            if (!m_channel->recv_msg(shared_from_this(), id, msg)) {
                 log_error("failed to receive message from server!");
                 break;
             }
-            log_info("[msg:%u] %s", msg.c_str());
+            log_info("[msg:%llu] %s", id, msg.c_str());
         }
     }
 private:
     std::shared_ptr<im_channel_impl> m_channel;
-    std::shared_ptr<Work> m_consignor_work;
 };
 
 class im_client_impl {
 public:
     im_client_impl(uint64_t my_id,
-                   std::string& server_addr, uint16_t server_port)
-    : m_server_addr(server_addr), m_server_port(server_port)
-    {}
+                   std::string &server_addr, uint16_t server_port)
+            : m_id(my_id),
+              m_server_addr(server_addr),
+              m_server_port(server_port) {}
 
     bool connect(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work) {
         im_channel_builder_impl channel_builder{worker};

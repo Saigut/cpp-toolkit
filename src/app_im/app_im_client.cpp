@@ -75,13 +75,11 @@ public:
     void do_work() override
     {
         if (m_client.connect(m_io_worker, shared_from_this())) {
-            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientRecvMsg>(m_client.server_msg_channel,
-                                                                                 shared_from_this()),
+            m_main_worker->add_work(new WorkWrap(std::make_shared<ClientRecvMsg>(m_client.server_msg_channel),
                                                  nullptr));
             m_main_worker->add_work(new WorkWrap(std::make_shared<ClientSendMsg>(m_client.server_msg_channel,
                                                                                  m_client.m_id,
                                                                                  11111,
-                                                                                 shared_from_this(),
                                                                                  m_io_worker),
                                                  nullptr));
         } else {
