@@ -89,6 +89,48 @@ std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(std::shared_ptr
     return channel;
 }
 
+// im2_channel_builder
+std::shared_ptr<im2_channel> im2_channel_builder::connect(std::shared_ptr<Work> consignor_work,
+                                                                  uint64_t my_id,
+                                                                  const std::string& addr_str,
+                                                                  uint16_t port) {
+    auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>(&(*m_io_worker));
+    expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
+    auto channel = std::make_shared<im2_channel>(connector_asio, m_main_worker);
+    uint64_t id = 0;
+    std::string msg;
+    uint64_t sending_my_id = my_id;
+    boost::endian::native_to_big_inplace(sending_my_id);
+    msg.assign((const char*)(&sending_my_id), sizeof(sending_my_id));
+    channel->send_text(consignor_work, id, msg);
+    return channel;
+}
+bool im2_channel_builder::listen(const std::string& local_addr_str, uint16_t local_port) {
+    if (acceptor_asio) {
+        return true;
+    }
+    acceptor_asio = std::make_shared<::WorkUtils::TcpAcceptor_Asio>(&(*m_io_worker));
+    if (0 != acceptor_asio->listen(local_addr_str, local_port)) {
+        acceptor_asio.reset();
+        return false;
+    } else {
+        return true;
+    }
+}
+std::shared_ptr<im2_channel> im2_channel_builder::accept(std::shared_ptr<Work> consignor_work, uint64_t& peer_id) {
+    if (!acceptor_asio) {
+        return nullptr;
+    }
+    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept(consignor_work);
+    auto channel = std::make_shared<im2_channel>(socket_asio, m_main_worker);
+    uint64_t id;
+    std::string msg;
+    channel->recv_text(consignor_work, id, msg);
+    peer_id = *((uint64_t*)msg.data());
+    boost::endian::big_to_native_inplace(peer_id);
+    return channel;
+}
+
 int app_im(int argc, char** argv)
 {
     if (argc < 2) {

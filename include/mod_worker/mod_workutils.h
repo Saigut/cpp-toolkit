@@ -5,7 +5,8 @@
 #include <mod_worker/mod_worker_netio.h>
 
 #include <mod_common/expect.h>
-#include <asio/deadline_timer.hpp>
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/endian.hpp>
 
 namespace WorkUtils {
     class WorkUtils {
@@ -225,23 +226,166 @@ namespace WorkUtils {
 
     class channel_ab {
     public:
-        channel_ab(std::shared_ptr<tcp_socket> tcp)
-                : m_tcp(tcp) {}
+        channel_ab(std::shared_ptr<Worker> main_worker)
+        : m_main_worker(main_worker),
+          m_light_channel_map(std::make_shared<std::map<uint64_t, light_channel_info>>())
+        {}
         virtual bool send_msg(std::shared_ptr<Work> consignor_work, std::string& msg) = 0;
         virtual bool recv_msg(std::shared_ptr<Work> consignor_work, std::string& msg) = 0;
+
+        virtual bool add_light_channel_msg_handler(
+                uint64_t light_ch_id,
+                std::shared_ptr<Work> light_channel_consignor_work) {
+            auto ret = m_light_channel_map->find(light_ch_id);
+            if (ret == m_light_channel_map->end()) {
+                return false;
+            }
+            ret->second.light_channel_consignor_work = light_channel_consignor_work;
+            return true;
+        }
+        virtual bool del_light_channel_msg_handler(
+                uint64_t light_ch_id) {
+            auto ret = m_light_channel_map->find(light_ch_id);
+            if (ret == m_light_channel_map->end()) {
+                return false;
+            }
+            ret->second.light_channel_consignor_work.reset();
+            return true;
+        }
+        virtual bool get_light_channel_msg(uint64_t light_ch_id, std::string& msg) {
+            auto ret = m_light_channel_map->find(light_ch_id);
+            if (ret == m_light_channel_map->end()) {
+                return false;
+            }
+            if (ret->second.msg_q->empty()) {
+                return false;
+            }
+            msg = ret->second.msg_q->front();
+            ret->second.msg_q->pop();
+            return true;
+        }
     protected:
-        std::shared_ptr<tcp_socket> m_tcp;
+        virtual bool deal_with_light_channel_msg(uint64_t light_ch_id, std::string& msg) {
+            auto ret = m_light_channel_map->find(light_ch_id);
+            if (ret == m_light_channel_map->end()) {
+                auto insert_ret = m_light_channel_map->emplace(light_ch_id, light_channel_info{});
+                if (insert_ret.second) {
+                    log_error("light channel map insert failed!");
+                    return false;
+                }
+                ret = insert_ret.first;
+            }
+            light_channel_info& ch_info = ret->second;
+            ch_info.msg_q->push(msg);
+            if (ch_info.light_channel_consignor_work) {
+                m_main_worker->add_work(new WorkWrap(ch_info.light_channel_consignor_work));
+                ch_info.light_channel_consignor_work.reset();
+            }
+            return true;
+        }
+        struct light_channel_info {
+            light_channel_info()
+            : msg_q(std::make_shared<std::queue<std::string>>())
+            {}
+            std::shared_ptr<Work> light_channel_consignor_work;
+            std::shared_ptr<std::queue<std::string>> msg_q;
+        };
+        std::shared_ptr<std::map<uint64_t, light_channel_info>> m_light_channel_map;
+        std::shared_ptr<Worker> m_main_worker;
     };
 
-    class channel_builder_ab : public WorkUtils::WorkUtils {
+    // message format example:
+    // msg: <uint64 msg size><uint64 msg type><msg body>
+    //      <uint64 msg size>: all data size after <uint64 msg size>
+    //      <uint64 msg type>: 0, chat message; 1 light channel msg(connector); 2 light channel msg(acceptor)
+    // chat message <msg body>: <uint64 peer id><text>
+    // light channel <msg body>: <uint64 light channel id><uint64 msg type><msg body>
+    class light_channel_ab : channel_ab {
     public:
-        explicit channel_builder_ab(Worker_NetIo* worker)
-                : WorkUtils((Worker*)worker) {}
+        light_channel_ab(std::shared_ptr<Worker> main_worker,
+                         std::shared_ptr<channel_ab> main_channel,
+                         uint64_t light_channel_id)
+                : channel_ab(main_worker),
+                  m_main_channel(main_channel),
+                  m_light_channel_id(light_channel_id) {}
+        virtual bool send_msg(std::shared_ptr<Work> consignor_work, std::string& msg) {
+            uint64_t msg_type = boost::endian::native_to_big((uint64_t)1);
+            uint64_t channel_id = boost::endian::native_to_big(m_light_channel_id);
+            std::string msg_type_str;
+            std::string channel_id_str;
+            std::string channel_msg;
+            msg_type_str.assign((const char*)(&msg_type), sizeof(msg_type));
+            channel_id_str.assign((const char*)(&channel_id), sizeof(channel_id));
+            channel_msg = msg_type_str + channel_id_str + msg;
+            return m_main_channel->send_msg(consignor_work, channel_msg);
+        }
+        virtual bool recv_msg(std::shared_ptr<Work> consignor_work, std::string& msg) {
+            if (m_main_channel->get_light_channel_msg(m_light_channel_id, msg)) {
+                return true;
+            }
+            m_main_channel->add_light_channel_msg_handler(m_light_channel_id, consignor_work);
+            expect_ret_val(consignor_work->m_wp.wp_yield(0), false);
+            if (0 != consignor_work->m_wp.m_yield_param) {
+                return false;
+            }
+            return m_main_channel->get_light_channel_msg(m_light_channel_id, msg);
+        }
+    protected:
+        std::shared_ptr<channel_ab> m_main_channel;
+        uint64_t m_light_channel_id;
+    };
+
+    class channel_builder_ab {
+    public:
         // for client
         virtual std::shared_ptr<channel_ab> connect(std::shared_ptr<Work> consignor_work) = 0;
         // for server
         virtual bool listen() = 0;
         virtual std::shared_ptr<channel_ab> accept(std::shared_ptr<Work> consignor_work) = 0;
+    };
+
+    class server_deal_req_work_ab : public Work {
+    public:
+        server_deal_req_work_ab(std::shared_ptr<std::string> req_msg,
+                                std::shared_ptr<channel_ab> server_channel)
+                : m_req_msg(req_msg), m_server_channel(server_channel) {}
+        void do_work() override {
+            if (true /* req_msg is xxx */) {
+                /* do something */
+                log_info("req msg: %s", m_req_msg->c_str());
+                std::string res_msg = "response";
+                m_server_channel->send_msg(shared_from_this(), res_msg);
+            }
+        }
+    protected:
+        std::shared_ptr<std::string> m_req_msg;
+        std::shared_ptr<channel_ab> m_server_channel;
+    };
+
+    class server_ab {
+    public:
+        server_ab(std::shared_ptr<channel_ab> channel,
+                  std::shared_ptr<Work> consignor_work,
+                  std::shared_ptr<Worker> main_worker)
+                : m_channel(channel),
+                  m_consignor_work(consignor_work),
+                  m_main_worker(main_worker) {}
+        virtual void run() {
+            while (true) {
+                auto req_msg = std::make_shared<std::string>();
+                m_channel->recv_msg(m_consignor_work, *req_msg);
+                auto deal_req_work = get_server_deal_req_work(req_msg);
+                m_main_worker->add_work(new WorkWrap(deal_req_work));
+            }
+        }
+        virtual std::shared_ptr<server_deal_req_work_ab> get_server_deal_req_work(
+                std::shared_ptr<std::string> req_msg) {
+            return std::make_shared<server_deal_req_work_ab>(req_msg, m_channel);
+        }
+    protected:
+        std::shared_ptr<channel_ab> m_channel;
+        std::shared_ptr<Work> m_consignor_work;
+        std::shared_ptr<Worker> m_main_worker;
     };
 }
 
