@@ -90,7 +90,7 @@ std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(std::shared_ptr
 }
 
 // im2_channel
-std::shared_ptr<im2_light_channel> im2_channel::get_light_channel_from_msg(
+std::shared_ptr<WorkUtils::light_channel_ab> im2_channel::get_light_channel_from_msg(
         std::string &msg) {
     size_t msg_size = msg.size();
     uint8_t* cur_pos = (uint8_t*)msg.data();
@@ -103,18 +103,35 @@ std::shared_ptr<im2_light_channel> im2_channel::get_light_channel_from_msg(
     light_channel_id = *((uint64_t*)cur_pos);
 //    cur_pos += sizeof(uint64_t);
     boost::endian::big_to_native_inplace(light_channel_id);
-    if (0 != msg_type) {
+    if (1 != msg_type) {
         return nullptr;
     }
+
+    auto light_channel_info_itr = m_light_channel_map->find(light_channel_id);
+    if (light_channel_info_itr == m_light_channel_map->end()) {
+        auto ret_insert = m_light_channel_map->emplace(light_channel_id, light_channel_info{});
+        if (!ret_insert.second) {
+            log_error("light channel map failed to insert!");
+            return nullptr;
+        }
+        light_channel_info_itr = ret_insert.first;
+    } else {
+        if (light_channel_info_itr->second.light_channel) {
+            return nullptr;
+        }
+    }
+
     uint64_t flag = (uint64_t)1 << 63;
     bool is_peer_channel_initiator = (0 != (light_channel_id & flag)) ? true : false;
     if (m_is_initiator == is_peer_channel_initiator) {
         return nullptr;
     }
-    return std::make_shared<im2_light_channel>(m_main_worker,
-                                               shared_from_this(),
-                                               light_channel_id,
-                                               m_is_initiator);
+    light_channel_info_itr->second.light_channel =
+            std::make_shared<im2_light_channel>(m_main_worker,
+                                                shared_from_this(),
+                                                light_channel_id,
+                                                m_is_initiator);
+    return light_channel_info_itr->second.light_channel;
 }
 
 // im2_channel_builder
@@ -184,22 +201,23 @@ void im2_channel_recv_work::do_work() {
     }
 }
 
-// im2_channel_recv_work
+// im2_channel_send_work
 void im2_channel_send_work::do_work() {
-    // todo
-//    m_main_worker->add_work(new WorkWrap(
-//            std::make_shared<im2_light_channel_send_work>(std::make_shared<im2_light_channel>(),
-//                                                    m_io_worker,
-//                                                    m_my_id)));
-    std::string msg = "msg from: " + std::to_string(m_my_id);
-    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
-    while (true) {
-        if (!m_channel->send_text(shared_from_this(), 11111, msg)) {
-            log_error("failed to send message to server!");
-            break;
-        }
-        timer.wait_for(5000);
-    }
+    auto light_channel = std::make_shared<im2_light_channel>(
+            m_main_worker_sp,
+            m_channel,
+            m_channel->generate_light_ch_id(),
+            true);
+    m_main_worker->add_work(new WorkWrap(
+            std::make_shared<im2_light_channel_send_work>(
+                    light_channel,
+                    m_main_worker_sp,
+                    m_io_worker,
+                    m_my_id)));
+    m_main_worker->add_work(new WorkWrap(
+            std::make_shared<im2_light_channel_server_work>(
+                    light_channel,
+                    m_my_id)));
 }
 
 // im2_light_channel_send_work
@@ -211,6 +229,7 @@ void im2_light_channel_send_work::do_work() {
             log_error("failed to send message to server!");
             break;
         }
+        // todo: here can recv_text for this light channel. and not block message in other channels
         timer.wait_for(5000);
     }
 }

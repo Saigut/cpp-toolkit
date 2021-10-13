@@ -96,8 +96,12 @@ void im2_light_channel_server_work::do_work() {
         std::string chat_msg;
         if (m_channel->get_chat_msg(msg, id_in_msg, chat_msg)) {
             log_info("got message: %s", chat_msg.c_str());
-            std::string res_msg = "response from " + std::to_string(m_my_id);
-            m_channel->send_text(shared_from_this(), 1234, chat_msg);
+            if (!m_channel->m_is_initiator) {
+                std::string res_msg = "response from " + std::to_string(m_my_id);
+                m_channel->send_text(shared_from_this(), 1234, res_msg);
+            }
+        } else {
+            log_info("not chat message?");
         }
     }
 }

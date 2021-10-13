@@ -224,6 +224,7 @@ namespace WorkUtils {
         std::shared_ptr<TcpSocketAb> m_tcp_socket;
     };
 
+    class light_channel_ab;
     class channel_ab : public std::enable_shared_from_this<channel_ab> {
     public:
         channel_ab(std::shared_ptr<Worker> main_worker,
@@ -302,7 +303,12 @@ namespace WorkUtils {
                 std::shared_ptr<Work> light_channel_consignor_work) {
             auto ret = m_light_channel_map->find(light_ch_id);
             if (ret == m_light_channel_map->end()) {
-                return false;
+                auto insert_ret = m_light_channel_map->emplace(light_ch_id, light_channel_info{});
+                if (!insert_ret.second) {
+                    log_error("light channel map insert failed!");
+                    return false;
+                }
+                ret = insert_ret.first;
             }
             ret->second.light_channel_consignor_work = light_channel_consignor_work;
             return true;
@@ -328,7 +334,6 @@ namespace WorkUtils {
             ret->second.msg_q->pop();
             return true;
         }
-    protected:
         uint64_t generate_light_ch_id() {
             uint64_t id = light_ch_id_base + 1;
             if (m_is_initiator) {
@@ -343,7 +348,7 @@ namespace WorkUtils {
             auto ret = m_light_channel_map->find(light_ch_id);
             if (ret == m_light_channel_map->end()) {
                 auto insert_ret = m_light_channel_map->emplace(light_ch_id, light_channel_info{});
-                if (insert_ret.second) {
+                if (!insert_ret.second) {
                     log_error("light channel map insert failed!");
                     return false;
                 }
@@ -363,6 +368,7 @@ namespace WorkUtils {
             {}
             std::shared_ptr<Work> light_channel_consignor_work;
             std::shared_ptr<std::queue<std::string>> msg_q;
+            std::shared_ptr<light_channel_ab> light_channel;
         };
         std::shared_ptr<std::map<uint64_t, light_channel_info>> m_light_channel_map;
         std::shared_ptr<Worker> m_main_worker;

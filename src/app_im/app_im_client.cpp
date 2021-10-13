@@ -161,8 +161,10 @@ void im2_client_work::do_work() {
     auto channel = channel_builder.connect(shared_from_this(), m_my_id, addr, 12345);
     m_main_worker_sp->add_work(new WorkWrap(
             std::make_shared<im2_channel_send_work>(channel,
+                                                    m_main_worker_sp,
                                                     m_io_worker,
                                                     m_my_id)));
+    m_main_worker_sp->add_work(new WorkWrap(std::make_shared<im2_channel_recv_work>(channel)));
 }
 
 // program <server_ip> <my_id> <peer_id>
