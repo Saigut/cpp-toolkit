@@ -84,6 +84,41 @@ bool im_server_impl::accept_channel(std::shared_ptr<Work> consignor_work) {
     }
 }
 
+void im2_light_channel_server_work::do_work() {
+    while (true) {
+        std::string msg;
+        if (!m_channel->recv_msg(shared_from_this(), msg)) {
+            log_error("channel failed to receive message!");
+            break;
+        }
+
+        uint64_t id_in_msg;
+        std::string chat_msg;
+        if (m_channel->get_chat_msg(msg, id_in_msg, chat_msg)) {
+            log_info("got message: %s", chat_msg.c_str());
+            std::string res_msg = "response from " + std::to_string(m_my_id);
+            m_channel->send_text(shared_from_this(), 1234, chat_msg);
+        }
+    }
+}
+
+void im2_server_work::do_work()
+{
+    std::string addr = "0.0.0.0";
+    im2_channel_builder channel_builder{m_main_worker_sp, m_io_worker};
+
+    expect_ret(channel_builder.listen(addr, 12345));
+    while (true) {
+        uint64_t peer_id;
+        auto channel = channel_builder.accept(shared_from_this(), peer_id);
+        if (!channel) {
+            log_error("channel failed to accept!");
+            break;
+        }
+        m_main_worker_sp->add_work(new WorkWrap(std::make_shared<im2_channel_recv_work>(channel)));
+    }
+}
+
 class ServerWork : public Work {
 public:
     ServerWork(Worker* main_worker,
@@ -132,6 +167,31 @@ int app_im_server_new(int argc, char** argv)
 
     worker_net_io.wait_worker_started();
     worker.add_work(new WorkWrap(std::make_shared<ServerWork>(&worker, &worker_net_io, server), nullptr));
+
+    while (true)  {
+        std::this_thread::sleep_for(std::chrono::milliseconds (100));
+    }
+
+    return 0;
+}
+
+int app_im2_server(int argc, char** argv)
+{
+    auto worker = std::make_shared<Worker>();
+    auto worker_net_io = std::make_shared<Worker_NetIo>();
+    // Start main worker
+    std::thread main_worker_thr(main_worker_thread, &(*worker));
+    // Start net io worker
+    std::thread other_worker_thr(worker_thread, &(*worker_net_io));
+
+    std::string addr = "0.0.0.0";
+
+    worker_net_io->wait_worker_started();
+    worker->add_work(new WorkWrap(std::make_shared<im2_server_work>(
+            addr, 12345,
+            worker,
+            worker_net_io,
+            22222)));
 
     while (true)  {
         std::this_thread::sleep_for(std::chrono::milliseconds (100));

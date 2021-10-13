@@ -155,6 +155,58 @@ int app_im_client_new(int argc, char** argv)
     return 0;
 }
 
+void im2_client_work::do_work() {
+    std::string addr = "127.0.0.1";
+    im2_channel_builder channel_builder{m_main_worker_sp, m_io_worker};
+    auto channel = channel_builder.connect(shared_from_this(), m_my_id, addr, 12345);
+    m_main_worker_sp->add_work(new WorkWrap(
+            std::make_shared<im2_channel_send_work>(channel,
+                                                    m_io_worker,
+                                                    m_my_id)));
+}
+
+// program <server_ip> <my_id> <peer_id>
+int app_im2_client(int argc, char** argv)
+{
+    int my_id;
+    int peer_id;
+    const char* server_ip;
+    if (4 != argc) {
+        log_error("Invalid arguments!\n");
+        return -1;
+    } else {
+        server_ip = argv[1];
+        my_id = atoi(argv[2]);
+        expect_ret_val(my_id >= 0, -1);
+        peer_id = atoi(argv[3]);
+        expect_ret_val(peer_id >= 0, -1);
+    }
+
+    auto worker = std::make_shared<Worker>();
+    auto worker_net_io = std::make_shared<Worker_NetIo>();
+    // Start main worker
+    std::thread main_worker_thr(main_worker_thread, &(*worker));
+    // Start net io worker
+    std::thread other_worker_thr(worker_thread, &(*worker_net_io));
+
+    std::string server_addr = server_ip;
+
+    worker_net_io->wait_worker_started();
+    worker->add_work(new WorkWrap(std::make_shared<im2_client_work>(
+            server_addr,
+            12345,
+            worker,
+            worker_net_io,
+            (uint64_t) my_id,
+            (uint64_t) peer_id)));
+
+    while (true)  {
+        std::this_thread::sleep_for(std::chrono::milliseconds (100));
+    }
+
+    return 0;
+}
+
 // program <list_port> <user_id> <peer_user_id>
 int app_im_client(int argc, char** argv)
 {

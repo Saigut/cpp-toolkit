@@ -89,6 +89,34 @@ std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(std::shared_ptr
     return channel;
 }
 
+// im2_channel
+std::shared_ptr<im2_light_channel> im2_channel::get_light_channel_from_msg(
+        std::string &msg) {
+    size_t msg_size = msg.size();
+    uint8_t* cur_pos = (uint8_t*)msg.data();
+    uint64_t msg_type;
+    uint64_t light_channel_id;
+    expect_ret_val(msg_size >= (sizeof(msg_type) + sizeof(light_channel_id)), nullptr);
+    msg_type = *((uint64_t*)cur_pos);
+    cur_pos += sizeof(uint64_t);
+    boost::endian::big_to_native_inplace(msg_type);
+    light_channel_id = *((uint64_t*)cur_pos);
+//    cur_pos += sizeof(uint64_t);
+    boost::endian::big_to_native_inplace(light_channel_id);
+    if (0 != msg_type) {
+        return nullptr;
+    }
+    uint64_t flag = (uint64_t)1 << 63;
+    bool is_peer_channel_initiator = (0 != (light_channel_id & flag)) ? true : false;
+    if (m_is_initiator == is_peer_channel_initiator) {
+        return nullptr;
+    }
+    return std::make_shared<im2_light_channel>(m_main_worker,
+                                               shared_from_this(),
+                                               light_channel_id,
+                                               m_is_initiator);
+}
+
 // im2_channel_builder
 std::shared_ptr<im2_channel> im2_channel_builder::connect(std::shared_ptr<Work> consignor_work,
                                                                   uint64_t my_id,
@@ -96,7 +124,7 @@ std::shared_ptr<im2_channel> im2_channel_builder::connect(std::shared_ptr<Work> 
                                                                   uint16_t port) {
     auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>(&(*m_io_worker));
     expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
-    auto channel = std::make_shared<im2_channel>(connector_asio, m_main_worker);
+    auto channel = std::make_shared<im2_channel>(connector_asio, m_main_worker, true);
     uint64_t id = 0;
     std::string msg;
     uint64_t sending_my_id = my_id;
@@ -122,13 +150,69 @@ std::shared_ptr<im2_channel> im2_channel_builder::accept(std::shared_ptr<Work> c
         return nullptr;
     }
     std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept(consignor_work);
-    auto channel = std::make_shared<im2_channel>(socket_asio, m_main_worker);
+    auto channel = std::make_shared<im2_channel>(socket_asio, m_main_worker, false);
     uint64_t id;
     std::string msg;
     channel->recv_text(consignor_work, id, msg);
     peer_id = *((uint64_t*)msg.data());
     boost::endian::big_to_native_inplace(peer_id);
     return channel;
+}
+
+// im2_channel_recv_work
+void im2_channel_recv_work::do_work() {
+    while (true) {
+        std::string msg;
+        if (!m_channel->recv_msg(shared_from_this(), msg)) {
+            log_error("channel failed to receive message!");
+            break;
+        }
+
+        uint64_t id_in_msg;
+        std::string chat_msg;
+        if (m_channel->get_chat_msg(msg, id_in_msg, chat_msg)) {
+            log_info("got message: %s", chat_msg.c_str());
+        } else {
+            auto light_channel = m_channel->get_light_channel_from_msg(msg);
+            if (light_channel) {
+                m_main_worker->add_work(new WorkWrap(
+                        std::make_shared<im2_light_channel_server_work>(
+                                light_channel, 11111)));
+            }
+            m_channel->deal_with_msg(msg);
+        }
+    }
+}
+
+// im2_channel_recv_work
+void im2_channel_send_work::do_work() {
+    // todo
+//    m_main_worker->add_work(new WorkWrap(
+//            std::make_shared<im2_light_channel_send_work>(std::make_shared<im2_light_channel>(),
+//                                                    m_io_worker,
+//                                                    m_my_id)));
+    std::string msg = "msg from: " + std::to_string(m_my_id);
+    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
+    while (true) {
+        if (!m_channel->send_text(shared_from_this(), 11111, msg)) {
+            log_error("failed to send message to server!");
+            break;
+        }
+        timer.wait_for(5000);
+    }
+}
+
+// im2_light_channel_send_work
+void im2_light_channel_send_work::do_work() {
+    std::string msg = "msg from: " + std::to_string(m_my_id);
+    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
+    while (true) {
+        if (!m_channel->send_text(shared_from_this(), 11111, msg)) {
+            log_error("failed to send message to server!");
+            break;
+        }
+        timer.wait_for(5000);
+    }
 }
 
 int app_im(int argc, char** argv)
@@ -140,9 +224,11 @@ int app_im(int argc, char** argv)
     }
 
     if (0 == strcmp(argv[1], "c")) {
-        return app_im_client_new(argc - 1, argv + 1);
+//        return app_im_client_new(argc - 1, argv + 1);
+        return app_im2_client(argc - 1, argv + 1);
     } else if (0 == strcmp(argv[1], "s")) {
-        return app_im_server_new(argc - 1, argv + 1);
+//        return app_im_server_new(argc - 1, argv + 1);
+        return app_im2_server(argc - 1, argv + 1);
     } else {
         log_error("wrong parameters.");
 //        print_usage();

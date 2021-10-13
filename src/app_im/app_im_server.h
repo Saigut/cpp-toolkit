@@ -11,6 +11,7 @@ extern "C" {
 
 int app_im_server(int argc, char** argv);
 int app_im_server_new(int argc, char** argv);
+int app_im2_server(int argc, char** argv);
 
 class im_server_base {
 public:

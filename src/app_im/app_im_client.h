@@ -404,15 +404,13 @@ private:
 };
 
 /// im2
-// msg: <uint64 msg size><uint64 msg type><msg body>
-//      <uint64 msg size>: all data size after <uint64 msg size>
-//      <uint64 msg type>: 0, chat message; 1 light channel msg
-// light channel <msg body>: <uint64 light channel id><uint64 msg type><msg body>
+class im2_light_channel;
 class im2_channel : public WorkUtils::channel_ab {
 public:
     explicit im2_channel(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket,
-                         std::shared_ptr<Worker> main_worker)
-            : channel_ab(main_worker),
+                         std::shared_ptr<Worker> main_worker,
+                         bool is_initiator)
+            : channel_ab(main_worker, is_initiator),
               m_tcp(std::make_shared<WorkUtils::tcp_socket>(tcp_socket)) {}
     virtual bool send_msg(std::shared_ptr<Work> consignor_work, std::string& msg) override {
         uint64_t msg_size_net_byte = boost::endian::native_to_big(msg.size());
@@ -420,85 +418,56 @@ public:
         expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(msg.data()), msg.size()), false);
         return true;
     }
-    bool send_text(std::shared_ptr<Work> consignor_work, uint64_t peer_id, std::string& text) {
-        uint64_t msg_type = boost::endian::native_to_big((uint64_t)0);
-        uint64_t peer_id_net = boost::endian::native_to_big(peer_id);
-        std::string msg_type_str;
-        std::string peer_id_str;
-        std::string send_msg_str;
-        msg_type_str.assign((const char*)(&msg_type), sizeof(msg_type));
-        peer_id_str.assign((const char*)(&peer_id_net), sizeof(peer_id_net));
-        send_msg_str = msg_type_str + peer_id_str + text;
-        return send_msg(consignor_work, send_msg_str);
-    }
     virtual bool recv_msg(std::shared_ptr<Work> consignor_work, std::string& msg) override {
         uint64_t msg_size;
         uint64_t msg_type;
-
         expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_size), sizeof(msg_size)), false);
         boost::endian::big_to_native_inplace(msg_size);
-        // check for msg type
+        expect_ret_val(msg_size < 1000000000, false);
+        msg.reserve(msg_size + 1);
+        msg.resize(msg_size);
+        ((uint8_t*)(msg.data()))[msg_size - sizeof(uint64_t)] = 0;
+        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size), false);
+        return true;
+    }
+    std::shared_ptr<im2_light_channel> get_light_channel_from_msg(std::string& msg);
+    bool deal_with_msg(std::string& msg) {
+        size_t msg_size = msg.size();
+        uint8_t* cur_pos = (uint8_t*)msg.data();
+        uint64_t msg_type;
         expect_ret_val(msg_size >= sizeof(msg_type), false);
 
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_type), sizeof(msg_type)), false);
+        msg_type = *((uint64_t*)cur_pos);
+        cur_pos += sizeof(uint64_t);
         boost::endian::big_to_native_inplace(msg_type);
 
         switch (msg_type) {
             case 0: {
-                msg.reserve(msg_size - sizeof(msg_type) + 1);
-                msg.resize(msg_size - sizeof(uint64_t));
-                expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size - sizeof(msg_type)), false);
-                ((uint8_t*)(msg.data()))[msg_size - sizeof(uint64_t)] = 0;
+                uint64_t id_in_msg;
+                expect_ret_val(msg_size >= (sizeof(msg_type) + sizeof(id_in_msg)), false);
+                id_in_msg = *((uint64_t*)cur_pos);
+//                cur_pos += sizeof(uint64_t);
+                boost::endian::big_to_native_inplace(id_in_msg);
+                log_info("chat message: %s", (const char*)cur_pos);
                 break;
             }
             case 1: {
                 uint64_t light_channel_id;
                 std::string light_channel_msg;
                 expect_ret_val(msg_size >= (sizeof(msg_type) + sizeof(light_channel_id)), false);
-                expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&light_channel_id), sizeof(light_channel_id)), false);
+                light_channel_id = *((uint64_t*)cur_pos);
+                cur_pos += sizeof(uint64_t);
                 boost::endian::big_to_native_inplace(light_channel_id);
-                light_channel_msg.reserve(msg_size - sizeof(msg_type) - sizeof(light_channel_id) + 1);
-                light_channel_msg.resize(msg_size - sizeof(msg_type) - sizeof(light_channel_id));
-                expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(light_channel_msg.data()), light_channel_msg.size()), false);
+                light_channel_msg = msg.substr(sizeof(msg_type) + sizeof(light_channel_id), std::string::npos);
+                light_channel_msg.reserve(light_channel_msg.size() + 1);
+                ((uint8_t*)(msg.data()))[light_channel_msg.size()] = 0;
                 expect_ret_val(deal_with_light_channel_msg(light_channel_id, light_channel_msg), false);
-                msg.clear();
                 break;
             }
             default: {
                 log_error("Invalid message type: %llu", msg_type);
                 return false;
             }
-        }
-        return true;
-    }
-    bool recv_text(std::shared_ptr<Work> consignor_work, uint64_t& id_in_msg, std::string& text) {
-        uint64_t msg_size;
-        uint64_t msg_type;
-        uint64_t read_id;
-
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_size), sizeof(uint64_t)), false);
-        boost::endian::big_to_native_inplace(msg_size);
-        expect_ret_val(msg_size >= sizeof(msg_type), false);
-
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_type), sizeof(msg_type)), false);
-        boost::endian::big_to_native_inplace(msg_type);
-
-        if (0 != msg_type) {
-            log_error("Unexpected message type: %llu!", msg_type);
-            return false;
-        }
-
-        size_t msg_header_sz = sizeof(msg_type) + sizeof(read_id);
-        expect_ret_val(msg_size >= msg_header_sz, false);
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&read_id), sizeof(uint64_t)), false);
-        boost::endian::big_to_native_inplace(read_id);
-
-        id_in_msg = read_id;
-        if (msg_size > msg_header_sz) {
-            text.reserve(msg_size - msg_header_sz + 1);
-            text.resize(msg_size - msg_header_sz);
-            expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(text.data()), text.size()), false);
-            ((uint8_t*)(text.data()))[msg_size - sizeof(uint64_t)] = 0;
         }
         return true;
     }
@@ -512,42 +481,18 @@ public:
     im2_light_channel(std::shared_ptr<Worker> main_worker,
                       std::shared_ptr<WorkUtils::channel_ab> main_channel,
                       uint64_t light_channel_id,
-                      uint64_t peer_id)
+                      bool is_initiator)
             : WorkUtils::light_channel_ab(main_worker,
                                           main_channel,
-                                          light_channel_id),
-              m_peer_id(peer_id) {}
-    bool send_text(std::shared_ptr<Work> consignor_work, std::string& text) {
-        uint64_t msg_type = boost::endian::native_to_big((uint64_t)0);
-        uint64_t peer_id_net = boost::endian::native_to_big(m_peer_id);
-        std::string msg_type_str;
-        std::string peer_id_str;
-        std::string send_msg_str;
-        msg_type_str.assign((const char*)(&msg_type), sizeof(msg_type));
-        peer_id_str.assign((const char*)(&peer_id_net), sizeof(peer_id_net));
-        send_msg_str = msg_type_str + peer_id_str + text;
-        return send_msg(consignor_work, send_msg_str);
-    }
-    bool recv_text(std::shared_ptr<Work> consignor_work, std::string& text) {
-        if (!recv_msg(consignor_work, text)) {
-            return false;
-        }
-        uint64_t msg_type;
-        uint64_t peer_id;
-        expect_ret_val(text.size() >= (sizeof(msg_type) + sizeof(peer_id)), false);
-        msg_type = *((uint64_t*)text.data());
-        peer_id = *(((uint64_t*)text.data()) + 1);
-        boost::endian::big_to_native_inplace(msg_type);
-        boost::endian::big_to_native_inplace(peer_id);
-        if (0 != msg_type) {
-            log_warn("this is not text message! type: %llu", msg_type);
-        } else {
-            text = text.substr(sizeof(msg_type) + sizeof(peer_id), text.size() - sizeof(msg_type));
-        }
-        return true;
-    }
-private:
-    uint64_t m_peer_id;
+                                          light_channel_id,
+                                          is_initiator) {}
+//    bool lch_send_text(std::shared_ptr<Work> consignor_work, std::string& text) {
+//        return send_text(consignor_work, m_peer_id, text);
+//    }
+//    bool lch_recv_text(std::shared_ptr<Work> consignor_work, std::string& text) {
+//        uint64_t id_in_msg;
+//        return recv_text(consignor_work, id_in_msg, text);
+//    }
 };
 
 class im2_channel_builder : public WorkUtils::channel_builder_ab {
@@ -567,6 +512,103 @@ private:
     std::shared_ptr<Worker> m_main_worker;
     std::shared_ptr<Worker_NetIo> m_io_worker;
     std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
+};
+
+class im2_channel_recv_work : public Work {
+public:
+    explicit im2_channel_recv_work(std::shared_ptr<im2_channel> channel)
+            : m_channel(channel)
+    {}
+    void do_work() override;
+private:
+    std::shared_ptr<im2_channel> m_channel;
+};
+
+class im2_channel_send_work : public Work {
+public:
+    explicit im2_channel_send_work(std::shared_ptr<im2_channel> channel,
+                                   std::shared_ptr<Worker_NetIo> io_worker,
+                                   uint64_t my_id)
+            : m_channel(channel),
+              m_io_worker(io_worker),
+              m_my_id(my_id)
+    {}
+    void do_work() override;
+private:
+    std::shared_ptr<im2_channel> m_channel;
+    std::shared_ptr<Worker_NetIo> m_io_worker;
+    uint64_t m_my_id;
+};
+
+class im2_light_channel_send_work : public Work {
+public:
+    explicit im2_light_channel_send_work(std::shared_ptr<im2_light_channel> channel,
+                                         std::shared_ptr<Worker_NetIo> io_worker,
+                                         uint64_t my_id)
+            : m_channel(channel),
+              m_io_worker(io_worker),
+              m_my_id(my_id)
+    {}
+    void do_work() override;
+private:
+    std::shared_ptr<im2_light_channel> m_channel;
+    std::shared_ptr<Worker_NetIo> m_io_worker;
+    uint64_t m_my_id;
+};
+
+class im2_light_channel_server_work : public Work {
+public:
+    explicit im2_light_channel_server_work(std::shared_ptr<im2_light_channel> channel,
+                                           uint64_t my_id)
+            : m_channel(channel),
+              m_my_id(my_id) {}
+    void do_work() override;
+private:
+    std::shared_ptr<im2_light_channel> m_channel;
+    uint64_t m_my_id;
+};
+
+class im2_server_work : public Work {
+public:
+    explicit im2_server_work(std::string& server_addr, uint16_t server_port,
+                             std::shared_ptr<Worker> main_worker_sp,
+                             std::shared_ptr<Worker_NetIo> io_worker,
+                             uint64_t my_id)
+            : m_server_addr(server_addr),
+              m_server_port(server_port),
+              m_main_worker_sp(main_worker_sp),
+              m_io_worker(io_worker),
+              m_my_id(my_id) {}
+    void do_work() override;
+private:
+    std::string m_server_addr;
+    uint16_t m_server_port;
+    std::shared_ptr<Worker> m_main_worker_sp;
+    std::shared_ptr<Worker_NetIo> m_io_worker;
+    uint64_t m_my_id;
+};
+
+class im2_client_work : public Work {
+public:
+    explicit im2_client_work(std::string& server_addr, uint16_t server_port,
+                             std::shared_ptr<Worker> main_worker_sp,
+                             std::shared_ptr<Worker_NetIo> io_worker,
+                             uint64_t my_id,
+                             uint64_t peer_id)
+            : m_server_addr(server_addr),
+              m_server_port(server_port),
+              m_main_worker_sp(main_worker_sp),
+              m_io_worker(io_worker),
+              m_my_id(my_id),
+              m_peer_id(peer_id) {}
+    void do_work() override;
+private:
+    std::string m_server_addr;
+    uint16_t m_server_port;
+    std::shared_ptr<Worker> m_main_worker_sp;
+    std::shared_ptr<Worker_NetIo> m_io_worker;
+    uint64_t m_my_id;
+    uint64_t m_peer_id;
 };
 
 /// old
@@ -603,6 +645,7 @@ private:
 
 int app_im_client(int argc, char** argv);
 int app_im_client_new(int argc, char** argv);
+int app_im2_client(int argc, char** argv);
 
 #ifdef __cplusplus
 }
