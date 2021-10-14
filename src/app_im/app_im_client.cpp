@@ -155,15 +155,41 @@ int app_im_client_new(int argc, char** argv)
     return 0;
 }
 
+void im2_client_request_work::do_work() {
+    auto light_channel = std::make_shared<im2_light_channel>(
+            m_main_worker_sp,
+            m_channel,
+            m_channel->generate_light_ch_id(),
+            true);
+    std::string req = "msg from: " + std::to_string(m_my_id);
+    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
+    while (true) {
+        if (!light_channel->send_text(shared_from_this(), 11111, req)) {
+            log_error("failed to send request to server!");
+            break;
+        }
+        uint64_t id_in_msg;
+        std::string res;
+        if (light_channel->recv_text(shared_from_this(), id_in_msg, res)) {
+            log_info("got response: %s", res.c_str());
+        }
+        timer.wait_for(5000);
+    }
+}
+
 void im2_client_work::do_work() {
     std::string addr = "127.0.0.1";
+    uint16_t port = 12345;
     im2_channel_builder channel_builder{m_main_worker_sp, m_io_worker};
-    auto channel = channel_builder.connect(shared_from_this(), m_my_id, addr, 12345);
+    auto channel = channel_builder.connect(shared_from_this(), m_my_id, addr, port);
+    if (!channel) {
+        log_error("failed connect to %s:%u!", addr.c_str(), port);
+    }
     m_main_worker_sp->add_work(new WorkWrap(
-            std::make_shared<im2_channel_send_work>(channel,
-                                                    m_main_worker_sp,
-                                                    m_io_worker,
-                                                    m_my_id)));
+            std::make_shared<im2_client_request_work>(channel,
+                                                      m_main_worker_sp,
+                                                      m_io_worker,
+                                                      m_my_id)));
     m_main_worker_sp->add_work(new WorkWrap(std::make_shared<im2_channel_recv_work>(channel)));
 }
 

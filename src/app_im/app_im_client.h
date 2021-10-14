@@ -594,6 +594,25 @@ private:
     uint64_t m_my_id;
 };
 
+class im2_client_request_work : public Work {
+public:
+    explicit im2_client_request_work(std::shared_ptr<im2_channel> channel,
+                                     std::shared_ptr<Worker> main_worker_sp,
+                                     std::shared_ptr<Worker_NetIo> io_worker,
+                                     uint64_t my_id)
+            : m_channel(channel),
+              m_main_worker_sp(main_worker_sp),
+              m_io_worker(io_worker),
+              m_my_id(my_id)
+    {}
+    void do_work() override;
+private:
+    std::shared_ptr<im2_channel> m_channel;
+    std::shared_ptr<Worker> m_main_worker_sp;
+    std::shared_ptr<Worker_NetIo> m_io_worker;
+    uint64_t m_my_id;
+};
+
 class im2_client_work : public Work {
 public:
     explicit im2_client_work(std::string& server_addr, uint16_t server_port,

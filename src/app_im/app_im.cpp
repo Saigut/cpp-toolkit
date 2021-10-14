@@ -184,20 +184,13 @@ void im2_channel_recv_work::do_work() {
             log_error("channel failed to receive message!");
             break;
         }
-
-        uint64_t id_in_msg;
-        std::string chat_msg;
-        if (m_channel->get_chat_msg(msg, id_in_msg, chat_msg)) {
-            log_info("got message: %s", chat_msg.c_str());
-        } else {
-            auto light_channel = m_channel->get_light_channel_from_msg(msg);
-            if (light_channel) {
-                m_main_worker->add_work(new WorkWrap(
-                        std::make_shared<im2_light_channel_server_work>(
-                                light_channel, 11111)));
-            }
-            m_channel->deal_with_msg(msg);
+        auto light_channel = m_channel->get_light_channel_from_msg(msg);
+        if (light_channel) {
+            m_main_worker->add_work(new WorkWrap(
+                    std::make_shared<im2_light_channel_server_work>(
+                            light_channel, 11111)));
         }
+        m_channel->deal_with_msg(msg);
     }
 }
 

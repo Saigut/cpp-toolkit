@@ -86,23 +86,15 @@ bool im_server_impl::accept_channel(std::shared_ptr<Work> consignor_work) {
 
 void im2_light_channel_server_work::do_work() {
     while (true) {
-        std::string msg;
-        if (!m_channel->recv_msg(shared_from_this(), msg)) {
-            log_error("channel failed to receive message!");
+        std::string req;
+        uint64_t id_in_msg;
+        if (!m_channel->recv_text(shared_from_this(), id_in_msg, req)) {
+            log_error("failed to receive request!");
             break;
         }
-
-        uint64_t id_in_msg;
-        std::string chat_msg;
-        if (m_channel->get_chat_msg(msg, id_in_msg, chat_msg)) {
-            log_info("got message: %s", chat_msg.c_str());
-            if (!m_channel->m_is_initiator) {
-                std::string res_msg = "response from " + std::to_string(m_my_id);
-                m_channel->send_text(shared_from_this(), 1234, res_msg);
-            }
-        } else {
-            log_info("not chat message?");
-        }
+        log_info("got request: %s", req.c_str());
+        std::string res = "response from " + std::to_string(m_my_id);
+        m_channel->send_text(shared_from_this(), 1234, res);
     }
 }
 
