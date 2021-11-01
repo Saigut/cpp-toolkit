@@ -45,7 +45,7 @@ static int mod_tcp_hole_test_server(int argc, char** argv)
 }
 
 // program s
-// program c <server_port>
+// program c <server_addr> <server_port>
 int mod_tcp_hole_test(int argc, char** argv)
 {
     if (argc < 2) {
