@@ -19,6 +19,7 @@
 #include <app_im/app_im.h>
 #include <app_worker/app_worker.h>
 #include <mod_worker/mod_worker.h>
+#include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -120,12 +121,13 @@ int program_main(int argc, char** argv)
 //    app_socket(argc, argv);
 //    ret = app_chat(argc, argv);
 //    ret = app_asio_socket(argc, argv);
-    ret = app_im(argc, argv);
+//    ret = app_im(argc, argv);
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
 //    ret = app_worker(argc, argv);
 //    ret = test_lockfree(argc, argv);
+    ret = mod_tcp_hole_test(argc, argv);
 
     return ret;
 }
