@@ -15,7 +15,20 @@ using boost::asio::io_context;
 
 static int mod_tcp_hole_test_client(int argc, char** argv)
 {
-    return -1;
+    boost::system::error_code ec;
+
+    // server endpoint
+    boost::asio::ip::address addr = boost::asio::ip::make_address(argv[1], ec);
+    check_ec_ret_val(ec, -1, "make_address");
+    tcp::endpoint endpoint(addr, std::atoi(argv[2]));
+
+    io_context io_ctx;
+    boost::asio::ip::tcp::socket client_socket{io_ctx};
+    client_socket.connect(endpoint, ec);
+    check_ec_ret_val(ec, -1, "client_socket connect");
+    log_info("connected!");
+
+    return 0;
 }
 
 static int mod_tcp_hole_test_server(int argc, char** argv)
@@ -39,7 +52,26 @@ static int mod_tcp_hole_test_server(int argc, char** argv)
              local_ep.port());
 
     // 3. listen and accept on this tcp port
+    boost::asio::ip::tcp::acceptor::reuse_address reuse_address_option(true);
+    tcp::acceptor acceptor(io_ctx);
+    acceptor.open(local_ep.protocol(), ec);
+    check_ec_ret_val(ec, -1, "acceptor open");
+    acceptor.set_option(reuse_address_option, ec);
+    check_ec_ret_val(ec, -1, "acceptor set_option");
+    acceptor.bind(local_ep, ec);
+    check_ec_ret_val(ec, -1, "acceptor bind");
+    acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+    check_ec_ret_val(ec, -1, "acceptor listen");
+    log_info("listening!");
+
     // 4. print address and port of incoming client
+    boost::asio::ip::tcp::socket incoming_client_socket = acceptor.accept(ec);
+    check_ec_ret_val(ec, -1, "acceptor accept");
+    tcp::endpoint remote_ep = incoming_client_socket.remote_endpoint(ec);
+    check_ec_ret_val(ec, -1, "failed to get remote_endpoint");
+    log_info("New client, ip: %s, port: %u",
+             remote_ep.address().to_string().c_str(),
+             remote_ep.port());
 
     return 0;
 }
