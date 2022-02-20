@@ -50,13 +50,17 @@ public:
     int m_my_finish_ret_val = -1;
 
     WorkingPoint m_wp;
+    void add_self_back_to_main_worker(std::shared_ptr<Work> sub_work);
 protected:
     virtual void do_work();
-    void add_self_back_to_main_worker(std::shared_ptr<Work> sub_work);
 
+    // Worker 通过全局的方式获取？或者通过一个类似 io_context 无处不在的东西来获取？
     Worker* m_main_worker = nullptr;
 
+    // 应该以闭包的方式和 finish handler 绑定在一起？
     std::shared_ptr<Work> m_consignor_work = nullptr;
+
+    // co_wait 怎么实现呢？  想办法用 finish_handler 做？
 
     bool began = false;
     bool stopped = false;

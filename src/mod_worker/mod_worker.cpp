@@ -54,3 +54,23 @@ WorkWrap* Worker::get_cur_work()
     WorkWrap* cur_work;
     return works_q.pop(cur_work) ? cur_work : nullptr;
 }
+
+void Task::execute() {
+    finish_task(task());
+}
+
+int Task::task() {
+    return 0;
+}
+
+void Task::finish_task(int task_ret) {
+
+}
+
+void Executor::execute_tasks() {
+
+}
+
+void Executor::add_task(Task task) {
+
+}

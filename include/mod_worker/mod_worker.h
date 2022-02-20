@@ -40,4 +40,20 @@ protected:
 //    std::mutex m_thread_lock;
 };
 
+class Task {
+public:
+    void execute();
+protected:
+    int task();
+    void finish_task(int task_ret);
+};
+
+class Executor {
+public:
+    void execute_tasks();
+    void add_task(Task task);
+};
+
+
+
 #endif //CPP_TOOLKIT_MOD_WORKER_H
