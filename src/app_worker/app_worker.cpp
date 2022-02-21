@@ -90,7 +90,7 @@ public:
         std::shared_ptr<Work> this_obj = shared_from_this();
         // Connect
         WorkUtils::TcpSocketConnector_Asio tcp_socket([this_obj](){this_obj->m_wp.wp_yield(0);},
-                                                      [this_obj](){this_obj->add_self_back_to_main_worker(nullptr)});
+                                                      [this_obj](){this_obj->add_self_back_to_main_worker(nullptr);});
         expect_ret(0 == tcp_socket.connect("127.0.0.1", 80));
 
         unsigned i;

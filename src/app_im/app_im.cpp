@@ -180,7 +180,7 @@ std::shared_ptr<im2_channel> im2_channel_builder::accept(std::shared_ptr<Work> c
 void im2_channel_recv_work::do_work() {
     while (true) {
         std::string msg;
-        if (!m_channel->recv_msg(shared_from_this(), msg)) {
+        if (!m_channel->recv_msg(msg)) {
             log_error("channel failed to receive message!");
             break;
         }

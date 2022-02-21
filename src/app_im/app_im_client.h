@@ -408,26 +408,25 @@ class im2_light_channel;
 class im2_channel : public WorkUtils::channel_ab {
 public:
     explicit im2_channel(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket,
-                         std::shared_ptr<Worker> main_worker,
                          bool is_initiator)
-            : channel_ab(main_worker, is_initiator),
+            : channel_ab(tcp_socket->m_work_yield, tcp_socket->m_work_back, is_initiator),
               m_tcp(std::make_shared<WorkUtils::tcp_socket>(tcp_socket)) {}
-    virtual bool send_msg(std::shared_ptr<Work> consignor_work, std::string& msg) override {
+    virtual bool send_msg(std::string& msg) override {
         uint64_t msg_size_net_byte = boost::endian::native_to_big(msg.size());
-        expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
-        expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(msg.data()), msg.size()), false);
+        expect_ret_val(m_tcp->write((uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp->write((uint8_t*)(msg.data()), msg.size()), false);
         return true;
     }
-    virtual bool recv_msg(std::shared_ptr<Work> consignor_work, std::string& msg) override {
+    virtual bool recv_msg(std::string& msg) override {
         uint64_t msg_size;
         uint64_t msg_type;
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_size), sizeof(msg_size)), false);
+        expect_ret_val(m_tcp->read((uint8_t*)(&msg_size), sizeof(msg_size)), false);
         boost::endian::big_to_native_inplace(msg_size);
         expect_ret_val(msg_size < 1000000000, false);
         msg.reserve(msg_size + 1);
         msg.resize(msg_size);
         ((uint8_t*)(msg.data()))[msg_size - sizeof(uint64_t)] = 0;
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size), false);
+        expect_ret_val(m_tcp->read((uint8_t*)(msg.data()), msg_size), false);
         return true;
     }
     std::shared_ptr<WorkUtils::light_channel_ab> get_light_channel_from_msg(std::string& msg);
@@ -478,11 +477,13 @@ private:
 // Fixme: Should prevent same light channel id in two ends of main_channel!
 class im2_light_channel : public WorkUtils::light_channel_ab {
 public:
-    im2_light_channel(std::shared_ptr<Worker> main_worker,
+    im2_light_channel(std::function<void()> work_yield,
+                      std::function<void()> work_back,
                       std::shared_ptr<WorkUtils::channel_ab> main_channel,
                       uint64_t light_channel_id,
                       bool is_initiator)
-            : WorkUtils::light_channel_ab(main_worker,
+            : WorkUtils::light_channel_ab(work_yield,
+                                          work_back,
                                           main_channel,
                                           light_channel_id,
                                           is_initiator) {}
@@ -497,20 +498,21 @@ public:
 
 class im2_channel_builder : public WorkUtils::channel_builder_ab {
 public:
-    explicit im2_channel_builder(std::shared_ptr<Worker> main_worker,
-                                 std::shared_ptr<Worker_NetIo> io_worker)
-            : m_main_worker(main_worker),
-              m_io_worker(io_worker) {}
-    std::shared_ptr<im2_channel> connect(std::shared_ptr<Work> consignor_work,
-                                             uint64_t my_id,
-                                             const std::string& addr_str,
-                                             uint16_t port);
+    explicit im2_channel_builder(std::function<void()> work_yield,
+                                 std::function<void()> work_back,
+                                 io_context& io_ctx)
+            : m_work_yield(work_yield), m_work_back(work_back),
+              m_io_ctx(io_ctx) {}
+    std::shared_ptr<im2_channel> connect(uint64_t my_id,
+                                         const std::string &addr_str,
+                                         uint16_t port);
 
     bool listen(const std::string& local_addr_str, uint16_t local_port);
-    std::shared_ptr<im2_channel> accept(std::shared_ptr<Work> consignor_work, uint64_t& peer_id);
+    std::shared_ptr<im2_channel> accept(uint64_t& peer_id);
 private:
-    std::shared_ptr<Worker> m_main_worker;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
+    std::function<void()> m_work_yield;
+    std::function<void()> m_work_back;
+    io_context& m_io_ctx;
     std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
 };
 
@@ -598,18 +600,18 @@ class im2_client_request_work : public Work {
 public:
     explicit im2_client_request_work(std::shared_ptr<im2_channel> channel,
                                      std::shared_ptr<Worker> main_worker_sp,
-                                     std::shared_ptr<Worker_NetIo> io_worker,
+                                     io_context& io_ctx,
                                      uint64_t my_id)
             : m_channel(channel),
               m_main_worker_sp(main_worker_sp),
-              m_io_worker(io_worker),
+              m_io_ctx(io_ctx),
               m_my_id(my_id)
     {}
     void do_work() override;
 private:
     std::shared_ptr<im2_channel> m_channel;
     std::shared_ptr<Worker> m_main_worker_sp;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
+    io_context& m_io_ctx;
     uint64_t m_my_id;
 };
 
@@ -617,13 +619,13 @@ class im2_client_work : public Work {
 public:
     explicit im2_client_work(std::string& server_addr, uint16_t server_port,
                              std::shared_ptr<Worker> main_worker_sp,
-                             std::shared_ptr<Worker_NetIo> io_worker,
+                             io_context& io_ctx,
                              uint64_t my_id,
                              uint64_t peer_id)
             : m_server_addr(server_addr),
               m_server_port(server_port),
               m_main_worker_sp(main_worker_sp),
-              m_io_worker(io_worker),
+              m_io_ctx(io_ctx),
               m_my_id(my_id),
               m_peer_id(peer_id) {}
     void do_work() override;
@@ -631,7 +633,7 @@ private:
     std::string m_server_addr;
     uint16_t m_server_port;
     std::shared_ptr<Worker> m_main_worker_sp;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
+    io_context& m_io_ctx;
     uint64_t m_my_id;
     uint64_t m_peer_id;
 };
