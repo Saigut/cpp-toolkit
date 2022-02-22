@@ -5,7 +5,7 @@
 #include "app_im_client.h"
 #include "app_im_server.h"
 
-
+#if 0
 // im_tcp_socket_impl
 int im_tcp_socket_impl::write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
     return m_tcp_socket->write(consignor_work, (char *)buf, data_sz);
@@ -48,26 +48,25 @@ bool im_channel_impl::recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& i
 }
 
 // im_channel_builder_impl
-std::shared_ptr<im_channel_impl> im_channel_builder_impl::connect(std::shared_ptr<Work> consignor_work,
-                                                                  uint64_t my_id,
+std::shared_ptr<im_channel_impl> im_channel_builder_impl::connect(uint64_t my_id,
                                                                   const std::string& addr_str,
                                                                   uint16_t port) {
-    auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>((Worker_NetIo*)m_worker);
-    expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
+    auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>(m_work_yield, m_work_back);
+    expect_ret_val(0 == connector_asio->connect(addr_str, port), nullptr);
     auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(connector_asio));
     uint64_t id = 0;
     std::string msg;
     uint64_t sending_my_id = my_id;
     boost::endian::native_to_big_inplace(sending_my_id);
     msg.assign((const char*)(&sending_my_id), sizeof(sending_my_id));
-    channel->send_msg(consignor_work, id, msg);
+    channel->send_msg(id, msg);
     return channel;
 }
 bool im_channel_builder_impl::listen(const std::string& local_addr_str, uint16_t local_port) {
     if (acceptor_asio) {
         return true;
     }
-    acceptor_asio = std::make_shared<::WorkUtils::TcpAcceptor_Asio>((Worker_NetIo*)m_worker);
+    acceptor_asio = std::make_shared<::WorkUtils::TcpAcceptor_Asio>(m_work_yield, m_work_back);
     if (0 != acceptor_asio->listen(local_addr_str, local_port)) {
         acceptor_asio.reset();
         return false;
@@ -75,15 +74,15 @@ bool im_channel_builder_impl::listen(const std::string& local_addr_str, uint16_t
         return true;
     }
 }
-std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(std::shared_ptr<Work> consignor_work, uint64_t& peer_id) {
+std::shared_ptr<im_channel_impl> im_channel_builder_impl::accept(uint64_t& peer_id) {
     if (!acceptor_asio) {
         return nullptr;
     }
-    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept(consignor_work);
+    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept();
     auto channel = std::make_shared<im_channel_impl>(std::make_shared<im_tcp_socket_impl>(socket_asio));
     uint64_t id;
     std::string msg;
-    channel->recv_msg(consignor_work, id, msg);
+    channel->recv_msg(id, msg);
     peer_id = *((uint64_t*)msg.data());
     boost::endian::big_to_native_inplace(peer_id);
     return channel;
@@ -127,7 +126,8 @@ std::shared_ptr<WorkUtils::light_channel_ab> im2_channel::get_light_channel_from
         return nullptr;
     }
     light_channel_info_itr->second.light_channel =
-            std::make_shared<im2_light_channel>(m_main_worker,
+            std::make_shared<im2_light_channel>(m_work_yield,
+                                                m_work_back,
                                                 shared_from_this(),
                                                 light_channel_id,
                                                 m_is_initiator);
@@ -135,26 +135,25 @@ std::shared_ptr<WorkUtils::light_channel_ab> im2_channel::get_light_channel_from
 }
 
 // im2_channel_builder
-std::shared_ptr<im2_channel> im2_channel_builder::connect(std::shared_ptr<Work> consignor_work,
-                                                                  uint64_t my_id,
+std::shared_ptr<im2_channel> im2_channel_builder::connect(uint64_t my_id,
                                                                   const std::string& addr_str,
                                                                   uint16_t port) {
-    auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>(&(*m_io_worker));
-    expect_ret_val(0 == connector_asio->connect(consignor_work, addr_str, port), nullptr);
-    auto channel = std::make_shared<im2_channel>(connector_asio, m_main_worker, true);
+    auto connector_asio = std::make_shared<::WorkUtils::TcpSocketConnector_Asio>(m_work_yield, m_work_back);
+    expect_ret_val(0 == connector_asio->connect(addr_str, port), nullptr);
+    auto channel = std::make_shared<im2_channel>(connector_asio, true);
     uint64_t id = 0;
     std::string msg;
     uint64_t sending_my_id = my_id;
     boost::endian::native_to_big_inplace(sending_my_id);
     msg.assign((const char*)(&sending_my_id), sizeof(sending_my_id));
-    channel->send_text(consignor_work, id, msg);
+    channel->send_text(id, msg);
     return channel;
 }
 bool im2_channel_builder::listen(const std::string& local_addr_str, uint16_t local_port) {
     if (acceptor_asio) {
         return true;
     }
-    acceptor_asio = std::make_shared<::WorkUtils::TcpAcceptor_Asio>(&(*m_io_worker));
+    acceptor_asio = std::make_shared<::WorkUtils::TcpAcceptor_Asio>(m_work_yield, m_work_back);
     if (0 != acceptor_asio->listen(local_addr_str, local_port)) {
         acceptor_asio.reset();
         return false;
@@ -162,15 +161,15 @@ bool im2_channel_builder::listen(const std::string& local_addr_str, uint16_t loc
         return true;
     }
 }
-std::shared_ptr<im2_channel> im2_channel_builder::accept(std::shared_ptr<Work> consignor_work, uint64_t& peer_id) {
+std::shared_ptr<im2_channel> im2_channel_builder::accept(uint64_t& peer_id) {
     if (!acceptor_asio) {
         return nullptr;
     }
-    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept(consignor_work);
-    auto channel = std::make_shared<im2_channel>(socket_asio, m_main_worker, false);
+    std::shared_ptr<::WorkUtils::TcpSocketAb> socket_asio = acceptor_asio->accept();
+    auto channel = std::make_shared<im2_channel>(socket_asio, false);
     uint64_t id;
     std::string msg;
-    channel->recv_text(consignor_work, id, msg);
+    channel->recv_text(id, msg);
     peer_id = *((uint64_t*)msg.data());
     boost::endian::big_to_native_inplace(peer_id);
     return channel;
@@ -196,6 +195,7 @@ void im2_channel_recv_work::do_work() {
 
 // im2_channel_send_work
 void im2_channel_send_work::do_work() {
+    std::shared_ptr<Work> this_obj = shared_from_this();
     auto light_channel = std::make_shared<im2_light_channel>(
             m_main_worker_sp,
             m_channel,
@@ -247,3 +247,4 @@ int app_im(int argc, char** argv)
         return -1;
     }
 }
+#endif

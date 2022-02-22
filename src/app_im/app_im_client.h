@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 
+#if 0
 // ab1
 class im_client_ab1 {
 public:
@@ -168,13 +169,13 @@ public:
 // ab6
 class im_tcp_socket_ab6 {
 public:
-    virtual int write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) = 0;
-    virtual int read_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t buf_sz) = 0;
-    virtual bool write(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
+    virtual int write_some(uint8_t* buf, size_t data_sz) = 0;
+    virtual int read_some(uint8_t* buf, size_t buf_sz) = 0;
+    virtual bool write(uint8_t* buf, size_t data_sz) {
         size_t remain_data_sz = data_sz;
         int ret;
         while (remain_data_sz > 0) {
-            ret = write_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
+            ret = write_some(buf + (data_sz - remain_data_sz), remain_data_sz);
             if (ret <= 0) {
                 log_error("write_some failed! ret: %d", ret);
                 return false;
@@ -187,11 +188,11 @@ public:
         }
         return true;
     }
-    virtual bool read(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) {
+    virtual bool read(uint8_t* buf, size_t data_sz) {
         size_t remain_data_sz = data_sz;
         int ret;
         while (remain_data_sz > 0) {
-            ret = read_some(consignor_work, buf + (data_sz - remain_data_sz), remain_data_sz);
+            ret = read_some(buf + (data_sz - remain_data_sz), remain_data_sz);
             if (ret <= 0) {
                 log_error("read_some failed! ret: %d", ret);
                 return false;
@@ -222,28 +223,28 @@ private:
 
 class im_channel_ab6 {
 public:
-    virtual bool send_msg(std::shared_ptr<Work> consignor_work, uint64_t id, std::string& msg) {
+    virtual bool send_msg(uint64_t id, std::string& msg) {
         uint64_t msg_size_net_byte = boost::endian::native_to_big(sizeof(uint64_t) + msg.size());
         uint64_t id_net_byte = boost::endian::native_to_big(id);
-        expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
-        expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(&id_net_byte), sizeof(uint64_t)), false);
-        expect_ret_val(m_tcp->write(consignor_work, (uint8_t*)(msg.data()), msg.size()), false);
+        expect_ret_val(m_tcp->write((uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp->write((uint8_t*)(&id_net_byte), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp->write((uint8_t*)(msg.data()), msg.size()), false);
         return true;
     }
-    virtual bool recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg) {
+    virtual bool recv_msg(uint64_t& id, std::string& msg) {
         uint64_t msg_size;
         uint64_t read_id;
 
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&msg_size), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp->read((uint8_t*)(&msg_size), sizeof(uint64_t)), false);
         boost::endian::big_to_native_inplace(msg_size);
         expect_ret_val(msg_size >= sizeof(uint64_t), false);
 
-        expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(&read_id), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp->read((uint8_t*)(&read_id), sizeof(uint64_t)), false);
         boost::endian::big_to_native_inplace(read_id);
 
         if (msg_size > sizeof(uint64_t)) {
             /// fixme!!
-            expect_ret_val(m_tcp->read(consignor_work, (uint8_t*)(msg.data()), msg_size - sizeof(uint64_t)), false);
+            expect_ret_val(m_tcp->read((uint8_t*)(msg.data()), msg_size - sizeof(uint64_t)), false);
         }
         return true;
     }
@@ -257,8 +258,8 @@ public:
     explicit im_tcp_socket_impl(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket)
     : m_tcp_socket(tcp_socket)
     {}
-    int write_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t data_sz) override;
-    int read_some(std::shared_ptr<Work> consignor_work, uint8_t* buf, size_t buf_sz) override;
+    int write_some(uint8_t* buf, size_t data_sz) override;
+    int read_some(uint8_t* buf, size_t buf_sz) override;
 private:
     std::shared_ptr<WorkUtils::TcpSocketAb> m_tcp_socket;
 };
@@ -267,24 +268,28 @@ class im_channel_impl {
 public:
     im_channel_impl(std::shared_ptr<im_tcp_socket_impl> tcp)
     : m_tcp(tcp) {}
-    bool send_msg(std::shared_ptr<Work> consignor_work, uint64_t id, std::string& msg);
-    bool recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg);
+    bool send_msg(uint64_t id, std::string& msg);
+    bool recv_msg(uint64_t& id, std::string& msg);
 private:
     std::shared_ptr<im_tcp_socket_impl> m_tcp;
 };
 
-class im_channel_builder_impl : public WorkUtils::WorkUtils {
+class im_channel_builder_impl {
 public:
-    explicit im_channel_builder_impl(Worker_NetIo* worker)
-    : WorkUtils((Worker*)worker) {}
-    std::shared_ptr<im_channel_impl> connect(std::shared_ptr<Work> consignor_work,
-                                             uint64_t my_id,
+    explicit im_channel_builder_impl(std::function<void()> work_yield,
+                                     std::function<void()> work_back)
+                                     : m_work_yield(work_yield),
+                                       m_work_back(work_back)
+                                     {}
+    std::shared_ptr<im_channel_impl> connect(uint64_t my_id,
                                              const std::string& addr_str,
                                              uint16_t port);
 
     bool listen(const std::string& local_addr_str, uint16_t local_port);
-    std::shared_ptr<im_channel_impl> accept(std::shared_ptr<Work> consignor_work, uint64_t& peer_id);
+    std::shared_ptr<im_channel_impl> accept(uint64_t& peer_id);
 private:
+    std::function<void()> m_work_yield;
+    std::function<void()> m_work_back;
     std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
 };
 
@@ -673,6 +678,8 @@ private:
 int app_im_client(int argc, char** argv);
 int app_im_client_new(int argc, char** argv);
 int app_im2_client(int argc, char** argv);
+
+#endif
 
 #ifdef __cplusplus
 }

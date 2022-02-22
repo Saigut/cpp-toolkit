@@ -1,3 +1,4 @@
+#if 0
 #include "app_im_client.h"
 
 #include <stdio.h>
@@ -401,3 +402,4 @@ int im_client::send_hb() {
         return -1;
     }
 }
+#endif

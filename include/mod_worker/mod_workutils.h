@@ -9,29 +9,68 @@
 #include <boost/endian.hpp>
 
 namespace WorkUtils {
-    class WorkUtils {
+    class WorkCoCbs {
     public:
-        explicit WorkUtils(Worker* worker)
-        : m_worker(worker) {}
-    protected:
-        Worker* m_worker = nullptr;
-    };
-
-    class TcpSocketAb {
-    public:
-        explicit TcpSocketAb(std::function<void()> work_yield,
-                             std::function<void()> work_back)
-                : m_work_yield(work_yield), m_work_back(work_back) {}
-        virtual int write(char* str_buf, size_t str_len) {
-            log_error("Should not call this!");
-            return -1;
-        }
-        virtual int read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz) {
-            log_error("Should not call this!");
-            return -1;
-        }
+        WorkCoCbs(std::function<void()> work_yield,
+                  std::function<void()> work_back)
+                : m_work_yield(work_yield),
+                  m_work_back(work_back) {}
         std::function<void()> m_work_yield;
         std::function<void()> m_work_back;
+    };
+    class UserUtilOri {
+    public:
+//        void xxxxx(xxx, xxx, WorkCoCbs);
+    };
+    class UserUtil {
+    public:
+//        void xxxxx(xxx, xxx) {
+//            m_user_util.xxxxx(xxx, xxx, m_co_cbs);
+//        }
+        UserUtilOri m_user_util;
+        WorkCoCbs m_co_cbs;
+    };
+    class WorkUtilsInner {
+    public:
+
+    };
+    class WorkUtils {
+    public:
+        explicit WorkUtils(WorkCoCbs& co_cbs)
+                : m_co_cbs(co_cbs) {}
+        explicit WorkUtils(std::function<void()> work_yield,
+                           std::function<void()> work_back)
+                : m_co_cbs(work_yield, work_back) {}
+    protected:
+        WorkCoCbs m_co_cbs;
+    };
+
+    class TcpSocketAb_Real {
+    public:
+        virtual int write(char* str_buf, size_t str_len, WorkCoCbs& co_cbs) {
+            log_error("Should not call this!");
+            return -1;
+        }
+        virtual int read(char* recv_buf, size_t buf_sz,size_t& recv_data_sz,
+                         WorkCoCbs& co_cbs) {
+            log_error("Should not call this!");
+            return -1;
+        }
+    };
+
+    class TcpSocketAb : public WorkUtils {
+    public:
+        explicit TcpSocketAb(std::shared_ptr<TcpSocketAb_Real> socket_real,
+                             WorkCoCbs& co_cbs)
+                : m_socket_real(socket_real),
+                  WorkUtils(co_cbs) {}
+        virtual int write(char* str_buf, size_t str_len) {
+            return m_socket_real->write(str_buf, str_len, m_co_cbs);
+        }
+        virtual int read(char* recv_buf, size_t buf_sz, size_t& recv_data_sz) {
+            return m_socket_real->read(recv_buf, buf_sz, recv_data_sz, m_co_cbs);
+        }
+        std::shared_ptr<TcpSocketAb_Real> m_socket_real;
     };
 
     class TcpSocketConnector : public TcpSocketAb {
@@ -190,31 +229,32 @@ namespace WorkUtils {
         std::shared_ptr<tcp::acceptor> m_acceptor = nullptr;
     };
 
-    class Timer : public WorkUtils {
-    public:
-        explicit Timer(Worker* worker, std::shared_ptr<Work> consignor_work)
-        : WorkUtils(worker), m_consignor_work(consignor_work), m_wp(consignor_work->m_wp) {}
-        virtual int wait_until(unsigned ts_ms) = 0;
-        virtual int wait_for(unsigned ts_ms) = 0;
-        virtual int cancel() = 0;
-    protected:
-        std::shared_ptr<Work> m_consignor_work = nullptr;
-        WorkingPoint& m_wp;
-    };
-    class Timer_Asio : public Timer {
-    public:
-        explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work)
-        : Timer((Worker*)worker, consignor_work), m_net_io_worker(worker) {
-            m_timer = std::make_shared<boost::asio::deadline_timer>(worker->m_io_ctx);
-        }
-        int wait_until(unsigned ts_ms) override ;
-        int wait_for(unsigned ts_ms) override ;
-        int cancel() override ;
-    private:
-        Worker_NetIo* m_net_io_worker = nullptr;
-        std::shared_ptr<boost::asio::deadline_timer> m_timer;
-    };
+//    class Timer : public WorkUtils {
+//    public:
+//        explicit Timer(Worker* worker, std::shared_ptr<Work> consignor_work)
+//        : WorkUtils(worker), m_consignor_work(consignor_work), m_wp(consignor_work->m_wp) {}
+//        virtual int wait_until(unsigned ts_ms) = 0;
+//        virtual int wait_for(unsigned ts_ms) = 0;
+//        virtual int cancel() = 0;
+//    protected:
+//        std::shared_ptr<Work> m_consignor_work = nullptr;
+//        WorkingPoint& m_wp;
+//    };
+//    class Timer_Asio : public Timer {
+//    public:
+//        explicit Timer_Asio(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work)
+//        : Timer((Worker*)worker, consignor_work), m_net_io_worker(worker) {
+//            m_timer = std::make_shared<boost::asio::deadline_timer>(worker->m_io_ctx);
+//        }
+//        int wait_until(unsigned ts_ms) override ;
+//        int wait_for(unsigned ts_ms) override ;
+//        int cancel() override ;
+//    private:
+//        Worker_NetIo* m_net_io_worker = nullptr;
+//        std::shared_ptr<boost::asio::deadline_timer> m_timer;
+//    };
 
+#if 0
     class tcp_socket {
     public:
         explicit tcp_socket(std::shared_ptr<TcpSocketAb> tcp_socket)
@@ -490,5 +530,6 @@ namespace WorkUtils {
         }
     };
 }
+#endfi
 
 #endif //CPP_TOOLKIT_MOD_WORKUTILS_H

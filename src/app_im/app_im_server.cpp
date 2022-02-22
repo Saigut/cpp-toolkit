@@ -1,3 +1,4 @@
+#if 0
 #include "app_im_server.h"
 
 #include <inttypes.h>
@@ -336,3 +337,4 @@ int im_server::deal_with_msg(const cpt_im::ServerIntfReq &req) {
     }
     return 0;
 }
+#endif
