@@ -78,20 +78,19 @@ int test_worker()
 
 class SomeThing : public Work {
 public:
-    explicit SomeThing(std::shared_ptr<Work> consignor_work)
-            : Work(consignor_work)
-    {}
-    explicit SomeThing(Worker_NetIo* other_worker)
-            : m_net_io_worker(other_worker)
+    explicit SomeThing(io_context& io_ctx)
+            : m_io_ctx(io_ctx)
     {}
 
     void do_work() override
     {
         std::shared_ptr<Work> this_obj = shared_from_this();
+        WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
+                                    [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
+        WorkUtils::TcpSocketBuilder_Asio skt_builder(m_io_ctx, co_cbs);
         // Connect
-        WorkUtils::TcpSocketConnector_Asio tcp_socket([this_obj](){this_obj->m_wp.wp_yield(0);},
-                                                      [this_obj](){this_obj->add_self_back_to_main_worker(nullptr);});
-        expect_ret(0 == tcp_socket.connect("127.0.0.1", 80));
+        auto skt = skt_builder.connect("127.0.0.1", 80);
+        expect_ret(skt);
 
         unsigned i;
         for (i = 0; i < 10; i++) {
@@ -102,22 +101,22 @@ public:
                                                  "User-Agent: curl/7.58.0\r\n"
                                                  "Accept: */*\r\n\r\n");
             // Send
-            expect_goto(0 == tcp_socket.write(send_buf, std::strlen(send_buf)), func_return);
+            expect_goto(skt->write((uint8_t*)send_buf, std::strlen(send_buf)), func_return);
 
             // Recv
             char recv_buf[4096] = { 0 };
-            size_t recv_data_sz = 0;
-            expect_goto(0 == tcp_socket.read(recv_buf, sizeof(recv_buf), recv_data_sz), func_return);
+            int ret_recv = skt->read_some((uint8_t*)recv_buf, sizeof(recv_buf));
+            expect_goto(ret_recv > 0, func_return);
 
-            recv_buf[recv_data_sz < sizeof(recv_buf) ? recv_data_sz : sizeof(recv_buf) - 1] = 0;
-//            log_info("received:\n%s!", recv_buf);
+            recv_buf[ret_recv < sizeof(recv_buf) ? ret_recv : sizeof(recv_buf) - 1] = 0;
+            log_info("received:\n%s!", recv_buf);
         }
         func_return:
         printf("done %u req\n", i);
     };
 
 private:
-    Worker_NetIo* m_net_io_worker = nullptr;
+    io_context& m_io_ctx;
 };
 
 
@@ -126,31 +125,32 @@ static void main_worker_thread(Worker* worker)
     worker->run();
 }
 
-static void worker_thread(Worker_NetIo* worker)
+static void worker_thread(io_context* io_ctx)
 {
-    worker->run();
+    boost::asio::io_context::work io_work(*io_ctx);
+    io_ctx->run();
+    log_info("Asio io context quit!!");
 }
 
 int app_worker(int argc, char** argv)
 {
     Worker worker{};
-    Worker_NetIo worker_net_io{};
+    io_context io_ctx;
 
     // Start main worker
     std::thread main_worker_thr(main_worker_thread, &worker);
     // Start net io worker
-    std::thread other_worker_thr(worker_thread, &worker_net_io);
+    std::thread other_worker_thr(worker_thread, &io_ctx);
 
     // Add work to main worker
-    worker_net_io.wait_worker_started();
     std::vector<std::shared_ptr<WorkWrap>> works;
     int i;
-    int num = 500;
+    int num = 1;
 //    for (i = 0; i < num; i++) {
 //        works.emplace_back(&worker_net_io);
 //    }
     for (i = 0; i < num; i++) {
-        worker.add_work(new WorkWrap(std::make_shared<SomeThing>(&worker_net_io), nullptr));
+        worker.add_work(new WorkWrap(std::make_shared<SomeThing>(io_ctx), nullptr));
     }
 
     while (true)  {

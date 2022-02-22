@@ -1,4 +1,3 @@
-#if 0
 #include "app_im_server.h"
 
 #include <inttypes.h>
@@ -19,95 +18,40 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 
 
-void RecvMsgFromClient::do_work() {
-    while (true) {
-        uint64_t id;
-        std::string msg;
-        if (!m_client_channel->recv_msg(shared_from_this(), id, msg)) {
-            log_error("client channel failed to receive message!");
-            m_id_channel_map.erase(m_client_id);
-            break;
-        }
-        auto result = m_id_channel_map.find(id);
-        if (result != m_id_channel_map.end()) {
-            result->second.msg_q->push(msg);
-        } else {
-            log_warn("No channel for client id: %llu!", id);
-        }
-    }
-}
-
-void RelayMsgToClient::do_work() {
-    WorkUtils::Timer_Asio timer{m_io_worker, shared_from_this()};
-    while (true) {
-        // Get message from relay queue
-        if (m_msg_q->empty()) {
-            timer.wait_for(1);
-        } else {
-            std::string& msg = m_msg_q->front();
-
-            if (!m_client_channel->send_msg(shared_from_this(), m_client_id, msg)) {
-                log_error("client channel failed to send message!");
-                break;
-            }
-            m_msg_q->pop();
-        }
-    }
-}
-
-bool im_server_impl::listen() {
-    return m_channel_builder.listen(m_server_addr, m_server_port);
-}
-
-bool im_server_impl::accept_channel(std::shared_ptr<Work> consignor_work) {
-    uint64_t peer_id;
-    std::shared_ptr<im_channel_impl> client_channel = m_channel_builder.accept(consignor_work, peer_id);
-    if (!client_channel) {
-        log_error("accept failed!");
-        return false;
-    } else {
-        log_info("Accepted new client: %llu", peer_id);
-        auto ret = m_id_channel_map.emplace(peer_id, client_channel);
-        if (!ret.second) {
-            log_error("failed insert to map!");
-            return false;
-        }
-        m_main_worker->add_work(new WorkWrap(std::make_shared<RelayMsgToClient>(peer_id,
-                                                                                client_channel,
-                                                                                ret.first->second.msg_q,
-                                                                                m_io_worker),
-                                             nullptr));
-        m_main_worker->add_work(new WorkWrap(std::make_shared<RecvMsgFromClient>(peer_id,
-                                                                                 client_channel,
-                                                                                 m_id_channel_map),
-                                             nullptr));
-        return true;
-    }
-}
-
 void im2_light_channel_server_work::do_work() {
+    std::shared_ptr<Work> this_obj = shared_from_this();
+    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
+                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
+    auto light_channel = std::make_shared<im2_light_channel>(
+            m_channel->m_main_channel,
+            m_channel->m_light_channel_id,
+            true,
+            co_cbs);
     while (true) {
         std::string req;
         uint64_t id_in_msg;
-        if (!m_channel->recv_text(shared_from_this(), id_in_msg, req)) {
+        if (!light_channel->recv_text(id_in_msg, req)) {
             log_error("failed to receive request!");
             break;
         }
         log_info("got request: %s", req.c_str());
         std::string res = "response from " + std::to_string(m_my_id);
-        m_channel->send_text(shared_from_this(), 1234, res);
+        light_channel->send_text(1234, res);
     }
 }
 
 void im2_server_work::do_work()
 {
     std::string addr = "0.0.0.0";
-    im2_channel_builder channel_builder{m_main_worker_sp, m_io_worker};
+    std::shared_ptr<Work> this_obj = shared_from_this();
+    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
+                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
+    im2_channel_builder channel_builder{m_io_ctx, co_cbs};
 
     expect_ret(channel_builder.listen(addr, 12345));
     while (true) {
         uint64_t peer_id;
-        auto channel = channel_builder.accept(shared_from_this(), peer_id);
+        auto channel = channel_builder.accept(peer_id);
         if (!channel) {
             log_error("channel failed to accept!");
             break;
@@ -116,60 +60,16 @@ void im2_server_work::do_work()
     }
 }
 
-class ServerWork : public Work {
-public:
-    ServerWork(Worker* main_worker,
-               Worker_NetIo* io_worker,
-               im_server_impl& server)
-            : m_main_worker(main_worker),
-              m_io_worker(io_worker),
-              m_server(server) {}
-
-    void do_work() override
-    {
-        while (m_server.accept_channel(shared_from_this()))
-        {}
-    };
-
-private:
-    Worker* m_main_worker;
-    Worker_NetIo* m_io_worker;
-    im_server_impl& m_server;
-};
 
 static void main_worker_thread(Worker* worker)
 {
     worker->run();
 }
 
-static void worker_thread(Worker_NetIo* worker)
+static void worker_thread(io_context* io_ctx)
 {
-    worker->run();
-}
-
-int app_im_server_new(int argc, char** argv)
-{
-    Worker worker{};
-    Worker_NetIo worker_net_io{};
-    // Start main worker
-    std::thread main_worker_thr(main_worker_thread, &worker);
-    // Start net io worker
-    std::thread other_worker_thr(worker_thread, &worker_net_io);
-
-
-    std::string addr = "0.0.0.0";
-    im_server_impl server{addr, 12345, &worker, &worker_net_io};
-
-    expect_ret_val(server.listen(), -1);
-
-    worker_net_io.wait_worker_started();
-    worker.add_work(new WorkWrap(std::make_shared<ServerWork>(&worker, &worker_net_io, server), nullptr));
-
-    while (true)  {
-        std::this_thread::sleep_for(std::chrono::milliseconds (100));
-    }
-
-    return 0;
+    boost::asio::io_context::work io_work(*io_ctx);
+    io_ctx->run();
 }
 
 int app_im2_server(int argc, char** argv)
@@ -178,8 +78,9 @@ int app_im2_server(int argc, char** argv)
     auto worker_net_io = std::make_shared<Worker_NetIo>();
     // Start main worker
     std::thread main_worker_thr(main_worker_thread, &(*worker));
-    // Start net io worker
-    std::thread other_worker_thr(worker_thread, &(*worker_net_io));
+
+    io_context io_ctx;
+    std::thread other_worker_thr(worker_thread, &io_ctx);
 
     std::string addr = "0.0.0.0";
 
@@ -187,7 +88,7 @@ int app_im2_server(int argc, char** argv)
     worker->add_work(new WorkWrap(std::make_shared<im2_server_work>(
             addr, 12345,
             worker,
-            worker_net_io,
+            io_ctx,
             22222)));
 
     while (true)  {
@@ -337,4 +238,3 @@ int im_server::deal_with_msg(const cpt_im::ServerIntfReq &req) {
     }
     return 0;
 }
-#endif

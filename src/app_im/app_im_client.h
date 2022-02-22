@@ -15,7 +15,6 @@
 extern "C" {
 #endif
 
-#if 0
 // ab1
 class im_client_ab1 {
 public:
@@ -253,169 +252,15 @@ public:
 };
 
 // impl
-class im_tcp_socket_impl : public im_tcp_socket_ab6 {
-public:
-    explicit im_tcp_socket_impl(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket)
-    : m_tcp_socket(tcp_socket)
-    {}
-    int write_some(uint8_t* buf, size_t data_sz) override;
-    int read_some(uint8_t* buf, size_t buf_sz) override;
-private:
-    std::shared_ptr<WorkUtils::TcpSocketAb> m_tcp_socket;
-};
-
-class im_channel_impl {
-public:
-    im_channel_impl(std::shared_ptr<im_tcp_socket_impl> tcp)
-    : m_tcp(tcp) {}
-    bool send_msg(uint64_t id, std::string& msg);
-    bool recv_msg(uint64_t& id, std::string& msg);
-private:
-    std::shared_ptr<im_tcp_socket_impl> m_tcp;
-};
-
-class im_channel_builder_impl {
-public:
-    explicit im_channel_builder_impl(std::function<void()> work_yield,
-                                     std::function<void()> work_back)
-                                     : m_work_yield(work_yield),
-                                       m_work_back(work_back)
-                                     {}
-    std::shared_ptr<im_channel_impl> connect(uint64_t my_id,
-                                             const std::string& addr_str,
-                                             uint16_t port);
-
-    bool listen(const std::string& local_addr_str, uint16_t local_port);
-    std::shared_ptr<im_channel_impl> accept(uint64_t& peer_id);
-private:
-    std::function<void()> m_work_yield;
-    std::function<void()> m_work_back;
-    std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
-};
-
-class im_client_impl;
-class ClientSendMsg : public Work {
-public:
-    explicit ClientSendMsg(std::shared_ptr<im_client_impl> client,
-                           uint64_t my_id,
-                           uint64_t peer_id,
-                           Worker_NetIo* io_worker)
-            : m_client(client),
-              m_my_id(my_id),
-              m_peer_id(peer_id),
-              m_io_worker(io_worker) {}
-    void do_work() override;
-private:
-    const uint64_t m_my_id;
-    std::shared_ptr<im_client_impl> m_client;
-    uint64_t m_peer_id;
-    Worker_NetIo* m_io_worker;
-};
-
-class ClientRecvMsg : public Work {
-public:
-    explicit ClientRecvMsg(std::shared_ptr<im_client_impl> client)
-            : m_client(client)
-              {}
-    void do_work() override;
-private:
-    std::shared_ptr<im_client_impl> m_client;
-};
-
-class im_client_impl {
-public:
-    im_client_impl(uint64_t my_id,
-                   std::string &server_addr, uint16_t server_port)
-            : m_id(my_id),
-              m_server_addr(server_addr),
-              m_server_port(server_port) {}
-
-    bool connect(Worker_NetIo* worker, std::shared_ptr<Work> consignor_work);
-    bool send_msg(std::shared_ptr<Work> consignor_work, uint64_t id, std::string& msg);
-    bool recv_msg(std::shared_ptr<Work> consignor_work, uint64_t& id, std::string& msg);
-    const uint64_t m_id;
-private:
-    std::string m_server_addr;
-    uint16_t m_server_port;
-    std::shared_ptr<im_channel_impl> server_msg_channel = nullptr;
-};
-
-class im_server_impl;
-struct channel_info {
-    channel_info(std::shared_ptr<im_channel_impl> _channel)
-            : channel(_channel),
-              msg_q(std::make_shared<std::queue<std::string>>())
-    {}
-    std::shared_ptr<im_channel_impl> channel;
-    std::shared_ptr<std::queue<std::string>> msg_q;
-};
-
-// work: recv message from from a client
-class RecvMsgFromClient : public Work {
-public:
-    explicit RecvMsgFromClient(uint64_t client_id,
-                               std::shared_ptr<im_channel_impl> client_channel,
-                               std::map<uint64_t, channel_info>& id_channel_map)
-            : m_client_id(client_id),
-              m_client_channel(client_channel),
-              m_id_channel_map(id_channel_map) {}
-    void do_work() override;
-private:
-    uint64_t m_client_id;
-    std::shared_ptr<im_channel_impl> m_client_channel;
-    std::map<uint64_t, channel_info>& m_id_channel_map;
-};
-
-// work: relay message to a client
-class RelayMsgToClient : public Work {
-public:
-    explicit RelayMsgToClient(uint64_t client_id,
-                              std::shared_ptr<im_channel_impl> client_channel,
-                              std::shared_ptr<std::queue<std::string>> msg_q,
-                              Worker_NetIo* io_worker)
-            : m_client_id(client_id),
-              m_client_channel(client_channel),
-              m_msg_q(msg_q),
-              m_io_worker(io_worker)
-    {}
-    void do_work() override;
-private:
-    uint64_t m_client_id;
-    std::shared_ptr<im_channel_impl> m_client_channel;
-    std::shared_ptr<std::queue<std::string>> m_msg_q;
-    Worker_NetIo* m_io_worker = nullptr;
-};
-
-class im_server_impl {
-public:
-    im_server_impl(std::string& server_addr, uint16_t server_port,
-                   Worker* main_worker,
-                   Worker_NetIo* io_worker)
-    : m_server_addr(server_addr),
-      m_server_port(server_port),
-      m_main_worker(main_worker),
-      m_io_worker(io_worker),
-      m_channel_builder(io_worker)
-    {}
-    bool listen();
-    bool accept_channel(std::shared_ptr<Work> consignor_work);
-private:
-    Worker* m_main_worker;
-    Worker_NetIo* m_io_worker;
-    im_channel_builder_impl m_channel_builder;
-    std::string m_server_addr;
-    uint16_t m_server_port;
-    std::map<uint64_t, channel_info> m_id_channel_map;
-};
 
 /// im2
 class im2_light_channel;
 class im2_channel : public WorkUtils::channel_ab {
 public:
-    explicit im2_channel(std::shared_ptr<WorkUtils::TcpSocketAb> tcp_socket,
+    explicit im2_channel(std::shared_ptr<WorkUtils::TcpSocket> tcp_socket,
                          bool is_initiator)
-            : channel_ab(tcp_socket->m_work_yield, tcp_socket->m_work_back, is_initiator),
-              m_tcp(std::make_shared<WorkUtils::tcp_socket>(tcp_socket)) {}
+            : channel_ab(is_initiator),
+              m_tcp(tcp_socket) {}
     virtual bool send_msg(std::string& msg) override {
         uint64_t msg_size_net_byte = boost::endian::native_to_big(msg.size());
         expect_ret_val(m_tcp->write((uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
@@ -475,23 +320,21 @@ public:
         }
         return true;
     }
-private:
-    std::shared_ptr<WorkUtils::tcp_socket> m_tcp;
+//private:
+    std::shared_ptr<WorkUtils::TcpSocket> m_tcp;
 };
 
 // Fixme: Should prevent same light channel id in two ends of main_channel!
 class im2_light_channel : public WorkUtils::light_channel_ab {
 public:
-    im2_light_channel(std::function<void()> work_yield,
-                      std::function<void()> work_back,
-                      std::shared_ptr<WorkUtils::channel_ab> main_channel,
+    im2_light_channel(std::shared_ptr<WorkUtils::channel_ab> main_channel,
                       uint64_t light_channel_id,
-                      bool is_initiator)
-            : WorkUtils::light_channel_ab(work_yield,
-                                          work_back,
-                                          main_channel,
+                      bool is_initiator,
+                      WorkUtils::WorkCoCbs& co_cbs)
+            : WorkUtils::light_channel_ab(main_channel,
                                           light_channel_id,
-                                          is_initiator) {}
+                                          is_initiator,
+                                          co_cbs) {}
 //    bool lch_send_text(std::shared_ptr<Work> consignor_work, std::string& text) {
 //        return send_text(consignor_work, m_peer_id, text);
 //    }
@@ -501,24 +344,19 @@ public:
 //    }
 };
 
-class im2_channel_builder : public WorkUtils::channel_builder_ab {
+class im2_channel_builder {
 public:
-    explicit im2_channel_builder(std::function<void()> work_yield,
-                                 std::function<void()> work_back,
-                                 io_context& io_ctx)
-            : m_work_yield(work_yield), m_work_back(work_back),
-              m_io_ctx(io_ctx) {}
+    explicit im2_channel_builder(io_context& io_ctx, WorkUtils::WorkCoCbs& co_cbs)
+    : m_socket_builder(io_ctx, co_cbs)
+    {}
     std::shared_ptr<im2_channel> connect(uint64_t my_id,
-                                         const std::string &addr_str,
+                                         const std::string& addr_str,
                                          uint16_t port);
 
     bool listen(const std::string& local_addr_str, uint16_t local_port);
     std::shared_ptr<im2_channel> accept(uint64_t& peer_id);
 private:
-    std::function<void()> m_work_yield;
-    std::function<void()> m_work_back;
-    io_context& m_io_ctx;
-    std::shared_ptr<::WorkUtils::TcpAcceptor_Asio> acceptor_asio = nullptr;
+    WorkUtils::TcpSocketBuilder_Asio m_socket_builder;
 };
 
 class im2_channel_recv_work : public Work {
@@ -576,7 +414,7 @@ public:
             : m_channel(channel),
               m_my_id(my_id) {}
     void do_work() override;
-private:
+//private:
     std::shared_ptr<WorkUtils::light_channel_ab> m_channel;
     uint64_t m_my_id;
 };
@@ -585,38 +423,32 @@ class im2_server_work : public Work {
 public:
     explicit im2_server_work(std::string& server_addr, uint16_t server_port,
                              std::shared_ptr<Worker> main_worker_sp,
-                             std::shared_ptr<Worker_NetIo> io_worker,
+                             io_context& io_ctx,
                              uint64_t my_id)
             : m_server_addr(server_addr),
               m_server_port(server_port),
               m_main_worker_sp(main_worker_sp),
-              m_io_worker(io_worker),
+              m_io_ctx(io_ctx),
               m_my_id(my_id) {}
     void do_work() override;
 private:
     std::string m_server_addr;
     uint16_t m_server_port;
     std::shared_ptr<Worker> m_main_worker_sp;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
+    io_context& m_io_ctx;
     uint64_t m_my_id;
 };
 
 class im2_client_request_work : public Work {
 public:
     explicit im2_client_request_work(std::shared_ptr<im2_channel> channel,
-                                     std::shared_ptr<Worker> main_worker_sp,
-                                     io_context& io_ctx,
                                      uint64_t my_id)
             : m_channel(channel),
-              m_main_worker_sp(main_worker_sp),
-              m_io_ctx(io_ctx),
               m_my_id(my_id)
     {}
     void do_work() override;
 private:
     std::shared_ptr<im2_channel> m_channel;
-    std::shared_ptr<Worker> m_main_worker_sp;
-    io_context& m_io_ctx;
     uint64_t m_my_id;
 };
 
@@ -679,7 +511,6 @@ int app_im_client(int argc, char** argv);
 int app_im_client_new(int argc, char** argv);
 int app_im2_client(int argc, char** argv);
 
-#endif
 
 #ifdef __cplusplus
 }
