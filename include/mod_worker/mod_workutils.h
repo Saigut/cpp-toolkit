@@ -342,7 +342,7 @@ namespace WorkUtils {
 
         virtual bool add_light_channel_msg_handler(
                 uint64_t light_ch_id,
-                std::function<void(int)> light_channel_handler) {
+                std::function<void(int)> recv_msg_handler) {
             auto ret = m_light_channel_map->find(light_ch_id);
             if (ret == m_light_channel_map->end()) {
                 auto insert_ret = m_light_channel_map->emplace(light_ch_id, light_channel_info{});
@@ -352,7 +352,7 @@ namespace WorkUtils {
                 }
                 ret = insert_ret.first;
             }
-            ret->second.light_channel_handler = light_channel_handler;
+            ret->second.recv_msg_handler = recv_msg_handler;
             return true;
         }
         virtual bool del_light_channel_msg_handler(
@@ -361,7 +361,7 @@ namespace WorkUtils {
             if (ret == m_light_channel_map->end()) {
                 return false;
             }
-            ret->second.light_channel_handler = [](int){};
+            ret->second.recv_msg_handler = [](int){};
             return true;
         }
         virtual bool get_light_channel_msg(uint64_t light_ch_id, std::string& msg) {
@@ -377,13 +377,13 @@ namespace WorkUtils {
             return true;
         }
         uint64_t generate_light_ch_id() {
-            uint64_t id = light_ch_id_base + 1;
+            uint64_t id = *light_ch_id_base + 1;
             if (m_is_initiator) {
                 id |= (uint64_t)1 << 63U;
             } else {
                 id &= ~((uint64_t)1 << 63U);
             }
-            light_ch_id_base++;
+            (*light_ch_id_base)++;
             return id;
         }
         virtual bool deal_with_light_channel_msg(uint64_t light_ch_id, std::string& msg) {
@@ -398,8 +398,8 @@ namespace WorkUtils {
             }
             light_channel_info& ch_info = ret->second;
             ch_info.msg_q->push(msg);
-            if (ch_info.light_channel_handler) {
-                ch_info.light_channel_handler(0);
+            if (ch_info.recv_msg_handler) {
+                ch_info.recv_msg_handler(0);
             }
             return true;
         }
@@ -409,11 +409,13 @@ namespace WorkUtils {
             {}
             std::shared_ptr<std::queue<std::string>> msg_q;
             std::shared_ptr<light_channel_ab> light_channel;
-            std::function<void(int)> light_channel_handler;
+            std::function<void(int)> recv_msg_handler;
         };
+        /// fixme  thread safe?
         std::shared_ptr<std::map<uint64_t, light_channel_info>> m_light_channel_map;
         bool m_is_initiator;
-        uint64_t light_ch_id_base = 0;
+        /// fixme  thread safe?
+        std::shared_ptr<uint64_t> light_ch_id_base = std::make_shared<uint64_t>(0);
     };
 
     // message format example:

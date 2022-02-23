@@ -22,21 +22,21 @@ void im2_light_channel_server_work::do_work() {
     std::shared_ptr<Work> this_obj = shared_from_this();
     WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
                                 [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
-    auto light_channel = std::make_shared<im2_light_channel>(
-            m_channel->m_main_channel,
-            m_channel->m_light_channel_id,
-            true,
-            co_cbs);
+    auto main_channel = std::make_shared<im2_channel>(m_main_channel);
+    main_channel->m_tcp.m_co_cbs = co_cbs;
+    auto light_channel = *m_channel;
+    light_channel.m_main_channel = main_channel;
+    light_channel.m_co_cbs = co_cbs;
     while (true) {
         std::string req;
         uint64_t id_in_msg;
-        if (!light_channel->recv_text(id_in_msg, req)) {
+        if (!light_channel.recv_text(id_in_msg, req)) {
             log_error("failed to receive request!");
             break;
         }
         log_info("got request: %s", req.c_str());
         std::string res = "response from " + std::to_string(m_my_id);
-        light_channel->send_text(1234, res);
+        light_channel.send_text(1234, res);
     }
 }
 

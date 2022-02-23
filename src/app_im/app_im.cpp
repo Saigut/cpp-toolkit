@@ -57,7 +57,7 @@ std::shared_ptr<WorkUtils::light_channel_ab> im2_channel::get_light_channel_from
             std::make_shared<im2_light_channel>(shared_from_this(),
                                                 light_channel_id,
                                                 m_is_initiator,
-                                                this->m_tcp->m_co_cbs);
+                                                this->m_tcp.m_co_cbs);
     return light_channel_info_itr->second.light_channel;
 }
 
@@ -95,10 +95,8 @@ void im2_channel_recv_work::do_work() {
     std::shared_ptr<Work> this_obj = shared_from_this();
     WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
                                 [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
-    auto channel = std::make_shared<im2_channel>(
-            std::make_shared<WorkUtils::TcpSocket>(
-                    m_channel->m_tcp->m_socket_real,
-                    co_cbs), true);
+    auto channel = std::make_shared<im2_channel>(*m_channel);
+    channel->m_tcp.m_co_cbs = co_cbs;
     while (true) {
         std::string msg;
         if (!channel->recv_msg(msg)) {
@@ -109,59 +107,55 @@ void im2_channel_recv_work::do_work() {
         if (light_channel) {
             m_main_worker->add_work(new WorkWrap(
                     std::make_shared<im2_light_channel_server_work>(
-                            light_channel, 11111)));
+                            light_channel, *channel, 11111)));
         }
         channel->deal_with_msg(msg);
     }
 }
 
 // im2_channel_send_work
-void im2_channel_send_work::do_work() {
-    std::shared_ptr<Work> this_obj = shared_from_this();
-    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
-                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
-    auto channel = std::make_shared<im2_channel>(
-            std::make_shared<WorkUtils::TcpSocket>(
-                    m_channel->m_tcp->m_socket_real,
-                    co_cbs), true);
-    auto light_channel = std::make_shared<im2_light_channel>(
-            channel,
-            channel->generate_light_ch_id(),
-            true,
-            co_cbs);
-    m_main_worker->add_work(new WorkWrap(
-            std::make_shared<im2_light_channel_send_work>(
-                    light_channel,
-                    m_main_worker_sp,
-                    m_io_worker,
-                    m_my_id)));
-    m_main_worker->add_work(new WorkWrap(
-            std::make_shared<im2_light_channel_server_work>(
-                    light_channel,
-                    m_my_id)));
-}
+//void im2_channel_send_work::do_work() {
+//    std::shared_ptr<Work> this_obj = shared_from_this();
+//    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
+//                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
+//    auto channel = std::make_shared<im2_channel>(*m_channel);
+//    channel->m_tcp.m_co_cbs = co_cbs;
+//    auto light_channel = std::make_shared<im2_light_channel>(
+//            channel,
+//            channel->generate_light_ch_id(),
+//            true,
+//            co_cbs);
+//    m_main_worker->add_work(new WorkWrap(
+//            std::make_shared<im2_light_channel_send_work>(
+//                    light_channel,
+//                    m_main_worker_sp,
+//                    m_io_worker,
+//                    m_my_id)));
+//    m_main_worker->add_work(new WorkWrap(
+//            std::make_shared<im2_light_channel_server_work>(
+//                    light_channel,
+//                    *channel,
+//                    m_my_id)));
+//}
 
 // im2_light_channel_send_work
-void im2_light_channel_send_work::do_work() {
-    std::shared_ptr<Work> this_obj = shared_from_this();
-    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
-                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
-    auto light_channel = std::make_shared<im2_light_channel>(
-            m_channel->m_main_channel,
-            m_channel->m_light_channel_id,
-            true,
-            co_cbs);
-    std::string msg = "msg from: " + std::to_string(m_my_id);
-//    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
-    while (true) {
-        if (!light_channel->send_text(11111, msg)) {
-            log_error("failed to send message to server!");
-            break;
-        }
-        // todo: here can recv_text for this light channel. and not block message in other channels
-//        timer.wait_for(5000);
-    }
-}
+//void im2_light_channel_send_work::do_work() {
+//    std::shared_ptr<Work> this_obj = shared_from_this();
+//    WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
+//                                [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
+//    auto light_channel = std::make_shared<im2_light_channel>(*m_channel);
+//    light_channel->m_co_cbs = co_cbs;
+//    std::string msg = "msg from: " + std::to_string(m_my_id);
+////    WorkUtils::Timer_Asio timer{&(*m_io_worker), shared_from_this()};
+//    while (true) {
+//        if (!light_channel->send_text(11111, msg)) {
+//            log_error("failed to send message to server!");
+//            break;
+//        }
+//        // todo: here can recv_text for this light channel. and not block message in other channels
+////        timer.wait_for(5000);
+//    }
+//}
 
 int app_im(int argc, char** argv)
 {

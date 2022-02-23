@@ -260,23 +260,23 @@ public:
     explicit im2_channel(std::shared_ptr<WorkUtils::TcpSocket> tcp_socket,
                          bool is_initiator)
             : channel_ab(is_initiator),
-              m_tcp(tcp_socket) {}
+              m_tcp(*tcp_socket) {}
     virtual bool send_msg(std::string& msg) override {
         uint64_t msg_size_net_byte = boost::endian::native_to_big(msg.size());
-        expect_ret_val(m_tcp->write((uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
-        expect_ret_val(m_tcp->write((uint8_t*)(msg.data()), msg.size()), false);
+        expect_ret_val(m_tcp.write((uint8_t*)(&msg_size_net_byte), sizeof(uint64_t)), false);
+        expect_ret_val(m_tcp.write((uint8_t*)(msg.data()), msg.size()), false);
         return true;
     }
     virtual bool recv_msg(std::string& msg) override {
         uint64_t msg_size;
         uint64_t msg_type;
-        expect_ret_val(m_tcp->read((uint8_t*)(&msg_size), sizeof(msg_size)), false);
+        expect_ret_val(m_tcp.read((uint8_t*)(&msg_size), sizeof(msg_size)), false);
         boost::endian::big_to_native_inplace(msg_size);
         expect_ret_val(msg_size < 1000000000, false);
         msg.reserve(msg_size + 1);
         msg.resize(msg_size);
         ((uint8_t*)(msg.data()))[msg_size - sizeof(uint64_t)] = 0;
-        expect_ret_val(m_tcp->read((uint8_t*)(msg.data()), msg_size), false);
+        expect_ret_val(m_tcp.read((uint8_t*)(msg.data()), msg_size), false);
         return true;
     }
     std::shared_ptr<WorkUtils::light_channel_ab> get_light_channel_from_msg(std::string& msg);
@@ -321,7 +321,7 @@ public:
         return true;
     }
 //private:
-    std::shared_ptr<WorkUtils::TcpSocket> m_tcp;
+    WorkUtils::TcpSocket m_tcp;
 };
 
 // Fixme: Should prevent same light channel id in two ends of main_channel!
@@ -369,53 +369,57 @@ private:
     std::shared_ptr<im2_channel> m_channel;
 };
 
-class im2_channel_send_work : public Work {
-public:
-    explicit im2_channel_send_work(std::shared_ptr<im2_channel> channel,
-                                   std::shared_ptr<Worker> main_worker_sp,
-                                   std::shared_ptr<Worker_NetIo> io_worker,
-                                   uint64_t my_id)
-            : m_channel(channel),
-              m_main_worker_sp(main_worker_sp),
-              m_io_worker(io_worker),
-              m_my_id(my_id)
-    {}
-    void do_work() override;
-private:
-    std::shared_ptr<im2_channel> m_channel;
-    std::shared_ptr<Worker> m_main_worker_sp;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
-    uint64_t m_my_id;
-};
+//class im2_channel_send_work : public Work {
+//public:
+//    explicit im2_channel_send_work(std::shared_ptr<im2_channel> channel,
+//                                   std::shared_ptr<Worker> main_worker_sp,
+//                                   std::shared_ptr<Worker_NetIo> io_worker,
+//                                   uint64_t my_id)
+//            : m_channel(channel),
+//              m_main_worker_sp(main_worker_sp),
+//              m_io_worker(io_worker),
+//              m_my_id(my_id)
+//    {}
+//    void do_work() override;
+//private:
+//    std::shared_ptr<im2_channel> m_channel;
+//    std::shared_ptr<Worker> m_main_worker_sp;
+//    std::shared_ptr<Worker_NetIo> m_io_worker;
+//    uint64_t m_my_id;
+//};
 
-class im2_light_channel_send_work : public Work {
-public:
-    explicit im2_light_channel_send_work(std::shared_ptr<im2_light_channel> channel,
-                                         std::shared_ptr<Worker> main_worker_sp,
-                                         std::shared_ptr<Worker_NetIo> io_worker,
-                                         uint64_t my_id)
-            : m_channel(channel),
-              m_main_worker_sp(main_worker_sp),
-              m_io_worker(io_worker),
-              m_my_id(my_id)
-    {}
-    void do_work() override;
-private:
-    std::shared_ptr<im2_light_channel> m_channel;
-    std::shared_ptr<Worker> m_main_worker_sp;
-    std::shared_ptr<Worker_NetIo> m_io_worker;
-    uint64_t m_my_id;
-};
+//class im2_light_channel_send_work : public Work {
+//public:
+//    explicit im2_light_channel_send_work(std::shared_ptr<im2_light_channel> channel,
+//                                         std::shared_ptr<Worker> main_worker_sp,
+//                                         std::shared_ptr<Worker_NetIo> io_worker,
+//                                         uint64_t my_id)
+//            : m_channel(channel),
+//              m_main_worker_sp(main_worker_sp),
+//              m_io_worker(io_worker),
+//              m_my_id(my_id)
+//    {}
+//    void do_work() override;
+//private:
+//    std::shared_ptr<im2_light_channel> m_channel;
+//    std::shared_ptr<Worker> m_main_worker_sp;
+//    std::shared_ptr<Worker_NetIo> m_io_worker;
+//    uint64_t m_my_id;
+//};
 
 class im2_light_channel_server_work : public Work {
 public:
     explicit im2_light_channel_server_work(std::shared_ptr<WorkUtils::light_channel_ab> channel,
+                                           im2_channel& main_channel,
                                            uint64_t my_id)
             : m_channel(channel),
+              m_main_channel(main_channel),
               m_my_id(my_id) {}
     void do_work() override;
 //private:
+    /// fixme   not use ptr, just use object?
     std::shared_ptr<WorkUtils::light_channel_ab> m_channel;
+    im2_channel& m_main_channel;
     uint64_t m_my_id;
 };
 

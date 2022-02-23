@@ -38,10 +38,8 @@ void im2_client_request_work::do_work() {
     std::shared_ptr<Work> this_obj = shared_from_this();
     WorkUtils::WorkCoCbs co_cbs{[this_obj]() { this_obj->m_wp.wp_yield(0); },
                                 [this_obj]() { this_obj->add_self_back_to_main_worker(nullptr); }};
-    auto channel = std::make_shared<im2_channel>(
-            std::make_shared<WorkUtils::TcpSocket>(
-                    m_channel->m_tcp->m_socket_real,
-                    co_cbs), true);
+    auto channel = std::make_shared<im2_channel>(*m_channel);
+    channel->m_tcp.m_co_cbs = co_cbs;
     auto light_channel = std::make_shared<im2_light_channel>(
             channel,
             channel->generate_light_ch_id(),
