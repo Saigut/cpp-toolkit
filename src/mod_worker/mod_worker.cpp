@@ -55,22 +55,29 @@ WorkWrap* Worker::get_cur_work()
     return works_q.pop(cur_work) ? cur_work : nullptr;
 }
 
-void Task::execute() {
-    finish_task(task());
-}
-
-int Task::task() {
-    return 0;
-}
-
-void Task::finish_task(int task_ret) {
-
-}
-
-void Executor::execute_tasks() {
-
-}
-
-void Executor::add_task(Task task) {
-
-}
+//void cppt_task::execute(int resume_param) {
+//    if (stopped) {
+//        return;
+//    }
+//    if (!began) {
+//        began = true;
+//        std::shared_ptr<cppt_task> task = shared_from_this();
+//        m_wp.set_wp(context::callcc(
+//                [task](context::continuation && c) {
+//                    int ret;
+//                    task->m_wp.set_wp(std::move(c));
+//                    ret = task->task_body();
+//                    task->stopped = true;
+//                    if (task->finish_handler) {
+//                        task->finish_handler(ret);
+//                    }
+//                    return std::move(task->m_wp.m_wp);
+//                }));
+//    } else {
+//        m_wp.wp_yield(resume_param);
+//    }
+//}
+//
+//int cppt_task::task_body() {
+//    return 0;
+//}
