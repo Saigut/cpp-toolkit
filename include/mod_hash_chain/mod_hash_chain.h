@@ -13,7 +13,9 @@ struct cppt_hc_block {
 
 class cppt_hash_chain {
 public:
-    int append_block(cppt_hc_block& block);
+    int append_block(cppt_hc_block& block) {
+        return -1;
+    }
     std::vector<cppt_hc_block*> chain;
     std::vector<uint8_t*> block_body;
 };

@@ -10,7 +10,7 @@ public:
     }
 
     int main_step() {
-        recv_msg();
+        msg_recv();
         process_msg();
         maybe_send_msg();
         return 0;
@@ -24,13 +24,28 @@ public:
         return -1;
     }
 
-    int msg_recv();
-    int msg_send_to();
-    int msg_broadcast();
+    int msg_recv() {
+        return -1;
+    }
 
-    int consensus_process();
+    int msg_send_to() {
+        return -1;
+    }
+    int msg_broadcast() {
+        return -1;
+    }
 
-    int storage_process();
+    int process_msg() {
+        return -1;
+    }
+
+    int consensus_process() {
+        return -1;
+    }
+
+    int storage_process() {
+        return -1;
+    }
 };
 
 
@@ -49,16 +64,31 @@ public:
             default:
                 ;
         }
+        return 0;
     }
 
     int maybe_send_msg() override {
         send_msg_set_data();
         send_msg_app_reponse();
+        return -1;
+    }
+
+    int process_msg_set_data() {
+        return -1;
+    }
+    int process_msg_app_request() {
+        return -1;
+    }
+    int send_msg_set_data() {
+        return -1;
+    }
+    int send_msg_app_reponse() {
+        return -1;
     }
 };
 
 
-class cppt_consensus_leader {
+class cppt_consensus_leader : public cppt_consensus {
 public:
     int process_msg(int p) override {
         switch (p) {
@@ -81,6 +111,7 @@ public:
             default:
                 ;
         }
+        return 0;
     }
 
     int maybe_send_msg() override {
@@ -88,6 +119,31 @@ public:
         send_msg_vote_result();
         send_msg_append_data();
         send_msg_app_reponse();
+        return 0;
+    }
+    int process_msg_initiate_vote() {
+        return -1;
+    }
+    int process_msg_vote_result() {
+        return -1;
+    }
+    int process_msg_append_data() {
+        return -1;
+    }
+    int process_msg_app_request() {
+        return -1;
+    }
+    int send_msg_initiate_vote() {
+        return -1;
+    }
+    int send_msg_vote_result() {
+        return -1;
+    }
+    int send_msg_append_data() {
+        return -1;
+    }
+    int send_msg_app_reponse() {
+        return -1;
     }
 };
 
