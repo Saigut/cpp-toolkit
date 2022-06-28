@@ -156,6 +156,7 @@ macro(setup_targets)
             app_chat app_asio_socket app_socket
             app_im app_grpc_hw
             app_worker
+            mod_coroutine
             mod_tcp_hole_punching
             mod_worker
             mod_socket
