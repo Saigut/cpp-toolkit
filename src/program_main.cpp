@@ -20,6 +20,7 @@
 #include <app_worker/app_worker.h>
 #include <mod_worker/mod_worker.h>
 #include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
+#include <mod_coroutine/mod_coroutine.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -107,6 +108,56 @@ int test_lockfree(int argc, char** argv)
     return 0;
 }
 
+void async_sleep_thread(unsigned ts_us, std::function<void(int result)>&& cb) {
+    usleep(ts_us);
+    cb(random() % ts_us);
+}
+
+void async_sleep(unsigned ts_us, std::function<void(int result)> cb)
+{
+    std::thread t(async_sleep_thread, ts_us, std::move(cb));
+    t.detach();
+}
+
+int co_sleep(unsigned ts_us)
+{
+    int sleep_result;
+    auto wrap_func = [&](std::function<void()>&& co_cb) {
+        auto async_sleep_cb = [&, co_cb](int result) {
+            sleep_result = result;
+            co_cb();
+        };
+        async_sleep(ts_us, async_sleep_cb);
+    };
+    cppt_co_yield(wrap_func);
+    return sleep_result;
+}
+
+void my_co1()
+{
+    log_info("1");
+    log_info("result: %d", co_sleep(111));
+    log_info("2");
+    log_info("result: %d", co_sleep(222));
+    log_info("3");
+}
+
+void my_co2()
+{
+    log_info("11");
+    log_info("result: %d", co_sleep(333));
+    log_info("22");
+    log_info("result: %d", co_sleep(444));
+    log_info("33");
+}
+
+void test_cppt_co()
+{
+    cppt_co_create(my_co1);
+    cppt_co_create(my_co2);
+    cppt_co_main_run();
+}
+
 int program_main(int argc, char** argv)
 {
     int ret = 0;
@@ -121,13 +172,14 @@ int program_main(int argc, char** argv)
 //    app_socket(argc, argv);
 //    ret = app_chat(argc, argv);
 //    ret = app_asio_socket(argc, argv);
-    ret = app_im(argc, argv);
+//    ret = app_im(argc, argv);
 //    test_timeout_hash_table();
 
 //    ret = ctx_main();
 //    ret = app_worker(argc, argv);
 //    ret = test_lockfree(argc, argv);
 //    ret = mod_tcp_hole_test(argc, argv);
+    test_cppt_co();
 
     return ret;
 }
