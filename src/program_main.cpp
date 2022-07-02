@@ -152,10 +152,16 @@ void my_co2()
     log_info("33");
 }
 
+void my_co0()
+{
+    auto id = cppt_co_awaitable_create(my_co1);
+    cppt_co_await(id);
+    cppt_co_create(my_co2);
+}
+
 void test_cppt_co()
 {
-    cppt_co_create(my_co1);
-    cppt_co_create(my_co2);
+    cppt_co_create(my_co0);
     cppt_co_main_run();
 }
 
