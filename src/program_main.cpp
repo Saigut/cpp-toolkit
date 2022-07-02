@@ -21,6 +21,7 @@
 #include <mod_worker/mod_worker.h>
 #include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
 #include <mod_coroutine/mod_coroutine.h>
+#include <mod_common/utils.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -109,8 +110,8 @@ int test_lockfree(int argc, char** argv)
 }
 
 void async_sleep_thread(unsigned ts_us, std::function<void(int result)>&& cb) {
-    usleep(ts_us);
-    cb(random() % ts_us);
+    cppt_usleep(ts_us);
+    cb(rand() % ts_us);
 }
 
 void async_sleep(unsigned ts_us, std::function<void(int result)> cb)

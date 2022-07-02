@@ -1,11 +1,17 @@
 #include <mod_common/utils.h>
 
-#include <pthread.h>
-#include <unistd.h>
 #include <stdint.h>
-#include <sys/time.h>
+#include <thread>
+#include <chrono>
 
-#include <mod_common/log.h>
+#ifdef _WIN32
+    #include <windows.h>
+    #include <processthreadsapi.h>
+#else
+    #include <pthread.h>
+    #include <unistd.h>
+    #include <sys/time.h>
+#endif
 
 
 int util_bind_thread_to_core(int core_id)
@@ -34,9 +40,8 @@ int util_bind_thread_to_core(int core_id)
 
 uint64_t util_now_ts_ms()
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (tv.tv_sec * (uint64_t)1000000 + tv.tv_usec) / 1000;
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
 void util_printf_buf(uint8_t* buf, size_t size)
@@ -46,4 +51,19 @@ void util_printf_buf(uint8_t* buf, size_t size)
         printf("%02X ", buf[i]);
     }
     printf("\n");
+}
+
+void cppt_msleep(unsigned ts_ms)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(ts_ms));
+}
+
+void cppt_usleep(unsigned ts_us)
+{
+    std::this_thread::sleep_for(std::chrono::microseconds(ts_us));
+}
+
+void cppt_nanosleep(unsigned ts_ns)
+{
+    std::this_thread::sleep_for(std::chrono::nanoseconds(ts_ns));
 }

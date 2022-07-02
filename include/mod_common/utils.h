@@ -5,6 +5,7 @@
 
 #include <functional>
 
+#include <mod_common/os_compat.h>
 #include "log.h"
 #include "expect.h"
 
@@ -228,5 +229,10 @@ private:
     uint64_t m_start_ts_ms = 0;
     uint64_t m_last_ts_ms = 0;
 };
+
+
+void cppt_msleep(unsigned ts_us);
+void cppt_usleep(unsigned ts_us);
+void cppt_nanosleep(unsigned ts_us);
 
 #endif //CPPT_UTILS_H

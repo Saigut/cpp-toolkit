@@ -4,6 +4,7 @@
 #include <memory>
 #include <boost/context/continuation.hpp>
 #include <mod_atomic_queue/atomic_queue.h>
+#include <mod_common/utils.h>
 
 
 // Types
@@ -64,7 +65,7 @@ void cppt_co_main_run()
                 co->start_user_co();
             }
         } else {
-            usleep(1);
+            cppt_usleep(1);
         }
     }
 }
