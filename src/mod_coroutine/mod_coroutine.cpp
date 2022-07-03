@@ -88,7 +88,7 @@ void cppt_co_wrapper_awaitable::start_user_co()
 
 
 // Interfaces
-void cppt_co_create(std::function<void()> user_co)
+void cppt_co_create0(std::function<void()> user_co)
 {
     g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(user_co)));
 }

@@ -143,9 +143,9 @@ void my_co1()
     log_info("3");
 }
 
-void my_co2()
+void my_co2(int n)
 {
-    log_info("11");
+    log_info("11: %d", n);
     log_info("result: %d", co_sleep(333));
     log_info("22");
     log_info("result: %d", co_sleep(444));
@@ -156,7 +156,7 @@ void my_co0()
 {
     auto id = cppt_co_awaitable_create(my_co1);
     cppt_co_await(id);
-    cppt_co_create(my_co2);
+    cppt_co_create(my_co2, 3);
 }
 
 void test_cppt_co()

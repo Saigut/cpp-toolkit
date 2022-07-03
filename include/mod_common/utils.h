@@ -235,4 +235,19 @@ void cppt_msleep(unsigned ts_us);
 void cppt_usleep(unsigned ts_us);
 void cppt_nanosleep(unsigned ts_us);
 
+
+template<typename Function, typename Tuple, size_t ... I>
+auto call_with_variadic_arg(Function f, Tuple t, std::index_sequence<I ...>)
+{
+    return f(std::get<I>(t) ...);
+}
+
+template<typename Function, typename Tuple>
+auto call_with_variadic_arg(Function f, Tuple t)
+{
+    static constexpr auto size = std::tuple_size<Tuple>::value;
+    return call_with_variadic_arg(f, t, std::make_index_sequence<size>{});
+}
+
+
 #endif //CPPT_UTILS_H
