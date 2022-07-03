@@ -78,9 +78,9 @@ void cppt_co_wrapper_awaitable::start_user_co()
             if (rst->second) {
                 cppt_co_create(rst->second);
             }
+            g_co_awaitable_map.erase(rst);
+            g_awaitable_id_queue.push(co_id);
         }
-        g_co_awaitable_map.erase(rst);
-        g_awaitable_id_queue.push(co_id);
 
         return std::move(g_cppt_co_c);
     });
