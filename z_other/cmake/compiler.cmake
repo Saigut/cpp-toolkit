@@ -4,7 +4,6 @@ include(common_var)
 
 macro(compiler_set_compilation_options)
     # Compiler
-    set(CMAKE_CXX_STANDARD 11)
     ## Firstly, chose generator, this is chosing build toochain. It's like only can chose generator on cmake command line.
 
     message("Number of logic cores of hardware: " ${GV_LCORES})
