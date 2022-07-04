@@ -93,7 +93,7 @@ void cppt_co_create0(std::function<void()> user_co)
     g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(user_co)));
 }
 
-unsigned int cppt_co_awaitable_create(std::function<void()> user_co)
+unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
 {
     if (g_awaitable_id_queue.empty()) {
         log_error("No available await id to use!");

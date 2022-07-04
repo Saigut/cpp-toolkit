@@ -44,6 +44,12 @@ uint64_t util_now_ts_ms()
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
+uint64_t util_now_ts_us()
+{
+    using namespace std::chrono;
+    return duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+}
+
 void util_printf_buf(uint8_t* buf, size_t size)
 {
     size_t i;

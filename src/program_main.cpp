@@ -18,6 +18,7 @@
 #include <app_asio_socket/app_asio_socket.h>
 #include <app_im/app_im.h>
 #include <app_worker/app_worker.h>
+#include <app_coroutine/app_coroutine.h>
 #include <mod_worker/mod_worker.h>
 #include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
 #include <mod_coroutine/mod_coroutine.h>
@@ -186,7 +187,8 @@ int program_main(int argc, char** argv)
 //    ret = app_worker(argc, argv);
 //    ret = test_lockfree(argc, argv);
 //    ret = mod_tcp_hole_test(argc, argv);
-    test_cppt_co();
+    ret = app_coroutine(argc, argv);
+//    test_cppt_co();
 
     return ret;
 }

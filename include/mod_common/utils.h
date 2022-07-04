@@ -13,6 +13,7 @@
 int util_bind_thread_to_core(int core_id);
 
 uint64_t util_now_ts_ms();
+uint64_t util_now_ts_us();
 
 void util_printf_buf(uint8_t* buf, size_t size);
 
