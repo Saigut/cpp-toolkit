@@ -323,14 +323,14 @@ struct log_record {
     uint64_t t6;
 };
 
-void print_log_record(log_record& log)
+static void print_log_record(log_record& log)
 {
     log_info("t1: %lluus", log.t1);
     log_info("t2: %lluus", log.t2);
     log_info("t3: %lluus", log.t3);
     log_info("t4: %lluus", log.t4);
     log_info("t5: %lluus", log.t5);
-    log_info("t6: %lluus", log.t6);
+//    log_info("t6: %lluus", log.t6);
 }
 
 void co_http_server_process_request(std::shared_ptr<cppt_co_tcp_socket> tcp_socket,

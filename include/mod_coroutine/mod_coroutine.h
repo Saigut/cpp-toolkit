@@ -7,7 +7,7 @@
 void cppt_co_create0(std::function<void()> user_co);
 
 template<typename Function, typename... Args>
-void cppt_co_create(Function f, Args... args)
+void cppt_co_create(Function& f, Args... args)
 {
     auto params = std::make_tuple(std::forward<Args>(args)...);
     auto user_co = [=](){
@@ -19,7 +19,7 @@ void cppt_co_create(Function f, Args... args)
 unsigned int cppt_co_awaitable_create0(std::function<void()> user_co);
 
 template<typename Function, typename... Args>
-unsigned int cppt_co_awaitable_create(Function f, Args... args)
+unsigned int cppt_co_awaitable_create(Function& f, Args... args)
 {
     auto params = std::make_tuple(std::forward<Args>(args)...);
     auto user_co = [=](){
