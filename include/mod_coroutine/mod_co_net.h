@@ -21,7 +21,7 @@ namespace {
             ssize_t wrote_size;
             boost::asio::const_buffer out_buf{ str_buf, str_len };
             auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_socket.async_write_some(out_buf, [&](
+                m_socket.async_write_some(out_buf, [&, co_cb](
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
@@ -37,7 +37,7 @@ namespace {
             ssize_t read_size;
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
             auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_socket.async_read_some(in_buf, [&](
+                m_socket.async_read_some(in_buf, [&, co_cb](
                         const boost::system::error_code& ec,
                         std::size_t read_b_num)
                 {
