@@ -14,7 +14,7 @@ struct log_record {
     uint64_t t6;
 };
 
-void print_log_record(log_record& log)
+static void print_log_record(log_record& log)
 {
     log_info("t1: %lluus", log.t1);
     log_info("t2: %lluus", log.t2);
@@ -27,39 +27,39 @@ void print_log_record(log_record& log)
 int g_v = 0;
 
 template<typename Functor>
-void lmd_func_val_rref_templ(Functor&& f)
+static void lmd_func_val_rref_templ(Functor&& f)
 {
     std::forward<Functor>(f)();;
 }
 
-void lmd_func_val_rref(std::function<void()>&& f)
+static void lmd_func_val_rref(std::function<void()>&& f)
 {
     f();
 }
 
 template<typename Functor>
-void lmd_func_val_ref(Functor& f)
+static void lmd_func_val_ref(Functor& f)
 {
     f();
 }
 
-void lmd_func_val(std::function<void()> f)
+static void lmd_func_val(std::function<void()> f)
 {
     f();
 }
 
-void c_func()
+static void c_func()
 {
     g_v++;
 }
 typedef void(*c_f_p_t)();
-void lmd_func_c(c_f_p_t f)
+static void lmd_func_c(c_f_p_t f)
 {
     f();
 }
 
 
-void test_lambda()
+static void test_lambda()
 {
     log_record logs;
     const int num = 1000;
@@ -117,8 +117,28 @@ void test_lambda()
     print_log_record(logs);
 }
 
+static void fun2( std::function<void()> callback ) {
+    (callback)();
+}
+
+static void fun1(int n) {
+    if(n <= 0) return;
+    printf("stack address = %p, ", &n);
+
+    fun2([n]() {
+        printf("capture address = %p\n", &n);
+        fun1(n - 1);
+    });
+}
+
+static int test2() {
+    fun1(200);
+    return 0;
+}
+
 int app_perf_test(int argc, char** argv)
 {
-    test_lambda();
+//    test_lambda();
+    test2();
     return 0;
 }
