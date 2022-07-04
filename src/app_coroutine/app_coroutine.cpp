@@ -163,7 +163,7 @@ bool headers_equal(const std::string& a, const std::string& b)
 
 std::string content_length_name_ = "Content-Length";
 
-#define read_in_char() ({c = read_char.read_char(); if ('\0' == c) return -1;})
+#define read_in_char() do {c = read_char.read_char(); if ('\0' == c) return -1;} while(false)
 
 // ret: 0 finished; -1 error.
 int consume_header(request& req, cppt_co_tcp_socket& tcp_socket)
