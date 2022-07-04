@@ -2,6 +2,7 @@
 #define CPP_TOOLKIT_MOD_P2P_NET_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 class cppt_p2p_node {
 public:

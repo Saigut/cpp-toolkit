@@ -2,6 +2,7 @@
 #define CPP_TOOLKIT_MOD_COROUTINE_H
 
 #include <functional>
+#include <mod_common/utils.h>
 
 void cppt_co_create0(std::function<void()> user_co);
 
