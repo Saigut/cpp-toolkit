@@ -23,6 +23,7 @@
 #include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
 #include <mod_coroutine/mod_coroutine.h>
 #include <mod_common/utils.h>
+#include <app_perf_test/app_perf_test.h>
 
 class Cro : boost::asio::coroutine {
 public:
@@ -187,7 +188,8 @@ int program_main(int argc, char** argv)
 //    ret = app_worker(argc, argv);
 //    ret = test_lockfree(argc, argv);
 //    ret = mod_tcp_hole_test(argc, argv);
-    ret = app_coroutine(argc, argv);
+//    ret = app_coroutine(argc, argv);
+    ret = app_perf_test(argc, argv);
 //    test_cppt_co();
 
     return ret;

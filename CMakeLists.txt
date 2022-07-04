@@ -157,6 +157,7 @@ macro(setup_targets)
             app_im app_grpc_hw
             app_worker
             app_coroutine
+            app_perf_test
             mod_coroutine
             mod_tcp_hole_punching
             mod_worker
