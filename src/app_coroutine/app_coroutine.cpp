@@ -314,14 +314,34 @@ int consume_header(request& req, cppt_co_tcp_socket& tcp_socket)
     return 0;
 }
 
-void co_http_server_process_request(std::shared_ptr<cppt_co_tcp_socket> tcp_socket)
+struct log_record {
+    uint64_t t1;
+    uint64_t t2;
+    uint64_t t3;
+    uint64_t t4;
+    uint64_t t5;
+    uint64_t t6;
+};
+
+void print_log_record(log_record& log)
+{
+    log_info("t1: %lluus", log.t1);
+    log_info("t2: %lluus", log.t2);
+    log_info("t3: %lluus", log.t3);
+    log_info("t4: %lluus", log.t4);
+    log_info("t5: %lluus", log.t5);
+    log_info("t6: %lluus", log.t6);
+}
+
+void co_http_server_process_request(std::shared_ptr<cppt_co_tcp_socket> tcp_socket,
+                                    log_record& logs)
 {
     request req;
 
-//    log_info("now: %lluus", util_now_ts_us());
+    logs.t2 = util_now_ts_us();
     if (0 == consume_header(req, *tcp_socket)) {
 //        log_info("Valid request!");
-//        log_info("now: %lluus", util_now_ts_us());
+        logs.t3 = util_now_ts_us();
         const char* res_str = "HTTP/1.1 200 OK\r\n"
                               "Server: cppt co http/0.1.0\r\n"
                               "Content-Length: 7\r\n"
@@ -331,9 +351,10 @@ void co_http_server_process_request(std::shared_ptr<cppt_co_tcp_socket> tcp_sock
                               "\r\n"
                               "Hello!\n";
         tcp_socket->write((uint8_t*)res_str, strlen(res_str));
-//        log_info("now: %lluus", util_now_ts_us());
+        logs.t4 = util_now_ts_us();
         tcp_socket->close();
-//        log_info("now: %lluus", util_now_ts_us());
+        logs.t5 = util_now_ts_us();
+//        print_log_record(logs);
     } else {
         log_error("Invalid request!");
         tcp_socket->close();
@@ -342,6 +363,7 @@ void co_http_server_process_request(std::shared_ptr<cppt_co_tcp_socket> tcp_sock
 
 void co_http_server_main(io_context& io_ctx)
 {
+    log_record logs;
     cppt_co_tcp_socket_builder builder(io_ctx);
     expect_ret(builder.listen("0.0.0.0", 10666));
     while (true) {
@@ -349,8 +371,8 @@ void co_http_server_main(io_context& io_ctx)
         if (!peer_socket) {
             return;
         }
-//        log_info("now: %lluus", util_now_ts_us());
-        cppt_co_create(co_http_server_process_request, peer_socket);
+        logs.t1 = util_now_ts_us();
+        cppt_co_create(co_http_server_process_request, peer_socket, std::ref(logs));
     }
 }
 
