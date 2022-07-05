@@ -73,5 +73,5 @@ macro(compiler_set_compilation_options)
 
     ## Standard
     set(CMAKE_C_STANDARD 99)
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 14)
 endmacro()
