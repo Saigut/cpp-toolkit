@@ -52,7 +52,7 @@ static void init_awaitable_id_queue()
         g_awaitable_id_queue.push(i);
     }
 }
-static void cppt_co_add_c(context::continuation&& c)
+void cppt_co_add_c(context::continuation&& c)
 {
     g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(c)));
 }
