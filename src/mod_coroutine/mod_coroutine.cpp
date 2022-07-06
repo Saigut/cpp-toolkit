@@ -21,10 +21,10 @@ public:
     virtual context::continuation start_user_co();
     void call_after_pause_handler();
     void set_after_pause_handler(
-            const std::function<void()>& f);
+            const std::function<void(std::function<void()>&&)>& f);
 //protected:
     std::function<void()> m_user_co;
-    std::function<void()> m_after_pause_handler;
+    std::function<void(std::function<void()>&&)> m_after_pause_handler;
 };
 
 class cppt_co_wrapper_awaitable : public cppt_co_wrapper {
@@ -98,13 +98,13 @@ context::continuation cppt_co_wrapper_awaitable::start_user_co()
 void cppt_co_wrapper::call_after_pause_handler()
 {
     if (m_after_pause_handler) {
-        m_after_pause_handler();
+        m_after_pause_handler([cur_co(g_cur_co)](){ cppt_co_add_sptr(cur_co); });
         m_after_pause_handler = nullptr;
     }
 }
 
 void cppt_co_wrapper::set_after_pause_handler(
-        const std::function<void()>& f)
+        const std::function<void(std::function<void()>&&)>& f)
 {
     m_after_pause_handler = f;
 }
@@ -141,7 +141,7 @@ void cppt_co_main_run()
             }
 //            g_cur_co->call_after_pause_handler();
             if (g_cur_co->m_after_pause_handler) {
-                g_cur_co->m_after_pause_handler();
+                g_cur_co->m_after_pause_handler([cur_co(g_cur_co)](){ cppt_co_add_sptr(cur_co); });
                 g_cur_co->m_after_pause_handler = nullptr;
             } else {
                 free(g_cur_co);
@@ -153,16 +153,14 @@ void cppt_co_main_run()
     }
 }
 
-static void set_cur_c_call_after_pause_handler(const std::function<void()>& f)
+static void set_cur_c_call_after_pause_handler(const std::function<void(std::function<void()>&&)>& f)
 {
     g_cur_co->set_after_pause_handler(f);
 }
 
 void cppt_co_yield(const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
 {
-    set_cur_c_call_after_pause_handler([&wrapped_extern_func](){
-        wrapped_extern_func([cur_co(g_cur_co)](){ cppt_co_add_sptr(cur_co); });
-    });
+    set_cur_c_call_after_pause_handler(wrapped_extern_func);
     g_cppt_co_c = g_cppt_co_c.resume();
 }
 
