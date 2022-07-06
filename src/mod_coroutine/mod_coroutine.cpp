@@ -22,7 +22,7 @@ public:
     void call_after_pause_handler();
     void set_after_pause_handler(
             const std::function<void()>& f);
-protected:
+//protected:
     std::function<void()> m_user_co;
     std::function<void()> m_after_pause_handler;
 };
@@ -38,14 +38,14 @@ private:
     uint32_t m_co_id;
 };
 
-using cppt_co_queue_t = atomic_queue::AtomicQueue2<std::shared_ptr<cppt_co_wrapper>, 65535>;
+using cppt_co_queue_t = atomic_queue::AtomicQueue2<cppt_co_wrapper*, 65535>;
 
 
 // Values
 thread_local context::continuation g_cppt_co_c;
 thread_local std::map<uint32_t, std::function<void()>> g_co_awaitable_map;
 thread_local std::queue<uint32_t> g_awaitable_id_queue;
-thread_local std::shared_ptr<cppt_co_wrapper> g_cur_co;
+thread_local cppt_co_wrapper* g_cur_co;
 cppt_co_queue_t g_co_exec_queue;
 
 
@@ -59,9 +59,9 @@ static void init_awaitable_id_queue()
 }
 void cppt_co_add_c(context::continuation&& c)
 {
-    g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(c)));
+    g_co_exec_queue.push(new cppt_co_wrapper(std::move(c)));
 }
-static void cppt_co_add_sptr(std::shared_ptr<cppt_co_wrapper> wrapper)
+static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
 {
     g_co_exec_queue.push(wrapper);
 }
@@ -112,7 +112,7 @@ void cppt_co_wrapper::set_after_pause_handler(
 // Interfaces
 void cppt_co_create0(std::function<void()> user_co)
 {
-    g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(user_co)));
+    g_co_exec_queue.push(new cppt_co_wrapper(std::move(user_co)));
 }
 
 unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
@@ -123,7 +123,7 @@ unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
     }
     uint32_t id = g_awaitable_id_queue.front();
     g_awaitable_id_queue.pop();
-    g_co_exec_queue.push(std::make_shared<cppt_co_wrapper_awaitable>(
+    g_co_exec_queue.push(new cppt_co_wrapper_awaitable(
             std::move(user_co), id));
     return id;
 }
@@ -139,7 +139,14 @@ void cppt_co_main_run()
             } else {
                 g_cur_co->m_c = std::move(g_cur_co->start_user_co());
             }
-            g_cur_co->call_after_pause_handler();
+//            g_cur_co->call_after_pause_handler();
+            if (g_cur_co->m_after_pause_handler) {
+                g_cur_co->m_after_pause_handler();
+                g_cur_co->m_after_pause_handler = nullptr;
+            } else {
+                free(g_cur_co);
+                g_cur_co = nullptr;
+            }
         } else {
             cppt_nanosleep(1);
         }
