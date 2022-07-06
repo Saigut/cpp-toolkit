@@ -4,6 +4,7 @@
 #include <mod_worker/mod_work.h>
 #include <mod_worker/mod_worker_netio.h>
 
+#include <inttypes.h>
 #include <mod_common/expect.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/endian.hpp>
@@ -319,7 +320,7 @@ namespace WorkUtils {
             boost::endian::big_to_native_inplace(msg_type);
             boost::endian::big_to_native_inplace(id_in_msg);
             if (0 != msg_type) {
-                log_error("this is not text message! type: %llu", msg_type);
+                log_error("this is not text message! type: %" PRIu64, msg_type);
                 return false;
             }
             text = text.substr(sizeof(msg_type) + sizeof(id_in_msg), text.size() - sizeof(msg_type));

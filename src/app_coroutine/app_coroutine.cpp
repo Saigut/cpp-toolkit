@@ -325,11 +325,11 @@ struct log_record {
 
 static void print_log_record(log_record& log)
 {
-    log_info("t1: %lluus", log.t1);
-    log_info("t2: %lluus", log.t2);
-    log_info("t3: %lluus", log.t3);
-    log_info("t4: %lluus", log.t4);
-    log_info("t5: %lluus", log.t5);
+    log_info("t1: %" PRIu64 "us", log.t1);
+    log_info("t2: %" PRIu64 "us", log.t2);
+    log_info("t3: %" PRIu64 "us", log.t3);
+    log_info("t4: %" PRIu64 "us", log.t4);
+    log_info("t5: %" PRIu64 "us", log.t5);
 //    log_info("t6: %lluus", log.t6);
 }
 

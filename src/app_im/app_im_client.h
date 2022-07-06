@@ -58,7 +58,7 @@ public:
         uint64_t id;
         std::string msg;
         recv_msg(id, msg);
-        log_info("[msg:%u] %s", id, msg.c_str());
+        log_info("[msg:%" PRIu64 "] %s", id, msg.c_str());
     }
 
     uint64_t m_id;
@@ -111,7 +111,7 @@ public:
         uint64_t id;
         std::string msg;
         recv_msg(id, msg);
-        log_info("[msg:%u] %s", msg.c_str());
+        log_info("[msg:%" PRIu64 "] %s", id, msg.c_str());
     }
 
     uint64_t m_id;
@@ -314,7 +314,7 @@ public:
                 break;
             }
             default: {
-                log_error("Invalid message type: %llu", msg_type);
+                log_error("Invalid message type: %" PRIu64, msg_type);
                 return false;
             }
         }
