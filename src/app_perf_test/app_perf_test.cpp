@@ -396,7 +396,7 @@ void just_exec()
 void test_shared_ptr()
 {
     log_record logs;
-    const int num = 1000;
+    const int num = 100000;
     int i;
 
     log_info("test shared ptr");
@@ -450,7 +450,7 @@ void test_shared_ptr()
     print_log_record(logs);
 }
 
-#define get_ns_diff(a, b) (a) > (b) ? ((a) - (b)) : 99999999
+#define get_ns_diff(a, b) (a) >= (b) ? ((a) - (b)) : 99999999
 
 static void print_log_record_ns(log_record& log)
 {
@@ -463,13 +463,25 @@ static void print_log_record_ns(log_record& log)
 //    log_info("t5: %lluns", log.t5);
 }
 
+static void reset_log_record(log_record& log)
+{
+    log.t1 = 0;
+    log.t2 = 0;
+    log.t3 = 0;
+    log.t4 = 0;
+    log.t5 = 0;
+    log.t6 = 0;
+}
+
+const int switch_num = 100000;
+
 void cppt_co0()
 {
     namespace context = boost::context;
     log_record logs;
     int i;
-    const int switch_num = 100000;
 
+    reset_log_record(logs);
     log_info("test cppt coroutine just switch 1 time");
     for (i = 0; i < 1; i++) {
         logs.t1 = util_now_ts_ns();
@@ -484,6 +496,7 @@ void cppt_co0()
     }
     print_log_record_ns(logs);
 
+    reset_log_record(logs);
     log_info("test cppt coroutine 1 1time");
     for (i = 0; i < 1; i++) {
         logs.t1 = util_now_ts_ns();
@@ -498,10 +511,11 @@ void cppt_co0()
     }
     print_log_record_ns(logs);
 
-    log_info("test cppt coroutine just switch");
+    reset_log_record(logs);
+    log_info("test cppt coroutine just switch init");
     logs.t1 = util_now_ts_us();
     for (i = 0; i < switch_num; i++) {
-        g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
+        g_cppt_co_c = context::callcc([](context::continuation && c) {
             cppt_co_add_c(std::move(c));
             return std::move(g_cppt_co_c);
         });
@@ -509,10 +523,11 @@ void cppt_co0()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test cppt coroutine 1");
     logs.t1 = util_now_ts_us();
     for (i = 0; i < switch_num; i++) {
-        auto wrap_func = [&logs](std::function<void()>&& co_cb) {
+        auto wrap_func = [](std::function<void()>&& co_cb) {
             co_cb();
         };
         cppt_co_yield(wrap_func);
@@ -520,6 +535,7 @@ void cppt_co0()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test cppt coroutine 2");
     logs.t1 = util_now_ts_us();
     auto wrap_func = [&](std::function<void()>&& co_cb) {
@@ -531,6 +547,7 @@ void cppt_co0()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test cppt coroutine 3");
     logs.t1 = util_now_ts_us();
     auto wrap_func3 = [](std::function<void()>&& co_cb) {
@@ -593,8 +610,8 @@ static void test_boost_context()
     namespace context = boost::context;
     log_record logs;
     int i;
-    const int switch_num = 100000;
 
+    reset_log_record(logs);
     log_info("test boost callcc");
     context::continuation source = context::callcc(
             [](context::continuation && sink){
@@ -610,6 +627,7 @@ static void test_boost_context()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test boost callcc init");
     {
         logs.t1 = util_now_ts_us();
@@ -621,6 +639,7 @@ static void test_boost_context()
         print_log_record(logs);
     }
 
+    reset_log_record(logs);
     log_info("test boost fiber");
     context::fiber fsource{[](context::fiber&& sink){
         for(;;){
@@ -635,6 +654,7 @@ static void test_boost_context()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test boost fiber init");
     logs.t1 = util_now_ts_us();
     for (i = 0; i < switch_num; i++) {
@@ -645,6 +665,7 @@ static void test_boost_context()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+    reset_log_record(logs);
     log_info("test boost fcontext");
     {
         stack_allocator stack_alloc;
@@ -667,6 +688,7 @@ static void test_boost_context()
         print_log_record(logs);
     }
 
+    reset_log_record(logs);
     log_info("test boost fcontext init");
     {
         logs.t1 = util_now_ts_us();
@@ -692,11 +714,11 @@ int app_perf_test(int argc, char** argv)
 //    test_lambda();
 //    test2();
 //    test_save_func();
-//    test_shared_ptr();
-    test_boost_context();
+    test_shared_ptr();
     perf_callcc(argc, argv);
     perf_fiber(argc, argv);
     perf_fcontext(argc, argv);
+    test_boost_context();
     test_cppt_co();
     return 0;
 }
