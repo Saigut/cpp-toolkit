@@ -33,7 +33,8 @@ unsigned int cppt_co_awaitable_create(Function& f, Args... args)
 
 void cppt_co_main_run();
 
-void cppt_co_yield(std::function<void(std::function<void()>&&)> wrapped_extern_func);
+void cppt_co_yield(
+        const std::function<void(std::function<void()>&&)>& wrapped_extern_func);
 void cppt_co_await(unsigned int co_id);
 
 void cppt_co_add_c(boost::context::continuation&& c);

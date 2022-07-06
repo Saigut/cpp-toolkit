@@ -18,9 +18,13 @@ public:
     explicit cppt_co_wrapper(context::continuation&& c)
             : m_c(std::move(c)) {}
     context::continuation m_c;
-    virtual void start_user_co();
+    virtual context::continuation start_user_co();
+    void call_after_pause_handler();
+    void set_after_pause_handler(
+            const std::function<void()>& f);
 protected:
     std::function<void()> m_user_co;
+    std::function<void()> m_after_pause_handler;
 };
 
 class cppt_co_wrapper_awaitable : public cppt_co_wrapper {
@@ -29,7 +33,7 @@ public:
             : cppt_co_wrapper(std::move(user_co)), m_co_id(co_id) {}
     explicit cppt_co_wrapper_awaitable(context::continuation&& c, uint32_t co_id)
             : cppt_co_wrapper(std::move(c)), m_co_id(co_id) {}
-    void start_user_co() override;
+    context::continuation start_user_co() override;
 private:
     uint32_t m_co_id;
 };
@@ -41,6 +45,7 @@ using cppt_co_queue_t = atomic_queue::AtomicQueue2<std::shared_ptr<cppt_co_wrapp
 thread_local context::continuation g_cppt_co_c;
 thread_local std::map<uint32_t, std::function<void()>> g_co_awaitable_map;
 thread_local std::queue<uint32_t> g_awaitable_id_queue;
+thread_local std::shared_ptr<cppt_co_wrapper> g_cur_co;
 cppt_co_queue_t g_co_exec_queue;
 
 
@@ -56,21 +61,25 @@ void cppt_co_add_c(context::continuation&& c)
 {
     g_co_exec_queue.push(std::make_shared<cppt_co_wrapper>(std::move(c)));
 }
+static void cppt_co_add_sptr(std::shared_ptr<cppt_co_wrapper> wrapper)
+{
+    g_co_exec_queue.push(wrapper);
+}
 
 
 // Type implementation
-void cppt_co_wrapper::start_user_co()
+context::continuation cppt_co_wrapper::start_user_co()
 {
-    context::callcc([&](context::continuation && c) {
+    return context::callcc([&](context::continuation && c) {
         g_cppt_co_c = std::move(c);
         m_user_co();
         return std::move(g_cppt_co_c);
     });
 }
 
-void cppt_co_wrapper_awaitable::start_user_co()
+context::continuation cppt_co_wrapper_awaitable::start_user_co()
 {
-    context::callcc([&, co_id(m_co_id)](context::continuation && c) {
+    return context::callcc([&, co_id(m_co_id)](context::continuation && c) {
         g_cppt_co_c = std::move(c);
         m_user_co();
         auto rst = g_co_awaitable_map.find(co_id);
@@ -86,6 +95,19 @@ void cppt_co_wrapper_awaitable::start_user_co()
     });
 }
 
+void cppt_co_wrapper::call_after_pause_handler()
+{
+    if (m_after_pause_handler) {
+        m_after_pause_handler();
+        m_after_pause_handler = nullptr;
+    }
+}
+
+void cppt_co_wrapper::set_after_pause_handler(
+        const std::function<void()>& f)
+{
+    m_after_pause_handler = f;
+}
 
 // Interfaces
 void cppt_co_create0(std::function<void()> user_co)
@@ -111,25 +133,30 @@ void cppt_co_main_run()
     init_awaitable_id_queue();
     while (true) {
         if (!g_co_exec_queue.was_empty()) {
-            std::shared_ptr<cppt_co_wrapper> co = g_co_exec_queue.pop();
-            if (co->m_c) {
-                co->m_c.resume();
+            g_cur_co = g_co_exec_queue.pop();
+            if (g_cur_co->m_c) {
+                g_cur_co->m_c = std::move(g_cur_co->m_c.resume());
             } else {
-                co->start_user_co();
+                g_cur_co->m_c = std::move(g_cur_co->start_user_co());
             }
+            g_cur_co->call_after_pause_handler();
         } else {
-            cppt_usleep(1);
+            cppt_nanosleep(1);
         }
     }
 }
 
-void cppt_co_yield(std::function<void(std::function<void()>&&)> wrapped_extern_func)
+static void set_cur_c_call_after_pause_handler(const std::function<void()>& f)
 {
-    g_cppt_co_c = context::callcc([&](context::continuation && c) {
-        auto sptr_c = std::make_shared<context::continuation>(std::move(c));
-        wrapped_extern_func([sptr_c](){ cppt_co_add_c(std::move(*sptr_c)); });
-        return std::move(g_cppt_co_c);
+    g_cur_co->set_after_pause_handler(f);
+}
+
+void cppt_co_yield(const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
+{
+    set_cur_c_call_after_pause_handler([&wrapped_extern_func](){
+        wrapped_extern_func([cur_co(g_cur_co)](){ cppt_co_add_sptr(cur_co); });
     });
+    g_cppt_co_c = g_cppt_co_c.resume();
 }
 
 void cppt_co_await(unsigned int co_id)
