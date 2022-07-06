@@ -51,7 +51,7 @@ function(external_lib_setup baseDir)
         CONFIGURE_COMMAND ./bootstrap${BOOST_BS_SUFFIX}
         BUILD_IN_SOURCE true
         BUILD_COMMAND ""
-        INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external/${CMAKE_CXX_COMPILER_ID} ${PARALLEL_ARG} address-model=64 architecture=x86 variant=debug link=static install)
+        INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external/${CMAKE_CXX_COMPILER_ID} ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
 
     # grpc-1.34.0
     ExternalProject_Add(ep_grpc
