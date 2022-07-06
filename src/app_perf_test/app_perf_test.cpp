@@ -4,6 +4,7 @@
 #include <thread>
 #include <tuple>
 #include <stdint.h>
+#include <type_traits>
 #include <boost/context/continuation.hpp>
 #include <boost/context/fiber.hpp>
 #include <mod_common/log.h>
@@ -170,23 +171,18 @@ static void call_func_lambda()
     g_func_lambda();
 }
 
+#ifndef _WIN32
 typedef void* func_cast_t;
 
 func_cast_t g_f_cast;
 
 template<size_t... Indexes> struct _Index_tuple { };
 
-#ifdef __has_builtin
-# if __has_builtin(__make_integer_seq)
-#  define _GLIBCXX_USE_MAKE_INTEGER_SEQ 1
-# endif
-#endif
-
 // Builds an _Index_tuple<0, 1, 2, ..., _Num-1>.
 template<size_t Num>
 struct Build_index_tuple
 {
-#if _GLIBCXX_USE_MAKE_INTEGER_SEQ
+#ifdef _WIN32
     template<typename, size_t... Indexes>
         using _IdxTuple = _Index_tuple<Indexes...>;
 
@@ -280,6 +276,7 @@ static void call_func_cast()
     State_ptr _t{ static_cast<State*>(g_f_cast) };
     _t->_M_run();
 }
+#endif
 
 static void func_for_save(int n1, int n2)
 {
@@ -303,6 +300,7 @@ static void test_save_func()
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
 
+#ifndef _WIN32
     log_info("save func to to raw pointer");
     logs.t1 = util_now_ts_us();
     for (i = 0; i < num; i++) {
@@ -311,6 +309,7 @@ static void test_save_func()
     }
     logs.t2 = util_now_ts_us();
     print_log_record(logs);
+#endif
 }
 
 static void print_log_record_sptr(log_record& log)
@@ -454,10 +453,10 @@ void test_shared_ptr()
 
 static void print_log_record_ns(log_record& log)
 {
-    log_info("[t1,t2]: %luns", get_ns_diff(log.t2, log.t1));
-    log_info("[t2,t3]: %luns", get_ns_diff(log.t3, log.t2));
-    log_info("[t3,t4]: %luns", get_ns_diff(log.t4, log.t3));
-    log_info("[t4,t5]: %luns", get_ns_diff(log.t5, log.t4));
+    log_info("[t1,t2]: %" PRIu64 "ns", get_ns_diff(log.t2, log.t1));
+    log_info("[t2,t3]: %" PRIu64 "ns", get_ns_diff(log.t3, log.t2));
+    log_info("[t3,t4]: %" PRIu64 "ns", get_ns_diff(log.t4, log.t3));
+    log_info("[t4,t5]: %" PRIu64 "ns", get_ns_diff(log.t5, log.t4));
 //    log_info("[t5,t6]: %lluns", log.t5);
 //    log_info("t4: %lluns", log.t4);
 //    log_info("t5: %lluns", log.t5);
