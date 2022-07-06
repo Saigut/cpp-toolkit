@@ -4,9 +4,13 @@
 #include <thread>
 #include <tuple>
 #include <stdint.h>
+#include <boost/context/continuation.hpp>
+#include <boost/context/fiber.hpp>
 #include <mod_common/log.h>
 #include <mod_common/utils.h>
 #include <mod_coroutine/mod_coroutine.h>
+#include "app_perf_test_internal.h"
+#include "clock.hpp"
 
 struct log_record {
     uint64_t t1;
@@ -19,7 +23,7 @@ struct log_record {
 
 static void print_log_record(log_record& log)
 {
-    log_info("[t1,t2]: %lluus", log.t2 - log.t1);
+    log_info("[t1,t2]: %" PRIu64 "us", log.t2 - log.t1);
 //    log_info("[t2,t3]: %lluus", log.t3 - log.t2);
 //    log_info("t3: %lluus", log.t3);
 //    log_info("t4: %lluus", log.t4);
@@ -311,8 +315,8 @@ static void test_save_func()
 
 static void print_log_record_sptr(log_record& log)
 {
-    log_info("[t1,t2]: %lluus", log.t2 - log.t1);
-    log_info("[t2,t3]: %lluus", log.t3 - log.t2);
+    log_info("[t1,t2]: %" PRIu64 "us", log.t2 - log.t1);
+    log_info("[t2,t3]: %" PRIu64 "us", log.t3 - log.t2);
 //    log_info("t3: %lluus", log.t3);
 //    log_info("t4: %lluus", log.t4);
 //    log_info("t5: %lluus", log.t5);
@@ -464,10 +468,10 @@ void cppt_co0()
     namespace context = boost::context;
     log_record logs;
     int i;
-    const int switch_num = 1;
+    const int switch_num = 100000;
 
-    log_info("test cppt coroutine just switch");
-    for (i = 0; i < switch_num; i++) {
+    log_info("test cppt coroutine just switch 1 time");
+    for (i = 0; i < 1; i++) {
         logs.t1 = util_now_ts_ns();
         g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
             logs.t2 = util_now_ts_ns();
@@ -480,8 +484,8 @@ void cppt_co0()
     }
     print_log_record_ns(logs);
 
-    log_info("test cppt coroutine 1");
-    for (i = 0; i < switch_num; i++) {
+    log_info("test cppt coroutine 1 1time");
+    for (i = 0; i < 1; i++) {
         logs.t1 = util_now_ts_ns();
         auto wrap_func = [&logs](std::function<void()>&& co_cb) {
             logs.t3 = util_now_ts_ns();
@@ -493,6 +497,28 @@ void cppt_co0()
         logs.t5 = util_now_ts_ns();
     }
     print_log_record_ns(logs);
+
+    log_info("test cppt coroutine just switch");
+    logs.t1 = util_now_ts_us();
+    for (i = 0; i < switch_num; i++) {
+        g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
+            cppt_co_add_c(std::move(c));
+            return std::move(g_cppt_co_c);
+        });
+    }
+    logs.t2 = util_now_ts_us();
+    print_log_record(logs);
+
+    log_info("test cppt coroutine 1");
+    logs.t1 = util_now_ts_us();
+    for (i = 0; i < switch_num; i++) {
+        auto wrap_func = [&logs](std::function<void()>&& co_cb) {
+            co_cb();
+        };
+        cppt_co_yield(wrap_func);
+    }
+    logs.t2 = util_now_ts_us();
+    print_log_record(logs);
 
     log_info("test cppt coroutine 2");
     logs.t1 = util_now_ts_us();
@@ -523,12 +549,154 @@ static void test_cppt_co()
     cppt_co_main_run();
 }
 
+template< std::size_t Max, std::size_t Default, std::size_t Min >
+class simple_stack_allocator
+{
+public:
+    static std::size_t maximum_stacksize()
+    { return Max; }
+
+    static std::size_t default_stacksize()
+    { return Default; }
+
+    static std::size_t minimum_stacksize()
+    { return Min; }
+
+    void * allocate( std::size_t size) const
+    {
+        BOOST_ASSERT( minimum_stacksize() <= size);
+        BOOST_ASSERT( maximum_stacksize() >= size);
+
+        void * limit = std::malloc( size);
+        if ( ! limit) throw std::bad_alloc();
+
+        return static_cast< char * >( limit) + size;
+    }
+
+    void deallocate( void * vp, std::size_t size) const
+    {
+        BOOST_ASSERT( vp);
+        BOOST_ASSERT( minimum_stacksize() <= size);
+        BOOST_ASSERT( maximum_stacksize() >= size);
+
+        void * limit = static_cast< char * >( vp) - size;
+        std::free( limit);
+    }
+};
+
+typedef simple_stack_allocator<
+        8 * 1024 * 1024, 64 * 1024, 8 * 1024
+>                                       stack_allocator;
+
+static void test_boost_context()
+{
+    namespace context = boost::context;
+    log_record logs;
+    int i;
+    const int switch_num = 100000;
+
+    log_info("test boost callcc");
+    context::continuation source = context::callcc(
+            [](context::continuation && sink){
+                for(;;){
+                    sink=sink.resume();
+                }
+                return std::move(sink);
+            });
+    logs.t1 = util_now_ts_us();
+    for (i = 0; i < switch_num; i++) {
+        source=source.resume();
+    }
+    logs.t2 = util_now_ts_us();
+    print_log_record(logs);
+
+    log_info("test boost callcc init");
+    {
+        logs.t1 = util_now_ts_us();
+        for (i = 0; i < switch_num; i++) {
+            context::continuation source2 = context::callcc(
+                    [&](context::continuation && sink){return std::move(sink);});
+        }
+        logs.t2 = util_now_ts_us();
+        print_log_record(logs);
+    }
+
+    log_info("test boost fiber");
+    context::fiber fsource{[](context::fiber&& sink){
+        for(;;){
+            sink=std::move(sink).resume();
+        }
+        return std::move(sink);
+    }};
+    logs.t1 = util_now_ts_us();
+    for (i = 0; i < switch_num; i++) {
+        fsource=std::move(fsource).resume();
+    }
+    logs.t2 = util_now_ts_us();
+    print_log_record(logs);
+
+    log_info("test boost fiber init");
+    logs.t1 = util_now_ts_us();
+    for (i = 0; i < switch_num; i++) {
+        context::fiber fsource2{[](context::fiber&& sink){
+            return std::move(sink);
+        }};
+    }
+    logs.t2 = util_now_ts_us();
+    print_log_record(logs);
+
+    log_info("test boost fcontext");
+    {
+        stack_allocator stack_alloc;
+        boost::context::detail::fcontext_t ctx = boost::context::detail::make_fcontext(
+                stack_alloc.allocate(stack_allocator::default_stacksize()),
+                stack_allocator::default_stacksize(),
+                [](boost::context::detail::transfer_t t_) {
+                    boost::context::detail::transfer_t t = t_;
+                    while (true) {
+                        t = boost::context::detail::jump_fcontext(t.fctx, 0);
+                    }
+                });
+        // cache warum-up
+        boost::context::detail::transfer_t t = boost::context::detail::jump_fcontext( ctx, 0);
+        logs.t1 = util_now_ts_us();
+        for (i = 0; i < switch_num; i++) {
+            t = boost::context::detail::jump_fcontext( t.fctx, 0);
+        }
+        logs.t2 = util_now_ts_us();
+        print_log_record(logs);
+    }
+
+    log_info("test boost fcontext init");
+    {
+        logs.t1 = util_now_ts_us();
+        for (i = 0; i < switch_num; i++) {
+            stack_allocator stack_alloc2;
+            boost::context::detail::fcontext_t ctx2 = boost::context::detail::make_fcontext(
+                    stack_alloc2.allocate(stack_allocator::default_stacksize()),
+                    stack_allocator::default_stacksize(),
+                    [](boost::context::detail::transfer_t t_) {
+                        boost::context::detail::transfer_t t = t_;
+                        t = boost::context::detail::jump_fcontext(t.fctx, 0);
+                    });
+            // cache warum-up
+            boost::context::detail::transfer_t t = boost::context::detail::jump_fcontext( ctx2, 0);
+        }
+        logs.t2 = util_now_ts_us();
+        print_log_record(logs);
+    }
+}
+
 int app_perf_test(int argc, char** argv)
 {
 //    test_lambda();
 //    test2();
 //    test_save_func();
 //    test_shared_ptr();
+    test_boost_context();
+    perf_callcc(argc, argv);
+    perf_fiber(argc, argv);
+    perf_fcontext(argc, argv);
     test_cppt_co();
     return 0;
 }

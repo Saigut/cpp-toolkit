@@ -21,6 +21,8 @@ macro(setup_build_environment)
 
     ## Setup product options
     ### set_product_options()
+    set (CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-O0")
+    set (CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-O0")
 
     # Paths
     set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
@@ -208,7 +210,7 @@ macro(setup_targets)
             crypto
 
             json-c ${GV_gen_grpc_cpp_lib_bname})
-    target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context)
+    target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context boost_program_options)
     target_link_libraries(main ${PLATFORM_LINK_LIB})
 endmacro()
 
