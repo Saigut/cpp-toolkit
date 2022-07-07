@@ -59,11 +59,18 @@ static void init_awaitable_id_queue()
 }
 void cppt_co_add_c(context::continuation&& c)
 {
-    g_co_exec_queue.push(new cppt_co_wrapper(std::move(c)));
+    auto new_co = new cppt_co_wrapper(std::move(c));
+    if (!g_co_exec_queue.try_push(new_co)) {
+        log_error("g_co_exec_queue full!");
+        delete new_co;
+    }
 }
 static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
 {
-    g_co_exec_queue.push(wrapper);
+    if (!g_co_exec_queue.try_push(wrapper)) {
+        log_error("g_co_exec_queue full!");
+        delete wrapper;
+    }
 }
 
 
