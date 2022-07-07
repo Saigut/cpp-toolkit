@@ -5,6 +5,7 @@
 #include <mod_worker/mod_worker_netio.h>
 
 #include <inttypes.h>
+#include <map>
 #include <mod_common/expect.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/endian.hpp>
