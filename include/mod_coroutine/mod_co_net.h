@@ -25,7 +25,7 @@ namespace {
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
-                    check_ec(ec, "write_some");
+//                    check_ec(ec, "write_some");
                     wrote_size = ec ? -1 : (ssize_t)wrote_b_num;
                     co_cb();
                 });
@@ -41,7 +41,7 @@ namespace {
                         const boost::system::error_code& ec,
                         std::size_t read_b_num)
                 {
-                    check_ec(ec, "read_some");
+//                    check_ec(ec, "read_some");
                     read_size = ec ? -1 : (ssize_t)read_b_num;
                     co_cb();
                 });
@@ -49,7 +49,7 @@ namespace {
             cppt_co_yield(wrap_func);
             return read_size;
         }
-        virtual bool write(uint8_t* buf, size_t data_sz) {
+        bool write(uint8_t* buf, size_t data_sz) {
             size_t remain_data_sz = data_sz;
             ssize_t ret;
             while (remain_data_sz > 0) {
@@ -66,7 +66,7 @@ namespace {
             }
             return true;
         }
-        virtual bool read(uint8_t* buf, size_t data_sz) {
+        bool read(uint8_t* buf, size_t data_sz) {
             size_t remain_data_sz = data_sz;
             ssize_t ret;
             while (remain_data_sz > 0) {
@@ -125,16 +125,12 @@ namespace {
             }
             return true;
         }
-        std::shared_ptr<cppt_co_tcp_socket> accept() {
+        cppt_co_tcp_socket* accept(io_context& io_ctx) {
             int ret;
-            tcp::socket client_socket(m_io_ctx);
+            tcp::socket client_socket(io_ctx);
             auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_acceptor.async_accept([&, co_cb](const boost::system::error_code& ec,
-                                            tcp::socket peer) {
+                m_acceptor.async_accept(client_socket, [&, co_cb](const boost::system::error_code& ec) {
                     check_ec(ec, "accept");
-                    if (!ec) {
-                        client_socket = std::move(peer);
-                    }
                     ret = ec ? -1 : 0;
                     co_cb();
                 });
@@ -144,12 +140,7 @@ namespace {
                 log_error("failed to accept!");
                 return nullptr;
             }
-            boost::system::error_code ec;
-            tcp::endpoint remote_ep = client_socket.remote_endpoint(ec);
-            check_ec_ret_val(ec, nullptr, "failed to get remote_endpoint");
-//            log_info("New client, ip: %s, port: %u", remote_ep.address().to_string().c_str(),
-//                     remote_ep.port());
-            return std::make_shared<cppt_co_tcp_socket>(std::move(client_socket));
+            return new cppt_co_tcp_socket{std::move(client_socket)};
         }
     private:
         int listen_internal(const std::string& local_addr_str, uint16_t local_port) {

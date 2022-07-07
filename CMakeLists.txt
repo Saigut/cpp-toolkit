@@ -208,7 +208,8 @@ macro(setup_targets)
             crypto
 
             json-c ${GV_gen_grpc_cpp_lib_bname})
-    target_link_boost_libraries(main boost_atomic boost_chrono boost_date_time boost_context boost_program_options)
+    target_link_boost_libraries(main boost_thread boost_context boost_atomic boost_chrono boost_date_time
+        boost_program_options)
     target_link_libraries(main ${PLATFORM_LINK_LIB})
 endmacro()
 
