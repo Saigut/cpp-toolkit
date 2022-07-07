@@ -10,7 +10,7 @@
 #include "expect.h"
 
 
-int util_bind_thread_to_core(int core_id);
+int util_bind_thread_to_core(unsigned int core_id);
 
 uint64_t util_now_ts_ms();
 uint64_t util_now_ts_us();

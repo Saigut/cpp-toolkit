@@ -14,7 +14,7 @@
 #endif
 
 
-int util_bind_thread_to_core(int core_id)
+int util_bind_thread_to_core(unsigned int core_id)
 {
 #ifdef _WIN32
     if (0 == SetThreadAffinityMask(GetCurrentThread(), 1 << core_id)) {
@@ -24,7 +24,7 @@ int util_bind_thread_to_core(int core_id)
     }
 #else
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-    if (core_id < 0 || core_id >= num_cores) {
+    if (core_id >= num_cores) {
         return -1;
     }
     cpu_set_t cpuset;
