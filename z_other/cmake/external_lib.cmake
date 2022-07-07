@@ -21,13 +21,13 @@ function(external_lib_setup baseDir)
 
     # setup package URL
     set(V_JSON_C_URL ${baseDir}/package/json-c.zip)
-    set(V_BOOST_URL ${baseDir}/package/boost_1_72_0.zip)
+    set(V_BOOST_URL ${baseDir}/package/boost_1_79_0.zip)
     set(V_GRPC_URL ${baseDir}/package/grpc-1.34.0_with_deps.zip)
     if(NOT EXISTS "${V_JSON_C_URL}")
         set(V_JSON_C_URL https://github.com/json-c/json-c/archive/master.zip)
     endif()
     if(NOT EXISTS "${V_BOOST_URL}")
-        set(V_BOOST_URL https://boostorg.jfrog.io/artifactory/main/release/1.72.0/source/boost_1_72_0.zip)
+        set(V_BOOST_URL https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip)
     endif()
     if(NOT EXISTS "${V_GRPC_URL}")
         set(V_GRPC_URL https://github.com/Saigut/grpc/releases/download/v1.34.0/grpc-1.34.0_with_deps.zip)
@@ -45,7 +45,7 @@ function(external_lib_setup baseDir)
             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 
-    # boost_1_72_0
+    # boost_1_79_0
     ExternalProject_Add(ep_boost
         URL ${V_BOOST_URL}
         CONFIGURE_COMMAND ./bootstrap${BOOST_BS_SUFFIX}
