@@ -70,6 +70,14 @@ void cppt_co_add_c(context::continuation&& c)
         delete new_co;
     }
 }
+void cppt_co_add_c_sptr(std::shared_ptr<context::continuation> c)
+{
+    auto new_co = new cppt_co_wrapper(c);
+    if (!g_co_exec_queue.try_push(new_co)) {
+        log_error("g_co_exec_queue full!");
+        delete new_co;
+    }
+}
 static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
 {
     if (!g_co_exec_queue.try_push(wrapper)) {
@@ -159,6 +167,17 @@ void cppt_co_main_run()
             if (g_cur_co->m_after_pause_handler) {
                 g_cur_co->m_after_pause_handler([cur_co(g_cur_co)](){ cppt_co_add_sptr(cur_co); });
                 g_cur_co->m_after_pause_handler = nullptr;
+//                if (m_after_pause_handler_need_timeout) {
+//                    auto timeout_hldr = [c(g_cur_co->m_c)](){ cppt_co_add_c_sptr(c); };
+//                    timer->expires_from_now(boost::posix_time::milliseconds(ts_ms));
+//                    timer->async_wait([timeout_hldr](const boost::system::error_code& ec) {
+//                        check_ec(ec, "timer async_wait");
+//                        ret = ec ? -1 : 0;
+//                        if (work_back) {
+//                            work_back();
+//                        }
+//                    });
+//                }
             } else {
                 delete g_cur_co;
                 g_cur_co = nullptr;
