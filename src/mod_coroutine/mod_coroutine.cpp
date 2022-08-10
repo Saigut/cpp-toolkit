@@ -3,6 +3,7 @@
 #include <queue>
 #include <map>
 #include <memory>
+#include <thread>
 #include <boost/context/continuation.hpp>
 #include <mod_atomic_queue/atomic_queue.h>
 #include <mod_common/utils.h>
@@ -148,8 +149,21 @@ unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
     return id;
 }
 
+#include <boost/asio/io_context.hpp>
+using boost::asio::io_context;
+static void asio_thread(io_context& io_ctx)
+{
+    boost::asio::io_context::work io_work(io_ctx);
+    io_ctx.run();
+    log_info("Asio io context quit!!");
+}
+
 void cppt_co_main_run()
 {
+    io_context io_ctx;
+    std::thread asio_thr{ asio_thread, std::ref(io_ctx) };
+    asio_thr.detach();
+
     init_awaitable_id_queue();
     while (g_run_flag) {
         if (!g_co_exec_queue.was_empty()) {
