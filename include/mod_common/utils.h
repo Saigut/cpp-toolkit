@@ -233,9 +233,9 @@ private:
 };
 
 
-void cppt_msleep(unsigned ts_us);
+void cppt_msleep(unsigned ts_ms);
 void cppt_usleep(unsigned ts_us);
-void cppt_nanosleep(unsigned ts_us);
+void cppt_nanosleep(unsigned ts_ns);
 
 
 template<typename Function, typename Tuple, size_t ... I>
