@@ -1,8 +1,12 @@
-#include <program_main.h>
-
 #include <iostream>
+#include <app_coroutine/app_coroutine.h>
 
-using namespace std;
+static int program_main(int argc, char** argv)
+{
+    int ret = 0;
+    ret = app_coroutine(argc, argv);
+    return ret;
+}
 
 int main(int argc, char** argv)
 {
