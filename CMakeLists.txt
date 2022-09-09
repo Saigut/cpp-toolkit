@@ -37,6 +37,8 @@ macro(setup_build_environment)
         ${GV_external_dir}/lib
         ${GV_other_dir}/gen/lib
     )
+    ## Output
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endmacro()
 
 macro(setup_directries)
