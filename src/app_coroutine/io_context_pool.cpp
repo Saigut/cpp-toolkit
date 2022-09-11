@@ -10,9 +10,9 @@
 
 #include "io_context_pool.h"
 #include <stdexcept>
+#include <thread>
 #include <boost/bind/bind.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
 #include <mod_common/utils.h>
 
 io_context_pool::io_context_pool(std::size_t pool_size)
@@ -34,10 +34,10 @@ io_context_pool::io_context_pool(std::size_t pool_size)
 void io_context_pool::run()
 {
   // Create a pool of threads to run all of the io_contexts.
-  std::vector<boost::shared_ptr<boost::thread> > threads;
+  std::vector<boost::shared_ptr<std::thread> > threads;
   for (std::size_t i = 0; i < io_contexts_.size(); ++i)
   {
-    boost::shared_ptr<boost::thread> thread(new boost::thread(
+    boost::shared_ptr<std::thread> thread(new std::thread(
             [i, &io_ctx(io_contexts_[i])](){
                 io_ctx->run();
 //                util_bind_thread_to_core(8 + i);
