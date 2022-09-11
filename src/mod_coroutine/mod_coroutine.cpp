@@ -210,7 +210,7 @@ void cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
 {
     auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
-        wrapped_extern_func([&](){
+        wrapped_extern_func([co_wapper](){
             cppt_co_add_sptr(co_wapper);
         });
     };
@@ -229,7 +229,7 @@ int cppt_co_yield_timeout(
     boost::asio::deadline_timer timer{ g_io_ctx };
 
     auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
-        wrapped_extern_func([&](){
+        wrapped_extern_func([&, co_wapper](){
             std::function<void()> f_before = [&](){
                 // stop timer
                 timer.cancel();
@@ -237,7 +237,7 @@ int cppt_co_yield_timeout(
             cppt_co_add_sptr_f_before(co_wapper, f_before);
         });
         timer.expires_from_now(boost::posix_time::milliseconds(timeout_ms));
-        timer.async_wait([&](const boost::system::error_code& ec){
+        timer.async_wait([&, co_wapper](const boost::system::error_code& ec){
             if (ec) {
                 return;
             }
