@@ -2,17 +2,8 @@
 set(V_program_name main)
 add_executable(${V_program_name} exec_main.cpp)
 target_link_libraries(${V_program_name}
-    app_chat app_asio_socket app_socket
-    app_im app_grpc_hw
-    app_worker
-    app_coroutine
-    app_perf_test
-    mod_coroutine
-    mod_tcp_hole_punching
-    mod_worker
-    mod_socket
-    mod_hash_table mod_queue
-    mod_common
+    cpp_toolkit
+
     grpc++_reflection
     grpc++
     grpc

@@ -113,7 +113,7 @@ macro(setup_grpc_target)
 endmacro()
 
 macro(setup_targets)
-    set(GV_main_src main.cpp src/program_main.cpp)
+    set(GV_cpp_toolkit_src "")
     get_filename_component(GV_src_path "src" ABSOLUTE)
     file(GLOB GV_all_mod "${GV_src_path}/mod_*")
     file(GLOB GV_all_app "${GV_src_path}/app_*")
@@ -148,10 +148,16 @@ macro(setup_targets)
                 list(APPEND GV_${tmp_name}_src ${tmp_sub_dir_files})
             endif()
         endforeach()
+        list(APPEND GV_cpp_toolkit_src ${GV_${tmp_name}_src})
         add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
         set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
         add_dependencies(${tmp_name} GT_gen_grpc_src GT_dir_gen_lib)
     endforeach()
+
+    # Library in one
+    add_library(cpp_toolkit STATIC ${GV_cpp_toolkit_src})
+    set_target_properties(cpp_toolkit PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
+    add_dependencies(cpp_toolkit GT_gen_grpc_src GT_dir_gen_lib)
 
     # Main executable
     foreach(one_dir ${GV_all_exec})
