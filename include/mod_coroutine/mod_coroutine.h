@@ -35,6 +35,11 @@ void cppt_co_main_run();
 
 void cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func);
+// ret: 0, ok; 1 timeout
+int cppt_co_yield_timeout(
+        const std::function<void(std::function<void()>&&)>& wrapped_extern_func,
+        unsigned int timeout_ms,
+        std::function<void()>& f_cancel_operation);
 void cppt_co_await(unsigned int co_id);
 
 void cppt_co_add_c(boost::context::continuation&& c);
