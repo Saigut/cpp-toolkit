@@ -54,6 +54,13 @@ function(external_lib_setup baseDir)
         INSTALL_COMMAND ./b2 --layout=system --prefix=${baseDir}/external/${CMAKE_CXX_COMPILER_ID} ${PARALLEL_ARG} address-model=64 architecture=x86 variant=release link=static install)
 
     # grpc-1.34.0
+    # set openssl path
+    string(LENGTH "${OPENSSL_ROOT_DIR}" StrLen)
+    set(V_grpc_cmake_ssl_param "")
+    if (NOT ${StrLen} EQUAL 0)
+        set(V_grpc_cmake_ssl_param "-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}")
+    endif()
+
     ExternalProject_Add(ep_grpc
 #        git clone -b v1.34.0 https://github.com/grpc/grpc
         URL ${V_GRPC_URL}
@@ -63,5 +70,7 @@ function(external_lib_setup baseDir)
             -DCMAKE_INSTALL_PREFIX:PATH=${baseDir}/external/${CMAKE_CXX_COMPILER_ID}
             -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+            -DgRPC_SSL_PROVIDER=package
+            ${V_grpc_cmake_ssl_param}
         BUILD_COMMAND ${CMAKE_COMMAND} --build . ${PARALLEL_ARG})
 endfunction()
