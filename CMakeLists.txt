@@ -9,6 +9,7 @@ include(common_var)
 include(helper)
 include(compiler)
 #include(external_lib)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
 macro(setup_platform_environment)
     ## Setup compilation options
@@ -16,6 +17,9 @@ macro(setup_platform_environment)
 endmacro()
 
 macro(setup_build_environment)
+    ## Setup Conan
+    conan_basic_setup()
+
     ## Setup dependency libraries
     #external_lib_setup(${PROJECT_SOURCE_DIR})
 
@@ -29,13 +33,12 @@ macro(setup_build_environment)
     include_directories(
         include
         ${GV_other_dir}/gen/grpc/cpp
-        ${GV_external_dir}/include
-        ${GV_external_dir}/include/boost
+        ${CONAN_INCLUDE_DIRS}
     )
     ## Libraries
     link_directories(
-        ${GV_external_dir}/lib
         ${GV_other_dir}/gen/lib
+        ${CONAN_LIB_DIRS}
     )
     ## Output
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
