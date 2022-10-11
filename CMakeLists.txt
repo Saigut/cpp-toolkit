@@ -20,9 +20,6 @@ macro(setup_build_environment)
     ## Setup Conan
 #    conan_basic_setup()
 
-    ## Setup dependency libraries
-    #external_lib_setup(${PROJECT_SOURCE_DIR})
-
     ## Setup product options
     ### set_product_options()
 
