@@ -18,7 +18,7 @@ endmacro()
 
 macro(setup_build_environment)
     ## Setup Conan
-    conan_basic_setup()
+#    conan_basic_setup()
 
     ## Setup dependency libraries
     #external_lib_setup(${PROJECT_SOURCE_DIR})
@@ -72,6 +72,15 @@ macro(setup_grpc_target)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 
+    find_program(V_ptotoc_cmd protoc PATHS ${CONAN_BIN_DIRS} NO_DEFAULT_PATH)
+    if (NOT V_ptotoc_cmd)
+        message(FATAL_ERROR "protoc is not found!" )
+    endif()
+    find_program(V_ptotoc_cpp_plugin grpc_cpp_plugin PATHS ${CONAN_BIN_DIRS} NO_DEFAULT_PATH)
+    if (NOT V_ptotoc_cpp_plugin)
+        message(FATAL_ERROR "grpc_cpp_plugin is not found!" )
+    endif()
+
     foreach(one_proto_file ${V_all_proto_files})
         get_filename_component(V_bname ${one_proto_file} NAME_WE)
         list(APPEND GV_proto_bnames ${V_bname})
@@ -83,14 +92,6 @@ macro(setup_grpc_target)
             "${V_dir_gen_grpc}/${V_bname}.grpc.pb.cc"
             )
         list(APPEND GV_gen_cpp_grpc_srcs ${V_gen_cpp_grpc_srcs})
-
-        if(OS_WINDOWS)
-            set(V_ptotoc_cmd ${GV_external_dir_a}/bin/protoc.exe)
-            set(V_ptotoc_cpp_plugin ${GV_external_dir_a}/bin/grpc_cpp_plugin.exe)
-        else()
-            set(V_ptotoc_cmd ${GV_external_dir_a}/bin/protoc)
-            set(V_ptotoc_cpp_plugin ${GV_external_dir_a}/bin/grpc_cpp_plugin)
-        endif()
 
         add_custom_command(
             OUTPUT ${V_gen_cpp_grpc_srcs}
@@ -152,9 +153,9 @@ macro(setup_targets)
             endif()
         endforeach()
         list(APPEND GV_cpp_toolkit_src ${GV_${tmp_name}_src})
-        add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
-        set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
-        add_dependencies(${tmp_name} GT_gen_grpc_src GT_dir_gen_lib)
+#        add_library(${tmp_name} STATIC ${GV_${tmp_name}_src})
+#        set_target_properties(${tmp_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
+#        add_dependencies(${tmp_name} GT_gen_grpc_src GT_dir_gen_lib)
     endforeach()
 
     # Library in one
