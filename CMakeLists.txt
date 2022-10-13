@@ -30,12 +30,39 @@ macro(setup_build_environment)
     include_directories(
         include
         ${GV_other_dir}/gen/grpc/cpp
+#        ${CONAN_INCLUDE_DIRS_JSON-C}
+#        ${CONAN_INCLUDE_DIRS_GRPC}
+#        ${CONAN_INCLUDE_DIRS_BOOST}
+#        ${CONAN_INCLUDE_DIRS_ABSEIL}
+#        ${CONAN_INCLUDE_DIRS_C-ARES}
+#        ${CONAN_INCLUDE_DIRS_OPENSSL}
+#        ${CONAN_INCLUDE_DIRS_RE2}
+#        ${CONAN_INCLUDE_DIRS_GRPC-PROTO}
+#        ${CONAN_INCLUDE_DIRS_BZIP2}
+#        ${CONAN_INCLUDE_DIRS_GOOGLEAPIS}
+#        ${CONAN_INCLUDE_DIRS_PROTOBUF}
+#        ${CONAN_INCLUDE_DIRS_ZLIB}
+#        ${CONAN_INCLUDE_DIRS_ZLIB}
         ${CONAN_INCLUDE_DIRS}
+#        ${GV_external_dir_a}/include
     )
     ## Libraries
     link_directories(
         ${GV_other_dir}/gen/lib
+#        ${CONAN_LIB_DIRS_JSON-C}
+#        ${CONAN_LIB_DIRS_GRPC}
+#        ${CONAN_LIB_DIRS_BOOST}
+#        ${CONAN_LIB_DIRS_ABSEIL}
+#        ${CONAN_LIB_DIRS_C-ARES}
+#        ${CONAN_LIB_DIRS_OPENSSL}
+#        ${CONAN_LIB_DIRS_RE2}
+#        ${CONAN_LIB_DIRS_GRPC-PROTO}
+#        ${CONAN_LIB_DIRS_BZIP2}
+#        ${CONAN_LIB_DIRS_GOOGLEAPIS}
+#        ${CONAN_LIB_DIRS_PROTOBUF}
+#        ${CONAN_LIB_DIRS_ZLIB}
         ${CONAN_LIB_DIRS}
+#        ${GV_external_dir_a}/lib
     )
     ## Output
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -69,14 +96,18 @@ macro(setup_grpc_target)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 
-    find_program(V_ptotoc_cmd protoc PATHS ${CONAN_BIN_DIRS} NO_DEFAULT_PATH)
+    set(V_bin_search_path ${CONAN_BIN_DIRS})
+#    set(V_bin_search_path ${GV_external_dir_a}/bin)
+    find_program(V_ptotoc_cmd protoc PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
     if (NOT V_ptotoc_cmd)
         message(FATAL_ERROR "protoc is not found!" )
     endif()
-    find_program(V_ptotoc_cpp_plugin grpc_cpp_plugin PATHS ${CONAN_BIN_DIRS} NO_DEFAULT_PATH)
+    message("Found protoc: ${V_ptotoc_cmd}")
+    find_program(V_ptotoc_cpp_plugin grpc_cpp_plugin PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
     if (NOT V_ptotoc_cpp_plugin)
         message(FATAL_ERROR "grpc_cpp_plugin is not found!" )
     endif()
+    message("Found grpc_cpp_plugin: ${V_ptotoc_cpp_plugin}")
 
     foreach(one_proto_file ${V_all_proto_files})
         get_filename_component(V_bname ${one_proto_file} NAME_WE)
