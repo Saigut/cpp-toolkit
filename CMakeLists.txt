@@ -27,40 +27,17 @@ macro(setup_build_environment)
     set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
+#    list(REMOVE_ITEM CONAN_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_BOOST})
     include_directories(
         include
         ${GV_other_dir}/gen/grpc/cpp
-#        ${CONAN_INCLUDE_DIRS_JSON-C}
-#        ${CONAN_INCLUDE_DIRS_GRPC}
-#        ${CONAN_INCLUDE_DIRS_BOOST}
-#        ${CONAN_INCLUDE_DIRS_ABSEIL}
-#        ${CONAN_INCLUDE_DIRS_C-ARES}
-#        ${CONAN_INCLUDE_DIRS_OPENSSL}
-#        ${CONAN_INCLUDE_DIRS_RE2}
-#        ${CONAN_INCLUDE_DIRS_GRPC-PROTO}
-#        ${CONAN_INCLUDE_DIRS_BZIP2}
-#        ${CONAN_INCLUDE_DIRS_GOOGLEAPIS}
-#        ${CONAN_INCLUDE_DIRS_PROTOBUF}
-#        ${CONAN_INCLUDE_DIRS_ZLIB}
-#        ${CONAN_INCLUDE_DIRS_ZLIB}
         ${CONAN_INCLUDE_DIRS}
 #        ${GV_external_dir_a}/include
     )
     ## Libraries
+#    list(REMOVE_ITEM CONAN_LIB_DIRS ${CONAN_LIB_DIRS_BOOST})
     link_directories(
         ${GV_other_dir}/gen/lib
-#        ${CONAN_LIB_DIRS_JSON-C}
-#        ${CONAN_LIB_DIRS_GRPC}
-#        ${CONAN_LIB_DIRS_BOOST}
-#        ${CONAN_LIB_DIRS_ABSEIL}
-#        ${CONAN_LIB_DIRS_C-ARES}
-#        ${CONAN_LIB_DIRS_OPENSSL}
-#        ${CONAN_LIB_DIRS_RE2}
-#        ${CONAN_LIB_DIRS_GRPC-PROTO}
-#        ${CONAN_LIB_DIRS_BZIP2}
-#        ${CONAN_LIB_DIRS_GOOGLEAPIS}
-#        ${CONAN_LIB_DIRS_PROTOBUF}
-#        ${CONAN_LIB_DIRS_ZLIB}
         ${CONAN_LIB_DIRS}
 #        ${GV_external_dir_a}/lib
     )
