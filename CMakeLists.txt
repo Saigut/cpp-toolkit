@@ -123,21 +123,6 @@ macro(setup_targets)
     setup_directries()
     setup_grpc_target()
 
-    if (${OS_WINDOWS})
-        set(V_PROTO_libs
-            libprotobuf-lited
-            libprotobufd
-            libprotocd)
-        set(V_LIBZ_libs
-            zlibstaticd)
-    else()
-        set(V_PROTO_libs
-            protobuf
-            protoc)
-        set(V_LIBZ_libs
-            z)
-    endif ()
-
     # Modules library
     foreach(one_dir ${GV_all_mod} ${GV_all_app})
         get_filename_component(tmp_name ${one_dir} NAME)
