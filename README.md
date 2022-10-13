@@ -3,13 +3,20 @@ Here put some cross-platform tools for convenience of C++ development. And also 
 
 # Dependency
 1. Install conan package manager
-2. Execute:
-```shell
-apt-get install pythonX.X-dev   # For boost. This can be skipped.
-mkdir build
-cd build
-conan install ../z_other
-```
+2. Adjust installation location of conan packages
+    ```shell
+    # show
+    conan config get storage.path
+    # change
+    conan config set storage.path=<your path>
+    ```
+3. Install dependency packages. Execute:
+    ```shell
+    apt-get install pythonX.X-dev   # For boost. This can be skipped.
+    mkdir build
+    cd build
+    conan install ../z_other
+    ```
 
 # Build
 ```shell
