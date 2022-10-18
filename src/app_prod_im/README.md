@@ -107,9 +107,17 @@
 ##### 2. 功能运行时序图
 
 ### 数据结构
-#### 1. 主要数据机构
+#### 1. 主要数据结构
 * ID  
    6到18个字符。字母、数字、短横线、下划线。
+
+* 联系人
+
+|字段           |描述          |类型      |
+|----           |----        |----      |
+| contact_id    |联系人ID     |字符串     |
+| contact_name  |联系人名字    |IO接口    |
+
 #### 2. 服务端数据结构
 * 用户会话
 
@@ -299,11 +307,11 @@ C++
   * 移除用户  
     user_del，参数：用户ID 字符串
   * 添加用户联系人  
-    user_contact_add，参数：联系人ID 字符串，联系人备注 字符串；返回值：结果 int
+    user_contact_add，参数：用户ID 字符串，联系人ID 字符串，联系人备注 字符串；返回值：结果 int
   * 移除用户联系人  
-    user_contact_del，参数：联系人ID 字符串
+    user_contact_del，参数：用户ID 字符串，联系人ID 字符串
   * 获取用户联系人列表  
-    user_contact_get_list，参数：无；返回值：联系人列表 联系人ID+联系人备注
+    user_contact_get_list，参数：用户ID 字符串；返回值：联系人列表 联系人ID+联系人备注
 * 用户会话  
   * 添加用户会话  
     user_session_add，参数：用户ID 字符串，用户会话；返回值：结果 int
@@ -313,7 +321,7 @@ C++
     user_session_find，参数：用户ID 字符串；返回值：用户会话
 * 聊天消息接收  
   * 运行  
-    msg_receive_run
+    msg_receiving_run
 * 聊天消息转发  
   * 转发聊天消息  
     msg_relay，参数：发送者ID 字符串，接收者ID 字符串，聊天消息内容 字符串；返回值：结果 int
