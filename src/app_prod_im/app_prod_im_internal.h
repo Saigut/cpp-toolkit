@@ -12,9 +12,30 @@ struct prod_im_contact {
 };
 
 
-
 // client
+class prod_im_c_mod_login_session {
+public:
+    int open(int io_skt);
+    void close();
+    int get_io_port();
+};
 
+class prod_im_c_mod_contacts {
+public:
+    void update_list(std::vector<prod_im_contact>& contact_list);
+    int add_contact(std::string& contact_id, std::string& contact_name);
+    int del_contact();
+};
+
+class prod_im_c_chat_msg_sending {
+public:
+    int send_msg(std::string& receiver_id, std::string& msg_content);
+};
+
+class prod_im_c_chat_msg_receiving {
+public:
+    void run();
+};
 
 
 // server

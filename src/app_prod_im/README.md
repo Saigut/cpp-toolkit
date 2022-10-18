@@ -35,13 +35,13 @@
 
 ### 模块
 #### 模块划分
-1. 客户端
+##### 1. 客户端
    * 登录会话
    * 联系人管理
    * 聊天消息发送
    * 聊天消息接收
 
-2. 服务端
+##### 2. 服务端
    * 用户信息
    * 用户会话
    * 聊天消息接收
@@ -285,17 +285,17 @@ C++
   * 关闭会话  
     login_session_close  
   * 获取IO接口  
-    login_session_get_io_port
+    login_session_get_io_port，参数：无；返回值：IO连接 socket
 * 联系人管理  
   * 更新联系人列表  
-    contact_update_list，参数：联系人列表 vector数组 引用  
+    update_list，参数：联系人列表 vector数组 引用  
   * 添加联系人  
-    contact_add，参数：联系人ID 字符串；联系人备注 字符串；返回值：结果 int  
+    add_contact，参数：联系人ID 字符串；联系人备注 字符串；返回值：结果 int  
   * 移除联系人  
-    contact_del，参数：联系人ID 字符串
+    del_contact，参数：联系人ID 字符串
 * 聊天消息发送  
   * 发送聊天消息  
-    chat_msg_send，参数：接收者ID 字符串；消息内容 字符串；返回值：结果 int
+    send_msg，参数：接收者ID 字符串；消息内容 字符串；返回值：结果 int
 * 聊天消息接收  
   * 运行。  
     run
