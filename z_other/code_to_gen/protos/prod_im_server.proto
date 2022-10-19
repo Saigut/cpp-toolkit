@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package prod_im_server;
+import "common.proto";
+
+service prod_im_server_service {
+    rpc register (register_req) returns (register_res) {}
+    rpc login (login_req) returns (login_res) {}
+    rpc get_contact_list (get_contact_list_req) returns (get_contact_list_res) {}
+    rpc add_contact (add_contact_req) returns (add_contact_res) {}
+    rpc del_contact (del_contact_req) returns (del_contact_res) {}
+    rpc send_chat_msg (send_chat_msg_req) returns (send_chat_msg_res) {}
+}
+
+message register_req {
+    string user_id = 1;
+    string user_pass = 2;
+}
+message register_res {
+    int32 result = 1;
+}
+
+message login_req {
+    string user_id = 1;
+    string user_pass = 2;
+}
+message login_res {
+    int32 result = 1;
+}
+
+message get_contact_list_req {
+}
+message get_contact_list_res {
+    int32 result = 1;
+    repeated common.prod_im_contact contact_list = 2;
+}
+
+message add_contact_req {
+    string contact_id = 1;
+    string contact_name = 2;
+}
+message add_contact_res {
+    int32 result = 1;
+}
+
+message del_contact_req {
+    string contact_id = 1;
+}
+message del_contact_res {
+    int32 result = 1;
+}
+
+message send_chat_msg_req {
+    string receiver_id = 1;
+    string chat_msg = 2;
+}
+message send_chat_msg_res {
+    int32 result = 1;
+}

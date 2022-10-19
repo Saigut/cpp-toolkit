@@ -38,5 +38,5 @@ void prod_im_s_mod_uinfo::user_contact_del(std::string& user_id, std::string& co
 
 std::vector<prod_im_contact>&& prod_im_s_mod_uinfo::user_contact_get_list(std::string& user_id)
 {
-    return nullptr;
+    return std::move(std::vector<prod_im_contact>{});
 }

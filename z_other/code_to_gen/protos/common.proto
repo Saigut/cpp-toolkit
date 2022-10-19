@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package common;
+
+message Empty {
+}
+
+message prod_im_contact {
+    string contact_id = 1;
+    string contact_name = 2;
+}

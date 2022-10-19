@@ -13,7 +13,7 @@
 
 int prod_im_s_mod_user_session::add(std::string& user_id)
 {
-
+    return -1;
 }
 
 void prod_im_s_mod_user_session::del(std::string& user_id)
@@ -23,5 +23,5 @@ void prod_im_s_mod_user_session::del(std::string& user_id)
 
 prod_im_s_user_session&& prod_im_s_mod_user_session::find(std::string& user_id)
 {
-    return nullptr;
+    return std::move(prod_im_s_user_session{});
 }

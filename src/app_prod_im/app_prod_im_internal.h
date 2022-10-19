@@ -1,6 +1,10 @@
 #ifndef CPP_TOOLKIT_APP_PROD_IM_INTERNAL_H
 #define CPP_TOOLKIT_APP_PROD_IM_INTERNAL_H
 
+#include <string>
+#include <vector>
+
+
 int app_prod_im_server(int argc, char** argv);
 int app_prod_im_client(int argc, char** argv);
 
@@ -13,6 +17,23 @@ struct prod_im_contact {
 
 
 // client
+class prod_im_c_mod_main {
+public:
+    int user_register(std::string& user_id,
+                      std::string& user_pass);
+    int login(std::string& user_id,
+              std::string& user_pass);
+    std::vector<prod_im_contact>&& get_contact_list();
+    int add_contact(std::string& contact_id,
+                    std::string& contact_name);
+    void del_contact(std::string& contact_id);
+    int send_msg_to_contact(std::string& contact_id,
+                            std::string& chat_msg);
+    void recv_chat_msg(std::string& sender_id,
+                       std::string& chat_msg);
+    void run();
+};
+
 class prod_im_c_mod_login_session {
 public:
     int open(int io_skt);
@@ -39,6 +60,25 @@ public:
 
 
 // server
+class prod_im_s_mod_main {
+public:
+    int user_register(std::string& user_id,
+                      std::string& user_pass);
+    int login(std::string& user_id,
+              std::string& user_pass);
+    std::vector<prod_im_contact>&&
+        get_contact_list(std::string& user_id);
+    int add_contact(std::string& user_id,
+                    std::string& contact_id,
+                    std::string& contact_name);
+    void del_contact(std::string& user_id,
+                     std::string& contact_id);
+    void recv_chat_msg(std::string& sender_id,
+                       std::string& receiver_id,
+                       std::string& chat_msg);
+    void run();
+};
+
 struct prod_im_s_user_session {
     std::string user_id;
     int io_port;
