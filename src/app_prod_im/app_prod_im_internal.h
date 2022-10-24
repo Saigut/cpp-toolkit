@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 
 int app_prod_im_server(int argc, char** argv);
@@ -85,6 +86,12 @@ struct prod_im_s_user_session {
 };
 
 class prod_im_s_mod_uinfo {
+private:
+    struct user_info_t {
+        std::string user_id;
+        std::string user_pass;
+        std::map<std::string, prod_im_contact> user_contacts;
+    };
 public:
     int user_add(std::string& user_id, std::string& user_pass);
 
@@ -97,6 +104,8 @@ public:
     void user_contact_del(std::string& user_id, std::string& contact_id);
 
     std::vector <prod_im_contact>&& user_contact_get_list(std::string& user_id);
+private:
+    std::map<std::string, user_info_t> m_users;
 };
 
 class prod_im_s_mod_user_session {
