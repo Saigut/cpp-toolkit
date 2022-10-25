@@ -36,6 +36,15 @@ void prod_im_s_mod_uinfo::user_del(std::string& user_id)
     m_users.erase(user_id);
 }
 
+std::shared_ptr<prod_im_s_mod_uinfo::user_info_t> prod_im_s_mod_uinfo::user_find(std::string& user_id)
+{
+    auto rst = m_users.find(user_id);
+    if (rst == m_users.end()) {
+        return nullptr;
+    }
+    return std::make_shared<prod_im_s_mod_uinfo::user_info_t>(rst->second);
+}
+
 int prod_im_s_mod_uinfo::user_contact_add(std::string& user_id,
                                           std::string& contact_id,
                                           std::string& contact_name)

@@ -27,19 +27,19 @@ macro(setup_build_environment)
     set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
-    list(REMOVE_ITEM CONAN_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_BOOST})
+#    list(REMOVE_ITEM CONAN_INCLUDE_DIRS ${CONAN_INCLUDE_DIRS_BOOST})
     include_directories(
         include
         ${GV_other_dir}/gen/grpc/cpp
         ${CONAN_INCLUDE_DIRS}
-        ${GV_external_dir_a}/include
+#        ${GV_external_dir_a}/include
     )
     ## Libraries
-    list(REMOVE_ITEM CONAN_LIB_DIRS ${CONAN_LIB_DIRS_BOOST})
+#    list(REMOVE_ITEM CONAN_LIB_DIRS ${CONAN_LIB_DIRS_BOOST})
     link_directories(
         ${GV_other_dir}/gen/lib
         ${CONAN_LIB_DIRS}
-        ${GV_external_dir_a}/lib
+#        ${GV_external_dir_a}/lib
     )
     ## Output
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
