@@ -4,7 +4,7 @@ package prod_im_server;
 import "common.proto";
 
 service prod_im_server_service {
-    rpc register (register_req) returns (register_res) {}
+    rpc user_register (user_register_req) returns (user_register_res) {}
     rpc login (login_req) returns (login_res) {}
     rpc get_contact_list (get_contact_list_req) returns (get_contact_list_res) {}
     rpc add_contact (add_contact_req) returns (add_contact_res) {}
@@ -12,11 +12,11 @@ service prod_im_server_service {
     rpc send_chat_msg (send_chat_msg_req) returns (send_chat_msg_res) {}
 }
 
-message register_req {
+message user_register_req {
     string user_id = 1;
     string user_pass = 2;
 }
-message register_res {
+message user_register_res {
     int32 result = 1;
 }
 
