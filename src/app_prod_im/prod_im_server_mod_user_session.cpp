@@ -16,21 +16,31 @@
 
 using boost::asio::deadline_timer;
 
-int prod_im_s_mod_user_session::add(std::string& user_id, int io_port)
+int prod_im_s_mod_user_session::add(const std::string& user_id,
+                                    const std::string& client_ip)
 {
     auto rst = m_user_sessions.find(user_id);
     if (rst != m_user_sessions.end()) {
         log_error("User session existed! User id: %s", user_id.c_str());
         return -1;
     }
-    auto insert_rst = m_user_sessions.insert({user_id,
-                                              prod_im_s_user_session{user_id,
-                                                                     io_port,
-                                                                     boost::asio::deadline_timer(m_io_ctx)}});
+    auto insert_rst = m_user_sessions.insert(
+            {user_id,
+             prod_im_s_user_session{user_id, client_ip,
+                     std::make_shared<boost::asio::deadline_timer>(m_io_ctx)}});
     if (!insert_rst.second) {
         log_error("Failed to insert user session! User id: %s", user_id.c_str());
         return -1;
     }
+    auto& timer = insert_rst.first->second.timer;
+    timer->expires_from_now(boost::posix_time::seconds(30));
+    timer->async_wait([user_id, v_this(this)](const boost::system::error_code& ec){
+        log_info("ec: %s", ec.message().c_str());
+        if (ec.value() == boost::system::errc::timed_out) {
+            log_warn("Session timed out! User id: %s", user_id.c_str());
+            v_this->del(user_id);
+        }
+    });
     return 0;
 }
 
@@ -39,11 +49,24 @@ void prod_im_s_mod_user_session::del(const std::string& user_id)
     m_user_sessions.erase(user_id);
 }
 
-std::shared_ptr<prod_im_s_user_session> prod_im_s_mod_user_session::find(std::string& user_id)
+std::shared_ptr<prod_im_s_user_session> prod_im_s_mod_user_session::find(const std::string& user_id)
 {
     auto rst = m_user_sessions.find(user_id);
     if (rst == m_user_sessions.end()) {
         return nullptr;
     }
-    return std::make_shared<prod_im_s_user_session>(rst->second);
+    auto& u_session = rst->second;
+    auto& timer = u_session.timer;
+    timer->cancel();
+    timer->expires_from_now(boost::posix_time::seconds(30));
+    timer->async_wait([user_id, v_this(this)](const boost::system::error_code& ec){
+        log_info("ec: %s", ec.message().c_str());
+        if (ec.value() == boost::system::errc::timed_out) {
+            log_warn("Session timed out! User id: %s", user_id.c_str());
+            v_this->del(user_id);
+        }
+    });
+    return std::make_shared<prod_im_s_user_session>(u_session.user_id,
+                                                    u_session.client_ip,
+                                                    u_session.timer);
 }

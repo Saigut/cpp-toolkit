@@ -29,6 +29,7 @@ message login_res {
 }
 
 message get_contact_list_req {
+    string user_id = 1;
 }
 message get_contact_list_res {
     int32 result = 1;
@@ -36,23 +37,26 @@ message get_contact_list_res {
 }
 
 message add_contact_req {
-    string contact_id = 1;
-    string contact_name = 2;
+    string user_id = 1;
+    string contact_id = 2;
+    string contact_name = 3;
 }
 message add_contact_res {
     int32 result = 1;
 }
 
 message del_contact_req {
-    string contact_id = 1;
+    string user_id = 1;
+    string contact_id = 2;
 }
 message del_contact_res {
     int32 result = 1;
 }
 
 message send_chat_msg_req {
-    string receiver_id = 1;
-    string chat_msg = 2;
+    string sender_id = 1;
+    string receiver_id = 2;
+    string chat_msg = 3;
 }
 message send_chat_msg_res {
     int32 result = 1;

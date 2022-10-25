@@ -23,9 +23,9 @@ public:
     CallImClient(std::shared_ptr<Channel> channel)
             : m_stub(prod_im_client_service::NewStub(channel)) {}
 
-    int SendMsg(std::string& sender_id,
-                std::string& receiver_id,
-                std::string& chat_content) {
+    int SendMsg(const std::string& sender_id,
+                const std::string& receiver_id,
+                const std::string& chat_content) {
         send_chat_msg_req request;
         request.set_sender_id(sender_id);
         request.set_receiver_id(receiver_id);
@@ -52,11 +52,12 @@ private:
 };
 
 
-int prod_im_s_mod_chat_msg_relay::relay_msg(std::string& sender_id,
-              std::string& receiver_id,
-              std::string& chat_content)
+int prod_im_s_mod_chat_msg_relay::relay_msg(const std::string& peer_ip,
+                                            const std::string& sender_id,
+                                            const std::string& receiver_id,
+                                            const std::string& chat_content)
 {
-    std::string im_client_listen_addr = "127.0.0.1:12345";
+    std::string im_client_listen_addr = peer_ip + ":60101";
     CallImClient call_to_im_client(grpc::CreateChannel(im_client_listen_addr,
                                                        grpc::InsecureChannelCredentials()));
     return call_to_im_client.SendMsg(sender_id, receiver_id, chat_content);

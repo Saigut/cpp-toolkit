@@ -24,13 +24,15 @@
 
 using boost::asio::deadline_timer;
 
-int prod_im_s_mod_main::user_register(std::string& user_id,
-                  std::string& user_pass)
+int prod_im_s_mod_main::user_register(const std::string& user_id,
+                                      const std::string& user_pass)
 {
     return m_user_info.user_add(user_id, user_pass);
 }
 int
-prod_im_s_mod_main::login(std::string& user_id, std::string& user_pass, int io_port)
+prod_im_s_mod_main::login(const std::string& user_id,
+                          const std::string& user_pass,
+                          const std::string& client_ip)
 {
     auto find_rst = m_user_info.user_find(user_id);
     if (!find_rst) {
@@ -41,7 +43,7 @@ prod_im_s_mod_main::login(std::string& user_id, std::string& user_pass, int io_p
         log_error("Wrong password! User id: %s", user_id.c_str());
         return -1;
     }
-    if (0 != m_user_session.add(user_id, io_port)) {
+    if (0 != m_user_session.add(user_id, client_ip)) {
         log_error("Failed to create user session! User id: %s", user_id.c_str());
         return -1;
     }
@@ -51,7 +53,7 @@ prod_im_s_mod_main::login(std::string& user_id, std::string& user_pass, int io_p
     });
     return 0;
 }
-std::vector<prod_im_contact>&& prod_im_s_mod_main::get_contact_list(std::string& user_id)
+std::vector<prod_im_contact>&& prod_im_s_mod_main::get_contact_list(const std::string& user_id)
 {
     auto find_rst = m_user_info.user_find(user_id);
     if (!find_rst) {
@@ -65,9 +67,9 @@ std::vector<prod_im_contact>&& prod_im_s_mod_main::get_contact_list(std::string&
     }
     return  m_user_info.user_contact_get_list(user_id);
 }
-int prod_im_s_mod_main::add_contact(std::string& user_id,
-                std::string& contact_id,
-                std::string& contact_name)
+int prod_im_s_mod_main::add_contact(const std::string& user_id,
+                                    const std::string& contact_id,
+                                    const std::string& contact_name)
 {
     auto find_rst = m_user_info.user_find(user_id);
     if (!find_rst) {
@@ -81,8 +83,8 @@ int prod_im_s_mod_main::add_contact(std::string& user_id,
     }
     return m_user_info.user_contact_add(user_id, contact_id, contact_name);
 }
-int prod_im_s_mod_main::del_contact(std::string& user_id,
-                                    std::string& contact_id)
+int prod_im_s_mod_main::del_contact(const std::string& user_id,
+                                    const std::string& contact_id)
 {
     auto find_rst = m_user_info.user_find(user_id);
     if (!find_rst) {
@@ -91,18 +93,24 @@ int prod_im_s_mod_main::del_contact(std::string& user_id,
     }
     auto rst = m_user_session.find(user_id);
     if (!rst) {
-        log_error("User is not login! User id: %s", user_id.c_str());
+        log_error("User does not login! User id: %s", user_id.c_str());
         return -1;
     }
     m_user_info.user_contact_del(user_id, contact_id);
     return 0;
 }
-void prod_im_s_mod_main::recv_chat_msg(std::string& sender_id,
-                   std::string& receiver_id,
-                   std::string& chat_msg)
+void prod_im_s_mod_main::recv_chat_msg(const std::string& sender_id,
+                                       const std::string& receiver_id,
+                                       const std::string& chat_msg)
 {
-    m_chat_msg_relay.relay_msg(sender_id, receiver_id, chat_msg);
+    auto rst = m_user_session.find(sender_id);
+    if (!rst) {
+        log_error("User does not login! User id: %s", sender_id.c_str());
+        return;
+    }
+    m_chat_msg_relay.relay_msg(rst->client_ip, sender_id, receiver_id, chat_msg);
 }
+
 void prod_im_s_mod_main::run()
 {
     boost::asio::io_context::work io_work(m_io_ctx);

@@ -16,7 +16,7 @@
     user_contact_get_list，参数：用户ID 字符串；返回值：联系人列表 联系人ID+联系人备注
 */
 
-int prod_im_s_mod_uinfo::user_add(std::string& user_id, std::string& user_pass)
+int prod_im_s_mod_uinfo::user_add(const std::string& user_id, const std::string& user_pass)
 {
     auto rst = m_users.find(user_id);
     if (rst != m_users.end()) {
@@ -31,12 +31,12 @@ int prod_im_s_mod_uinfo::user_add(std::string& user_id, std::string& user_pass)
     return 0;
 }
 
-void prod_im_s_mod_uinfo::user_del(std::string& user_id)
+void prod_im_s_mod_uinfo::user_del(const std::string& user_id)
 {
     m_users.erase(user_id);
 }
 
-std::shared_ptr<prod_im_s_mod_uinfo::user_info_t> prod_im_s_mod_uinfo::user_find(std::string& user_id)
+std::shared_ptr<prod_im_s_mod_uinfo::user_info_t> prod_im_s_mod_uinfo::user_find(const std::string& user_id)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
@@ -45,9 +45,9 @@ std::shared_ptr<prod_im_s_mod_uinfo::user_info_t> prod_im_s_mod_uinfo::user_find
     return std::make_shared<prod_im_s_mod_uinfo::user_info_t>(rst->second);
 }
 
-int prod_im_s_mod_uinfo::user_contact_add(std::string& user_id,
-                                          std::string& contact_id,
-                                          std::string& contact_name)
+int prod_im_s_mod_uinfo::user_contact_add(const std::string& user_id,
+                                          const std::string& contact_id,
+                                          const std::string& contact_name)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
@@ -70,7 +70,7 @@ int prod_im_s_mod_uinfo::user_contact_add(std::string& user_id,
     return 0;
 }
 
-void prod_im_s_mod_uinfo::user_contact_del(std::string& user_id, std::string& contact_id)
+void prod_im_s_mod_uinfo::user_contact_del(const std::string& user_id, const std::string& contact_id)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
@@ -80,7 +80,7 @@ void prod_im_s_mod_uinfo::user_contact_del(std::string& user_id, std::string& co
     rst->second.user_contacts.erase(contact_id);
 }
 
-std::vector<prod_im_contact>&& prod_im_s_mod_uinfo::user_contact_get_list(std::string& user_id)
+std::vector<prod_im_contact>&& prod_im_s_mod_uinfo::user_contact_get_list(const std::string& user_id)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
