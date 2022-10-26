@@ -39,6 +39,7 @@ public:
         if (status.ok()) {
             if (reply.result() != 0) {
                 log_error("Failed send message to im client!");
+                return -1;
             }
             return 0;
         } else {

@@ -9,6 +9,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
+#include <grpcpp/grpcpp.h>
 #include <prod_im_server.grpc.pb.h>
 
 
@@ -43,9 +44,20 @@ public:
 
 class prod_im_c_mod_login_session {
 public:
-    int open(int io_skt);
+    prod_im_c_mod_login_session(const std::string& user_id,
+                                const std::string& user_pass,
+                                const std::string& server_ip)
+                                : m_user_id(user_id),
+                                  m_user_pass(user_pass),
+                                  m_server_ip(server_ip)
+                                  {}
+    int open();
     void close();
-    int get_io_port();
+    std::string get_server_ip();
+private:
+    std::string m_user_id;
+    std::string m_user_pass;
+    std::string m_server_ip;
 };
 
 class prod_im_c_mod_contacts {
@@ -63,6 +75,35 @@ public:
 class prod_im_c_chat_msg_receiving {
 public:
     void run();
+};
+
+class call_im_server_grpc {
+public:
+    call_im_server_grpc(std::shared_ptr<grpc::Channel> channel)
+            : m_stub(prod_im_server::prod_im_server_service::NewStub(channel)) {}
+
+    int user_register(const std::string& user_id,
+                      const std::string& user_pass);
+
+    int login(const std::string& user_id,
+              const std::string& user_pass);
+
+    std::vector<prod_im_contact>&& get_contact_list(
+            const std::string& user_id);
+
+    int add_contact(const std::string& user_id,
+                    const std::string& contact_id,
+                    const std::string& contact_name);
+
+    int del_contact(const std::string& user_id,
+                    const std::string& contact_id);
+
+    int send_chat_msg(const std::string& sender_id,
+                      const std::string& receiver_id,
+                      const std::string& chat_msg);
+
+private:
+    std::unique_ptr<prod_im_server::prod_im_server_service::Stub> m_stub;
 };
 
 

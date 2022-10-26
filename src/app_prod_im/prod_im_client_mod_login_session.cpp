@@ -1,5 +1,7 @@
 #include "app_prod_im_internal.h"
 
+#include <grpcpp/grpcpp.h>
+#include <prod_im_server.grpc.pb.h>
 
 /*
 * 登录会话
@@ -11,7 +13,11 @@
     login_session_get_io_port，参数：无；返回值：IO连接 socket
 */
 
-int prod_im_c_mod_login_session::open(int io_skt)
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::Status;
+
+int prod_im_c_mod_login_session::open()
 {
     return -1;
 }
@@ -21,7 +27,7 @@ void prod_im_c_mod_login_session::close()
 
 }
 
-int prod_im_c_mod_login_session::get_io_port()
+std::string prod_im_c_mod_login_session::get_server_ip()
 {
-    return -1;
+    return m_server_ip;
 }
