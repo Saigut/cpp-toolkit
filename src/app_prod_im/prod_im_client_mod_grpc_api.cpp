@@ -1,6 +1,7 @@
 #include "app_prod_im_internal.h"
 
 #include <prod_im_server.grpc.pb.h>
+#include <mod_common/log.h>
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -44,10 +45,12 @@ int call_im_server_grpc::user_register(const std::string& user_id,
 }
 
 int call_im_server_grpc::login(const std::string& user_id,
-                               const std::string& user_pass) {
+                               const std::string& user_pass,
+                               uint16_t client_port) {
     login_req req;
     req.set_user_id(user_id);
     req.set_user_pass(user_pass);
+    req.set_client_port(client_port);
 
     login_res res;
 
@@ -66,7 +69,7 @@ int call_im_server_grpc::login(const std::string& user_id,
     }
 }
 
-std::vector<prod_im_contact>&&
+std::shared_ptr<std::vector<prod_im_contact>>
 call_im_server_grpc::get_contact_list(const std::string& user_id) {
     get_contact_list_req req;
     req.set_user_id(user_id);
@@ -79,20 +82,20 @@ call_im_server_grpc::get_contact_list(const std::string& user_id) {
     if (status.ok()) {
         if (res.result() != 0) {
             log_error("get_contact_list failed!");
-            return std::move(std::vector<prod_im_contact>{});
+            return nullptr;
         }
-        std::vector<prod_im_contact> ret_contact_list;
-        auto contact_list = res.contact_list();
-        unsigned int idx;
+        auto ret_contact_list = std::make_shared<std::vector<prod_im_contact>>();
+        auto& contact_list = res.contact_list();
+        int idx;
         for (idx = 0; idx < contact_list.size(); idx++) {
-            auto a_contact = contact_list.at(idx);
-            ret_contact_list.push_back(
+            auto& a_contact = contact_list.at(idx);
+            ret_contact_list->push_back(
                     {a_contact.contact_id(), a_contact.contact_name()});
         }
-        return  std::move(ret_contact_list);
+        return ret_contact_list;
     } else {
         log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
-        return std::move(std::vector<prod_im_contact>{});
+        return nullptr;
     }
 }
 
@@ -167,4 +170,16 @@ int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
         log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
         return -1;
     }
+}
+
+extern std::shared_ptr<prod_im_c_mod_main> g_client_main;
+
+::grpc::Status prod_im_client_grpc_api_impl::send_chat_msg(::grpc::ServerContext* context,
+                                                           const ::prod_im_client::send_chat_msg_req* request,
+                                                           ::prod_im_client::send_chat_msg_res* response)
+{
+    g_client_main->recv_chat_msg(request->sender_id(),
+                                 request->chat_msg());
+    response->set_result(0);
+    return Status::OK;
 }

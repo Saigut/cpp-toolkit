@@ -53,12 +53,14 @@ private:
 };
 
 
-int prod_im_s_mod_chat_msg_relay::relay_msg(const std::string& peer_ip,
-                                            const std::string& sender_id,
-                                            const std::string& receiver_id,
-                                            const std::string& chat_content)
+int
+prod_im_s_mod_chat_msg_relay::relay_msg(const std::string& peer_ip,
+                                        uint16_t peer_port,
+                                        const std::string& sender_id,
+                                        const std::string& receiver_id,
+                                        const std::string& chat_content)
 {
-    std::string im_client_listen_addr = peer_ip + ":60101";
+    std::string im_client_listen_addr = peer_ip + ":" + std::to_string(peer_port);
     CallImClient call_to_im_client(grpc::CreateChannel(im_client_listen_addr,
                                                        grpc::InsecureChannelCredentials()));
     return call_to_im_client.SendMsg(sender_id, receiver_id, chat_content);

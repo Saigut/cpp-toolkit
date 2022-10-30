@@ -10,11 +10,13 @@ using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 
-prod_im_s_mod_main g_server_main;
+std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
-static void run_main()
+static void run_asio(boost::asio::io_context& io_ctx)
 {
-    g_server_main.run();
+    boost::asio::io_context::work io_work(io_ctx);
+    io_ctx.run();
+    log_info("Asio thread quit.");
 }
 
 static void run_grpc_api()
@@ -37,11 +39,15 @@ static void run_grpc_api()
 
 int app_prod_im_server(int argc, char** argv)
 {
-    std::thread thr_main{run_main};
+    boost::asio::io_context io_ctx;
+
+    g_server_main = std::make_shared<prod_im_s_mod_main>(io_ctx);
+
+    std::thread thr_asio{run_asio, std::ref(io_ctx)};
     std::thread thr_grpc_api{run_grpc_api};
 
     thr_grpc_api.join();
-    thr_main.join();
+    thr_asio.join();
 
     return 0;
 }

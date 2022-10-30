@@ -10,7 +10,7 @@ using grpc::ServerContext;
 using grpc::Status;
 using prod_im_server::prod_im_server_service;
 
-extern prod_im_s_mod_main g_server_main;
+extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
 
 ::grpc::Status prod_im_server_grpc_api_impl::user_register(::grpc::ServerContext* context,
@@ -18,7 +18,7 @@ extern prod_im_s_mod_main g_server_main;
                                                            ::prod_im_server::user_register_res* response)
 {
     response->set_result(
-            g_server_main.user_register(request->user_id(), request->user_pass()));
+            g_server_main->user_register(request->user_id(), request->user_pass()));
     return Status::OK;
 }
 
@@ -35,18 +35,21 @@ extern prod_im_s_mod_main g_server_main;
     }
     log_info("Peer: %s, peer ip address: %s", peer_addr.c_str(), peer_ip_addr.c_str());
     response->set_result(
-            g_server_main.login(request->user_id(), request->user_pass(), peer_ip_addr));
+            g_server_main->login(request->user_id(), request->user_pass(),
+                                peer_ip_addr, request->client_port()));
     return Status::OK;
 }
 
 ::grpc::Status prod_im_server_grpc_api_impl::get_contact_list(::grpc::ServerContext* context,
                                                               const ::prod_im_server::get_contact_list_req* request,
                                                               ::prod_im_server::get_contact_list_res* response) {
-    auto rst = g_server_main.get_contact_list(request->user_id());
-    for (auto& contact : rst) {
-        auto a_contact = response->add_contact_list();
-        a_contact->set_contact_id(contact.contact_id);
-        a_contact->set_contact_name(contact.contact_name);
+    auto rst = g_server_main->get_contact_list(request->user_id());
+    if (rst) {
+        for (auto& contact : *rst) {
+            auto a_contact = response->add_contact_list();
+            a_contact->set_contact_id(contact.contact_id);
+            a_contact->set_contact_name(contact.contact_name);
+        }
     }
     response->set_result(0);
     return Status::OK;
@@ -56,7 +59,7 @@ extern prod_im_s_mod_main g_server_main;
                                                          const ::prod_im_server::add_contact_req* request,
                                                          ::prod_im_server::add_contact_res* response) {
     response->set_result(
-            g_server_main.add_contact(request->user_id(), request->contact_id(), request->contact_name()));
+            g_server_main->add_contact(request->user_id(), request->contact_id(), request->contact_name()));
     return Status::OK;
 }
 
@@ -64,14 +67,14 @@ extern prod_im_s_mod_main g_server_main;
                                                          const ::prod_im_server::del_contact_req* request,
                                                          ::prod_im_server::del_contact_res* response)
 {
-    response->set_result(g_server_main.del_contact(request->user_id(), request->contact_id()));
+    response->set_result(g_server_main->del_contact(request->user_id(), request->contact_id()));
     return Status::OK;
 }
 
 ::grpc::Status prod_im_server_grpc_api_impl::send_chat_msg(::grpc::ServerContext* context,
                                                            const ::prod_im_server::send_chat_msg_req* request,
                                                            ::prod_im_server::send_chat_msg_res* response) {
-    g_server_main.recv_chat_msg(request->sender_id(),
+    g_server_main->recv_chat_msg(request->sender_id(),
                                 request->receiver_id(),
                                 request->chat_msg());
     response->set_result(0);

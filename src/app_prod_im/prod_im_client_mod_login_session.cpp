@@ -26,8 +26,3 @@ void prod_im_c_mod_login_session::close()
 {
 
 }
-
-std::string prod_im_c_mod_login_session::get_server_ip()
-{
-    return m_server_ip;
-}

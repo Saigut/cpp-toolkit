@@ -23,6 +23,7 @@ message user_register_res {
 message login_req {
     string user_id = 1;
     string user_pass = 2;
+    uint32 client_port = 3;
 }
 message login_res {
     int32 result = 1;

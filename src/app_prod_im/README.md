@@ -175,27 +175,27 @@ C++
 命令行接口：
 * 注册
 ```shell
-./<program> reg <user id>
+./<program> <user id> reg <user id> <user passwd>
 ```
 * 登录
 ```shell
-./<program> login <user id>
+./<program> <user id> login <user id> <user passwd>
 ```
 * 获取联系人列表
 ```shell
-./<program> cont_list <user id>
+./<program> <user id> cont_list <user id>
 ```
 * 添加联系人
 ```shell
-./<program> cont_add <contact user id>
+./<program> <user id> cont_add <contact id> <contact name>
 ```
 * 移除联系人
 ```shell
-./<program> cont_del <contact user id>
+./<program> <user id> cont_del <contact id>
 ```
 * 向联系人发送消息
 ```shell
-./<program> msg <contact user id> <message>
+./<program> <user id> msg <contact id> <message>
 ```
 
 #### 2. 服务端接口

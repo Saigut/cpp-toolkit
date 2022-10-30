@@ -14,15 +14,27 @@
 
 void prod_im_c_mod_contacts::update_list(std::vector<prod_im_contact>& contact_list)
 {
-
+    m_contacts.clear();
+    for (auto& item : contact_list) {
+        m_contacts.insert({item.contact_id,
+                           {item.contact_id, item.contact_name}});
+    }
 }
 
 int prod_im_c_mod_contacts::add_contact(std::string& contact_id, std::string& contact_name)
 {
-    return -1;
+    auto rst = m_contacts.find(contact_id);
+    if (rst != m_contacts.end()) {
+        rst->second.contact_id = contact_id;
+        rst->second.contact_name = contact_name;
+    } else {
+        m_contacts.insert({contact_id, {contact_id, contact_name}});
+    }
+    return 0;
 }
 
-int prod_im_c_mod_contacts::del_contact()
+int prod_im_c_mod_contacts::del_contact(std::string& contact_id)
 {
-    return -1;
+    m_contacts.erase(contact_id);
+    return 0;
 }
