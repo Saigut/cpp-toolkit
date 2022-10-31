@@ -4,6 +4,7 @@
 #include <sstream>
 #include <ncursesw/curses.h>
 #include <mod_common/expect.h>
+#include <mod_common/utils.h>
 
 
 extern std::shared_ptr<prod_im_c_mod_main> g_client_main;
@@ -245,8 +246,9 @@ static void nmonitor()
 
 static std::string nget()
 {
-    while(!flag)
-        usleep(100);
+    while(!flag) {
+        cppt_usleep(100);
+    }
     std::string cmd = buf;
     flag = false;
     buf = "";
