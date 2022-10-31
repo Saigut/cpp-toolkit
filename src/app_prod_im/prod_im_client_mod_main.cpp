@@ -1,5 +1,6 @@
 #include "app_prod_im_internal.h"
 
+#include <ncursesw/curses.h>
 
 /*
 * 主模块
@@ -21,15 +22,13 @@
     run
 */
 
-int prod_im_c_mod_main::user_register(const std::string& user_id,
-                                      const std::string& user_pass)
+int prod_im_c_mod_main::user_register(const std::string& user_pass)
 {
-    return m_server_grpc_api->user_register(user_id, user_pass);
+    return m_server_grpc_api->user_register(m_my_id, user_pass);
 }
-int prod_im_c_mod_main::login(const std::string& user_id,
-                              const std::string& user_pass)
+int prod_im_c_mod_main::login(const std::string& user_pass)
 {
-    return m_server_grpc_api->login(user_id, user_pass, m_client_port);
+    return m_server_grpc_api->login(m_my_id, user_pass, m_client_port);
 }
 std::shared_ptr<std::vector<prod_im_contact>> prod_im_c_mod_main::get_contact_list()
 {
@@ -52,7 +51,8 @@ int prod_im_c_mod_main::send_msg_to_contact(const std::string& contact_id,
 void prod_im_c_mod_main::recv_chat_msg(const std::string& sender_id,
                                        const std::string& chat_msg)
 {
-    printf("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
+//    printf("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
+    prod_im_client_mod_cli_recv_msg("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
 }
 void prod_im_c_mod_main::run()
 {

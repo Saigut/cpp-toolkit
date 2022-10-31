@@ -20,7 +20,7 @@ int prod_im_s_mod_user_session::add(const std::string& user_id, const std::strin
 {
     auto rst = m_user_sessions.find(user_id);
     if (rst != m_user_sessions.end()) {
-        auto session = rst->second;
+        auto& session = rst->second;
         session.user_id = user_id;
         session.client_ip = client_ip;
         session.client_port = client_port;

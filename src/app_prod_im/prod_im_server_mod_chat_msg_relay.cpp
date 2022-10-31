@@ -63,5 +63,9 @@ prod_im_s_mod_chat_msg_relay::relay_msg(const std::string& peer_ip,
     std::string im_client_listen_addr = peer_ip + ":" + std::to_string(peer_port);
     CallImClient call_to_im_client(grpc::CreateChannel(im_client_listen_addr,
                                                        grpc::InsecureChannelCredentials()));
-    return call_to_im_client.SendMsg(sender_id, receiver_id, chat_content);
+    int ret = call_to_im_client.SendMsg(sender_id, receiver_id, chat_content);
+    if (ret != 0) {
+        log_debug("Peer address: %s", im_client_listen_addr.c_str());
+    }
+    return ret;
 }

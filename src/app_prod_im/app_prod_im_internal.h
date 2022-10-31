@@ -112,10 +112,8 @@ public:
               m_my_id(mMyId),
               m_server_grpc_api(mServerGrpcApi) {}
 
-    int user_register(const std::string& user_id,
-                      const std::string& user_pass);
-    int login(const std::string& user_id,
-              const std::string& user_pass);
+    int user_register(const std::string& user_pass);
+    int login(const std::string& user_pass);
     std::shared_ptr<std::vector<prod_im_contact>> get_contact_list();
     int add_contact(const std::string& contact_id,
                     const std::string& contact_name);
@@ -143,17 +141,18 @@ public:
                                  ::prod_im_client::send_chat_msg_res* response) override;
 };
 
-int prod_im_client_mod_cli(int argc, char** argv);
+int prod_im_client_mod_cli_read_loop();
+void prod_im_client_mod_cli_recv_msg(const char* fmt, ...);
 
 static void print_client_cli_usage()
 {
-    printf("Usage eg:\n");
-    printf("./<program> <user id> reg <user id> <user passwd>\n");
-    printf("./<program> <user id> login <user id> <user passwd>\n");
-    printf("./<program> <user id> cont_list <user id>\n");
-    printf("./<program> <user id> cont_add <contact id> <contact name>\n");
-    printf("./<program> <user id> cont_del <contact id>\n");
-    printf("./<program> <user id> msg <contact id> <message>\n");
+    prod_im_client_mod_cli_recv_msg("-| REPL usage eg:\n");
+    prod_im_client_mod_cli_recv_msg("-| reg <user passwd>\n");
+    prod_im_client_mod_cli_recv_msg("-| login <user passwd>\n");
+    prod_im_client_mod_cli_recv_msg("-| cont_list\n");
+    prod_im_client_mod_cli_recv_msg("-| cont_add <contact id> <contact name>\n");
+    prod_im_client_mod_cli_recv_msg("-| cont_del <contact id>\n");
+    prod_im_client_mod_cli_recv_msg("-| msg <contact id> <message>\n");
 }
 
 // server

@@ -15,6 +15,10 @@ using grpc::ServerContext;
 
 std::shared_ptr<prod_im_c_mod_main> g_client_main;
 
+static void run_read_loop()
+{
+    prod_im_client_mod_cli_read_loop();
+}
 
 static void run_grpc_api(uint16_t listen_port)
 {
@@ -35,28 +39,19 @@ static void run_grpc_api(uint16_t listen_port)
     grpc_server->Wait();
 }
 
-
+// argc >= 2
 int app_prod_im_client(int argc, char** argv)
 {
-    if (argc < 3) {
-        printf("Invalid number of parameters!\n");
-        print_client_cli_usage();
-        return -1;
-    }
-
     srand(time(NULL));
 
     std::string server_ip = "127.0.0.1";
     uint16_t server_port = 60100;
     uint16_t client_port = 10000 + (rand() % 1000);
-
     std::string my_id = argv[1];
-
     std::string im_server_listen_addr = server_ip + ":" + std::to_string(server_port);
     auto im_server_grpc_api = std::make_shared<call_im_server_grpc>(
             grpc::CreateChannel(im_server_listen_addr,
                                 grpc::InsecureChannelCredentials()));
-
     g_client_main = std::make_shared<prod_im_c_mod_main>(
             server_ip,
             server_port,
@@ -64,20 +59,16 @@ int app_prod_im_client(int argc, char** argv)
             my_id,
             im_server_grpc_api);
 
-
     printf("Client info:\n");
     printf("client user id: %s\n", my_id.c_str());
     printf("client port: %u\n", client_port);
     printf("server ip: %s\n", server_ip.c_str());
     printf("server port: %u\n", server_port);
 
-//    cppt_msleep(150);
-    prod_im_client_mod_cli(argc - 2, argv + 2);
-
-    if (0 == strcmp("login", *(argv + 2))) {
-        std::thread thr_grpc_api{run_grpc_api, client_port};
-        thr_grpc_api.join();
-    }
+    std::thread thr_grpc_api{ run_grpc_api, client_port };
+    std::thread thr_read_loop{ run_read_loop };
+    thr_grpc_api.join();
+    thr_read_loop.join();
 
     return 0;
 }

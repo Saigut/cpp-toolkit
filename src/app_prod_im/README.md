@@ -173,29 +173,34 @@ C++
 | result  |结果      |int      |
 
 命令行接口：
+* 启动
+```shell
+./<program> c <user id>
+``` 
+在交互式 REPL 中：  
 * 注册
 ```shell
-./<program> <user id> reg <user id> <user passwd>
+reg <user passwd>
 ```
 * 登录
 ```shell
-./<program> <user id> login <user id> <user passwd>
+login <user passwd>
 ```
 * 获取联系人列表
 ```shell
-./<program> <user id> cont_list <user id>
+cont_list
 ```
 * 添加联系人
 ```shell
-./<program> <user id> cont_add <contact id> <contact name>
+cont_add <contact id> <contact name>
 ```
 * 移除联系人
 ```shell
-./<program> <user id> cont_del <contact id>
+cont_del <contact id>
 ```
 * 向联系人发送消息
 ```shell
-./<program> <user id> msg <contact id> <message>
+msg <contact id> <message>
 ```
 
 #### 2. 服务端接口

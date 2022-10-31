@@ -1,0 +1,7 @@
+[requires]
+json-c/0.16
+grpc/1.48.0
+boost/1.80.0
+
+[generators]
+cmake
