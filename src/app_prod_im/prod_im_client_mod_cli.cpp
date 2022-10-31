@@ -23,16 +23,16 @@ static int cli_login(std::string& passwd)
 static int cli_cont_list()
 {
     auto contact_list = g_client_main->get_contact_list();
-    if (contact_list->empty()) {
+    if (!contact_list || contact_list->empty()) {
         prod_im_client_mod_cli_recv_msg("-| Empty contact list.\n");
         return 0;
     }
 
     int cnt = 1;
+    prod_im_client_mod_cli_recv_msg("-| Contacts:\n", cnt);
     for (auto& item : *contact_list) {
-        prod_im_client_mod_cli_recv_msg("-| Contact %d:\n", cnt);
-        prod_im_client_mod_cli_recv_msg("-| Id: %s\n", item.contact_id.c_str());
-        prod_im_client_mod_cli_recv_msg("-| Name: %s\n", item.contact_name.c_str());
+        prod_im_client_mod_cli_recv_msg("-| %d: %s, %s\n", cnt, item.contact_id.c_str(), item.contact_name.c_str());
+        cnt++;
     }
 
     return 0;
@@ -149,7 +149,8 @@ static int process_read_in(std::vector<std::string> tokens)
         return cli_msg(tokens);
 
     } else {
-        prod_im_client_mod_cli_recv_msg("-| Unknown cmd: %s\n", cmd.c_str());
+        prod_im_client_mod_cli_recv_msg("-| Unknown cmd: %s, cmd str len: %zu\n",
+                                        cmd.c_str(), strlen(cmd.c_str()));
         print_client_cli_usage();
         return -1;
     }
@@ -204,7 +205,9 @@ static void nprintf(std::string str)
     touchwin(win);
     str += '\n';
     wprintw(output_win, str.c_str());
+    box(output_win, 0, 0);
     wrefresh(output_win);
+    box(input_win, 0, 0);
     wrefresh(input_win);
 }
 
@@ -212,26 +215,43 @@ void prod_im_client_mod_cli_recv_msg(const char* fmt, ...)
 {
     touchwin(win);
 
+    wmove(output_win, getcury(output_win), 2);
     va_list ap;
     va_start(ap, fmt);
     vw_printw(output_win, fmt, ap);
     va_end(ap);
 
+    box(output_win, 0, 0);
+    box(input_win, 0, 0);
     wrefresh(output_win);
     wrefresh(input_win);
 }
 
 static void nmonitor()
 {
+    bool new_input = true;
     while(true)
     {
-        char x = wgetch(input_win);
+        char x;
+        if (new_input) {
+            x = mvwgetch(input_win, 1, 2);
+            new_input = false;
+        } else {
+            x = wgetch(input_win);
+        }
 
         if(x != '\r')
         {
             touchwin(win);
-            buf += x;
-            waddch(input_win, x);
+//            prod_im_client_mod_cli_recv_msg("%d\n", x);
+            if (x == 8) {
+                waddch(input_win, x);
+                wdelch(input_win);
+                buf.pop_back();
+            } else {
+                buf += x;
+                waddch(input_win, x);
+            }
         }
         else
         {
@@ -239,7 +259,9 @@ static void nmonitor()
             touchwin(input_win);
             flag = true;
             wclear(input_win);
+            new_input = true;
         }
+        box(input_win, 0, 0);
         wrefresh(input_win);
     }
 }
@@ -261,9 +283,15 @@ int prod_im_client_mod_cli_read_loop()
     ninit();
     fflush(stdin);
 
-    output_win = subwin(win, row - 1, col, 0, 0);
+    output_win = subwin(win, row - 3, col - 1, 0, 0);
     scrollok(output_win, true);
-    input_win = subwin(win, 1, col, row - 1, 0);
+    input_win = subwin(win, 3, col - 1, row - 3, 0);
+
+    box(output_win, 0, 0);
+    box(input_win, 0, 0);
+    wmove(output_win, 1, 2);
+    wrefresh(output_win);
+    wrefresh(input_win);
 
     std::thread nthr(nmonitor);
 
