@@ -10,6 +10,7 @@ service prod_im_server_service {
     rpc add_contact (add_contact_req) returns (add_contact_res) {}
     rpc del_contact (del_contact_req) returns (del_contact_res) {}
     rpc send_chat_msg (send_chat_msg_req) returns (send_chat_msg_res) {}
+    rpc get_msg (get_msg_req) returns (get_msg_res) {}
 }
 
 message user_register_req {
@@ -61,4 +62,12 @@ message send_chat_msg_req {
 }
 message send_chat_msg_res {
     int32 result = 1;
+}
+
+message get_msg_req {
+    string user_id = 1;
+}
+message get_msg_res {
+    int32 result = 1;
+    repeated string msgs = 2;
 }
