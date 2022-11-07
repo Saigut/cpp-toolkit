@@ -74,9 +74,9 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
 ::grpc::Status prod_im_server_grpc_api_impl::send_chat_msg(::grpc::ServerContext* context,
                                                            const ::prod_im_server::send_chat_msg_req* request,
                                                            ::prod_im_server::send_chat_msg_res* response) {
-    g_server_main->recv_chat_msg(request->sender_id(),
-                                request->receiver_id(),
-                                request->chat_msg());
+    g_server_main->client_chat_msg(request->sender_id(),
+                                   request->receiver_id(),
+                                   request->chat_msg());
     response->set_result(0);
     return Status::OK;
 }

@@ -332,7 +332,7 @@ msg <contact id> <message>
   * 向联系人发送消息
     send_msg_to_contact，参数：联系人ID 字符串，聊天消息内容 字符串；返回值：结果 int
   * 接收聊天消息
-    recv_chat_msg，参数：发送者ID 字符串，聊天消息内容
+    client_chat_msg，参数：发送者ID 字符串，聊天消息内容
   * 运行
     run
 * 登录会话  
@@ -369,7 +369,7 @@ msg <contact id> <message>
   * 移除联系人
     del_contact，参数：用户ID 字符串，联系人ID 字符串；返回值：
   * 接收消息
-    recv_chat_msg，参数：发送者ID 字符串，接收者ID 字符串，聊天消息内容 字符串；返回值：结果 int
+    client_chat_msg，参数：发送者ID 字符串，接收者ID 字符串，聊天消息内容 字符串；返回值：结果 int
   * 运行
     run
 * 用户信息  

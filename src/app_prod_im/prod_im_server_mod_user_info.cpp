@@ -80,7 +80,7 @@ void prod_im_s_mod_uinfo::user_contact_del(const std::string& user_id, const std
     rst->second.user_contacts.erase(contact_id);
 }
 
-std::shared_ptr<std::vector<prod_im_contact>> prod_im_s_mod_uinfo::user_contact_get_list(const std::string& user_id)
+std::shared_ptr<prod_im_cont_list> prod_im_s_mod_uinfo::user_contact_get_list(const std::string& user_id)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
@@ -88,7 +88,7 @@ std::shared_ptr<std::vector<prod_im_contact>> prod_im_s_mod_uinfo::user_contact_
     }
     auto& contacts = rst->second.user_contacts;
 
-    auto contact_list = std::make_shared<std::vector<prod_im_contact>>();
+    auto contact_list = std::make_shared<prod_im_cont_list>();
     std::transform(contacts.begin(), contacts.end(),
                    std::back_inserter(*contact_list),
                    [](const std::pair<std::string, prod_im_contact> &p) { return p.second; });

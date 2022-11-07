@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <system_error>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/deadline_timer.hpp>
@@ -12,6 +13,9 @@
 #include <grpcpp/grpcpp.h>
 #include <prod_im_client.grpc.pb.h>
 #include <prod_im_server.grpc.pb.h>
+#include <mod_ring_queue/mod_ring_queue.h>
+
+#include "app_prod_im_dt.h"
 
 
 int app_prod_im_server(int argc, char** argv);
@@ -19,11 +23,6 @@ int app_prod_im_client(int argc, char** argv);
 
 
 // common
-struct prod_im_contact {
-    std::string contact_id;
-    std::string contact_name;
-};
-
 
 // client
 class call_im_server_grpc {
@@ -36,7 +35,7 @@ public:
 
     int login(const std::string& user_id, const std::string& user_pass, uint16_t client_port);
 
-    std::shared_ptr<std::vector<prod_im_contact>> get_contact_list(
+    std::shared_ptr<prod_im_cont_list> get_contact_list(
             const std::string& user_id);
 
     int add_contact(const std::string& user_id,
@@ -73,7 +72,7 @@ private:
 
 class prod_im_c_mod_contacts {
 public:
-    void update_list(std::vector<prod_im_contact>& contact_list);
+    void update_list(prod_im_cont_list& contact_list);
     int add_contact(std::string& contact_id, std::string& contact_name);
     int del_contact(std::string& contact_id);
 private:
@@ -114,14 +113,14 @@ public:
 
     int user_register(const std::string& user_pass);
     int login(const std::string& user_pass);
-    std::shared_ptr<std::vector<prod_im_contact>> get_contact_list();
+    std::shared_ptr<prod_im_cont_list> get_contact_list();
     int add_contact(const std::string& contact_id,
                     const std::string& contact_name);
     void del_contact(const std::string& contact_id);
     int send_msg_to_contact(const std::string& contact_id,
                             const std::string& chat_msg);
-    void recv_chat_msg(const std::string& sender_id,
-                       const std::string& chat_msg);
+    void client_chat_msg(const std::string& sender_id,
+                         const std::string& chat_msg);
     void run();
 private:
     std::string m_server_ip;
@@ -189,7 +188,7 @@ public:
 
     void user_contact_del(const std::string& user_id, const std::string& contact_id);
 
-    std::shared_ptr<std::vector<prod_im_contact>> user_contact_get_list(const std::string& user_id);
+    std::shared_ptr<prod_im_cont_list> user_contact_get_list(const std::string& user_id);
 private:
     std::map<std::string, user_info_t> m_users;
 };
@@ -217,30 +216,137 @@ public:
                   const std::string& receiver_id, const std::string& chat_content);
 };
 
+enum emIM_S_MAIN_MSG_type {
+    emIM_S_MAIN_MSG_type_REG = 0,
+    emIM_S_MAIN_MSG_type_LOGIN,
+    emIM_S_MAIN_MSG_type_GET_CONT_LIST,
+    emIM_S_MAIN_MSG_type_ADD_CONT,
+    emIM_S_MAIN_MSG_type_DEL_CONT,
+    emIM_S_MAIN_MSG_type_CLIENT_MSG,
+};
+
+struct im_s_main_reg_req {
+    prod_im_user_account use_acco;
+};
+struct im_s_main_reg_res {
+    int rst;
+};
+
+struct im_s_main_login_req {
+    prod_im_user_account use_acco;
+    prod_im_s_client_info client_info;
+};
+struct im_s_main_login_res {
+    int rst;
+};
+
+struct im_s_main_get_cont_list_req {
+    std::string user_id;
+};
+struct im_s_main_get_cont_list_res {
+    int rst;
+};
+
+struct im_s_main_add_cont_req {
+    std::string user_id;
+    prod_im_contact cont;
+};
+struct im_s_main_add_cont_res {
+    int rst;
+};
+
+struct im_s_main_del_cont_req {
+    std::string user_id;
+    std::string cont_id;
+};
+struct im_s_main_del_cont_res {
+    int rst;
+};
+
+struct im_s_main_client_msg_req {
+    prod_im_chat_msg chat_msg;
+};
+struct im_s_main_client_msg_res {
+    int rst;
+};
+
+using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
+using prod_im_s_main_get_cont_list_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_cont_list>)>;
+
+class prod_im_s_mod_main_msg {
+public:
+    explicit prod_im_s_mod_main_msg() {}
+    emIM_S_MAIN_MSG_type type;
+    union {
+        im_s_main_reg_req reg;
+        im_s_main_login_req login;
+        im_s_main_get_cont_list_req get_cont_list;
+        im_s_main_add_cont_req add_cont;
+        im_s_main_del_cont_req del_cont;
+        im_s_main_client_msg_req client_msg;
+    };
+    prod_im_s_main_common_cb common_cb;
+    prod_im_s_main_get_cont_list_cb get_cont_list_cb;
+};
+
 class prod_im_s_mod_main {
 public:
     explicit prod_im_s_mod_main(boost::asio::io_context& io_ctx)
-    : m_user_session(io_ctx), m_io_ctx(io_ctx) {}
+    : m_user_session(io_ctx), m_io_ctx(io_ctx),
+      m_operation_mpool(4096, sizeof(prod_im_s_mod_main_msg)),
+      m_operation_queue(4096, m_operation_mpool) {}
     int user_register(const std::string& user_id,
                       const std::string& user_pass);
     int login(const std::string& user_id, const std::string& user_pass, const std::string& client_ip,
               uint16_t client_port);
-    std::shared_ptr<std::vector<prod_im_contact>>
+    std::shared_ptr<prod_im_cont_list>
     get_contact_list(const std::string& user_id);
     int add_contact(const std::string& user_id,
                     const std::string& contact_id,
                     const std::string& contact_name);
     int del_contact(const std::string& user_id,
                     const std::string& contact_id);
-    void recv_chat_msg(const std::string& sender_id,
-                       const std::string& receiver_id,
-                       const std::string& chat_msg);
+    void client_chat_msg(const std::string& sender_id,
+                         const std::string& receiver_id,
+                         const std::string& chat_msg);
+
+    int user_register(const prod_im_user_account& user_acco,
+                      prod_im_s_main_common_cb&& cb);
+    int login(const prod_im_user_account& user_acco,
+              const prod_im_s_client_info& client_info,
+              prod_im_s_main_common_cb&& cb);
+    int get_contact_list(const std::string& user_id,
+                         prod_im_s_main_get_cont_list_cb&& cb);
+    int add_contact(const std::string& user_id,
+                    const prod_im_contact& cont,
+                    prod_im_s_main_common_cb&& cb);
+    int del_contact(const std::string& user_id, const std::string& contact_id, prod_im_s_main_common_cb&& cb);
+    int client_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
+
     void run();
 private:
+
+
     prod_im_s_mod_uinfo m_user_info;
     prod_im_s_mod_user_session m_user_session;
     prod_im_s_mod_chat_msg_relay m_chat_msg_relay;
     boost::asio::io_context& m_io_ctx;
+
+    int writer_write(void* msg);
+    void notify_reader();
+    void reader_read();
+    std::atomic<bool> reader_is_idle = true;
+//    std::atomic<bool> notifying_reader = false;
+    std::atomic<bool> notified_reader = false;
+    std::atomic<bool> m_writer_writing = false;
+    std::atomic<bool> m_notification_on = false;
+    std::atomic<bool> m_notification_indeed_on = false;
+    std::mutex writer_lock;
+    std::mutex reader_lock;
+    std::mutex notify_lock;
+    mempool m_operation_mpool;
+    ring_queue m_operation_queue;
+    std::function<void()> notify_func;
 };
 
 class prod_im_server_grpc_api_impl final : public prod_im_server::prod_im_server_service::Service {

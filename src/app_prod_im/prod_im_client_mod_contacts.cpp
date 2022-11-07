@@ -12,7 +12,7 @@
     del_contact，参数：联系人ID 字符串
 */
 
-void prod_im_c_mod_contacts::update_list(std::vector<prod_im_contact>& contact_list)
+void prod_im_c_mod_contacts::update_list(prod_im_cont_list& contact_list)
 {
     m_contacts.clear();
     for (auto& item : contact_list) {

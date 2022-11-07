@@ -69,7 +69,7 @@ int call_im_server_grpc::login(const std::string& user_id,
     }
 }
 
-std::shared_ptr<std::vector<prod_im_contact>>
+std::shared_ptr<prod_im_cont_list>
 call_im_server_grpc::get_contact_list(const std::string& user_id) {
     get_contact_list_req req;
     req.set_user_id(user_id);
@@ -84,7 +84,7 @@ call_im_server_grpc::get_contact_list(const std::string& user_id) {
             log_error("get_contact_list failed!");
             return nullptr;
         }
-        auto ret_contact_list = std::make_shared<std::vector<prod_im_contact>>();
+        auto ret_contact_list = std::make_shared<prod_im_cont_list>();
         auto& contact_list = res.contact_list();
         int idx;
         for (idx = 0; idx < contact_list.size(); idx++) {
@@ -178,8 +178,8 @@ extern std::shared_ptr<prod_im_c_mod_main> g_client_main;
                                                            const ::prod_im_client::send_chat_msg_req* request,
                                                            ::prod_im_client::send_chat_msg_res* response)
 {
-    g_client_main->recv_chat_msg(request->sender_id(),
-                                 request->chat_msg());
+    g_client_main->client_chat_msg(request->sender_id(),
+                                   request->chat_msg());
     response->set_result(0);
     return Status::OK;
 }

@@ -1,6 +1,5 @@
 #include "app_prod_im_internal.h"
 
-#include <ncursesw/curses.h>
 
 /*
 * 主模块
@@ -17,7 +16,7 @@
   * 向联系人发送消息
     send_msg_to_contact，参数：联系人ID 字符串，聊天消息内容 字符串；返回值：结果 int
   * 接收聊天消息
-    recv_chat_msg，参数：发送者ID 字符串，聊天消息内容
+    client_chat_msg，参数：发送者ID 字符串，聊天消息内容
   * 运行
     run
 */
@@ -30,7 +29,7 @@ int prod_im_c_mod_main::login(const std::string& user_pass)
 {
     return m_server_grpc_api->login(m_my_id, user_pass, m_client_port);
 }
-std::shared_ptr<std::vector<prod_im_contact>> prod_im_c_mod_main::get_contact_list()
+std::shared_ptr<prod_im_cont_list> prod_im_c_mod_main::get_contact_list()
 {
     return m_server_grpc_api->get_contact_list(m_my_id);
 }
@@ -48,8 +47,8 @@ int prod_im_c_mod_main::send_msg_to_contact(const std::string& contact_id,
 {
     return m_server_grpc_api->send_chat_msg(m_my_id, contact_id, chat_msg);
 }
-void prod_im_c_mod_main::recv_chat_msg(const std::string& sender_id,
-                                       const std::string& chat_msg)
+void prod_im_c_mod_main::client_chat_msg(const std::string& sender_id,
+                                         const std::string& chat_msg)
 {
 //    printf("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
     prod_im_client_mod_cli_recv_msg("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
