@@ -13,6 +13,8 @@
 #include <grpcpp/grpcpp.h>
 #include <prod_im_client.grpc.pb.h>
 #include <prod_im_server.grpc.pb.h>
+
+#include <mod_common/log.h>
 #include <mod_ring_queue/mod_ring_queue.h>
 
 #include "app_prod_im_dt.h"
@@ -265,6 +267,7 @@ struct im_s_main_client_msg_res {
 using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
 using prod_im_s_main_get_cont_list_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_cont_list>)>;
 
+// Fixme:  this class should have fixed size!!
 class prod_im_s_mod_main_msg {
 public:
     explicit prod_im_s_mod_main_msg() {}
@@ -287,7 +290,12 @@ public:
     : m_user_session(io_ctx),
       m_io_ctx(io_ctx),
       m_op_mpool(4096, sizeof(prod_im_s_mod_main_msg)),
-      m_op_queue(4096, m_op_mpool) {}
+      m_op_queue(4096, m_op_mpool) {
+        if (0 != m_op_mpool.init()) {
+            log_error("m_op_mpool init failed!!");
+            exit(-1);
+        }
+    }
 
     void read_operation();
     int write_operation(prod_im_s_mod_main_msg* msg);
