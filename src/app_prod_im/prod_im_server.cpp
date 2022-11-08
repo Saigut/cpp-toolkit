@@ -37,15 +37,22 @@ static void run_grpc_api()
     server->Wait();
 }
 
+static void run_main()
+{
+    g_server_main->run();
+}
+
 int app_prod_im_server(int argc, char** argv)
 {
     boost::asio::io_context io_ctx;
 
     g_server_main = std::make_shared<prod_im_s_mod_main>(io_ctx);
 
-    std::thread thr_asio{run_asio, std::ref(io_ctx)};
-    std::thread thr_grpc_api{run_grpc_api};
+    std::thread thr_asio{ run_asio, std::ref(io_ctx) };
+    std::thread thr_grpc_api{ run_grpc_api };
+    std::thread thr_main{ run_main };
 
+    thr_main.join();
     thr_grpc_api.join();
     thr_asio.join();
 

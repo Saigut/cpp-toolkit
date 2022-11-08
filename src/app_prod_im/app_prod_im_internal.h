@@ -92,14 +92,6 @@ public:
 
 class prod_im_c_mod_main {
 public:
-//    explicit prod_im_c_mod_main(
-//            std::string m_server_ip;
-//    uint16_t m_server_port;
-//    uint16_t m_client_port;
-//
-//    std::string m_my_id;
-//            std::shared_ptr<call_im_server_grpc> server_grpc_api)
-//            : m_server_grpc_api(server_grpc_api) {}
     prod_im_c_mod_main(const std::string& mServerIp,
                        uint16_t mServerPort,
                        uint16_t mClientPort,
@@ -289,12 +281,49 @@ public:
     prod_im_s_main_get_cont_list_cb get_cont_list_cb;
 };
 
+class prod_im_s_mod_main_operation {
+public:
+    explicit prod_im_s_mod_main_operation(boost::asio::io_context& io_ctx)
+    : m_user_session(io_ctx),
+      m_io_ctx(io_ctx),
+      m_op_mpool(4096, sizeof(prod_im_s_mod_main_msg)),
+      m_op_queue(4096, m_op_mpool) {}
+
+    void read_operation();
+    int write_operation(prod_im_s_mod_main_msg* msg);
+
+    prod_im_s_mod_main_msg* alloc_msg();
+    void free_msg(prod_im_s_mod_main_msg* msg);
+
+//private:
+    int process_operation(prod_im_s_mod_main_msg* msg);
+
+    int user_register(const prod_im_user_account& user_acco);
+    int login(const prod_im_user_account& user_acco,
+              const prod_im_s_client_info& client_info);
+    std::shared_ptr<prod_im_cont_list> get_contact_list(const std::string& user_id);
+    int add_contact(const std::string& user_id,
+                    const prod_im_contact& cont);
+    int del_contact(const std::string& user_id, const std::string& contact_id);
+    int client_chat_msg(prod_im_chat_msg& chat_msg);
+
+
+    prod_im_s_mod_uinfo m_user_info;
+    prod_im_s_mod_user_session m_user_session;
+    prod_im_s_mod_chat_msg_relay m_chat_msg_relay;
+    boost::asio::io_context& m_io_ctx;
+
+    std::mutex op_writer_lock;
+    std::atomic<bool> m_op_msg_notification_on = false;
+    std::function<void()> notify_to_read_op_func;
+    mempool m_op_mpool;
+    ring_queue m_op_queue;
+};
+
 class prod_im_s_mod_main {
 public:
     explicit prod_im_s_mod_main(boost::asio::io_context& io_ctx)
-    : m_user_session(io_ctx), m_io_ctx(io_ctx),
-      m_operation_mpool(4096, sizeof(prod_im_s_mod_main_msg)),
-      m_operation_queue(4096, m_operation_mpool) {}
+    : m_operation(io_ctx) {}
     int user_register(const std::string& user_id,
                       const std::string& user_pass);
     int login(const std::string& user_id, const std::string& user_pass, const std::string& client_ip,
@@ -324,29 +353,10 @@ public:
     int client_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
 
     void run();
+
 private:
 
-
-    prod_im_s_mod_uinfo m_user_info;
-    prod_im_s_mod_user_session m_user_session;
-    prod_im_s_mod_chat_msg_relay m_chat_msg_relay;
-    boost::asio::io_context& m_io_ctx;
-
-    int writer_write(void* msg);
-    void notify_reader();
-    void reader_read();
-    std::atomic<bool> reader_is_idle = true;
-//    std::atomic<bool> notifying_reader = false;
-    std::atomic<bool> notified_reader = false;
-    std::atomic<bool> m_writer_writing = false;
-    std::atomic<bool> m_notification_on = false;
-    std::atomic<bool> m_notification_indeed_on = false;
-    std::mutex writer_lock;
-    std::mutex reader_lock;
-    std::mutex notify_lock;
-    mempool m_operation_mpool;
-    ring_queue m_operation_queue;
-    std::function<void()> notify_func;
+    prod_im_s_mod_main_operation m_operation;
 };
 
 class prod_im_server_grpc_api_impl final : public prod_im_server::prod_im_server_service::Service {
