@@ -267,6 +267,7 @@ struct im_s_main_client_msg_res {
 
 using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
 using prod_im_s_main_get_cont_list_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_cont_list>)>;
+using prod_im_s_main_get_chat_msg_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_chat_msg_list>)>;
 
 class prod_im_s_mod_main_msg {
 public:
@@ -349,6 +350,7 @@ public:
     void client_chat_msg(const std::string& sender_id,
                          const std::string& receiver_id,
                          const std::string& chat_msg);
+    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id);
 
     int user_register(const prod_im_user_account& user_acco,
                       prod_im_s_main_common_cb&& cb);
@@ -362,6 +364,7 @@ public:
                     prod_im_s_main_common_cb&& cb);
     int del_contact(const std::string& user_id, const std::string& contact_id, prod_im_s_main_common_cb&& cb);
     int client_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
+    int get_chat_msg(const std::string& user_id, prod_im_s_main_get_chat_msg_cb&& cb);
 
     void run();
 

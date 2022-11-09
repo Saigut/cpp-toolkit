@@ -24,6 +24,7 @@ struct prod_im_chat_msg {
     std::string receiver_id;
     std::string chat_msg;
 };
+using prod_im_chat_msg_list = std::vector<prod_im_chat_msg>;
 
 
 #endif //CPP_TOOLKIT_PROD_IM_DT_H

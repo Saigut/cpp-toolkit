@@ -164,6 +164,29 @@ void prod_im_s_mod_main::client_chat_msg(const std::string& sender_id,
     auto fut = prom.get_future();
     ret = fut.get();
 }
+std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::get_chat_msg(
+        const std::string& user_id)
+{
+    int ret = -1;
+    std::promise<int> prom;
+    std::shared_ptr<prod_im_chat_msg_list> rst = nullptr;
+
+    auto cb = [&](std::error_code ec, std::shared_ptr<prod_im_chat_msg_list> _msg_list){
+        if (ec) {
+            log_error("get_chat_msg failed! User id: %s", user_id.c_str());
+            prom.set_value(-1);
+        } else {
+            log_info("get_chat_msg succeed! User id: %s", user_id.c_str());
+            rst = _msg_list;
+            prom.set_value(0);
+        }
+    };
+    expect_ret_val(0 == get_chat_msg(user_id, cb), nullptr);
+    auto fut = prom.get_future();
+    ret = fut.get();
+
+    return rst;
+}
 
 int prod_im_s_mod_main::user_register(const prod_im_user_account& user_acco, prod_im_s_main_common_cb&& cb)
 {
@@ -299,6 +322,12 @@ fail_return:
     if (msg) {
         m_operation.free_msg(msg);
     }
+    return -1;
+}
+
+int prod_im_s_mod_main::get_chat_msg(const std::string& user_id,
+                                     prod_im_s_main_get_chat_msg_cb&& cb)
+{
     return -1;
 }
 
