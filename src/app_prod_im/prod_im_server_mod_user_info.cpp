@@ -45,6 +45,40 @@ std::shared_ptr<prod_im_s_mod_uinfo::user_info_t> prod_im_s_mod_uinfo::user_find
     return std::make_shared<prod_im_s_mod_uinfo::user_info_t>(rst->second);
 }
 
+bool prod_im_s_mod_uinfo::user_exist(const std::string& user_id)
+{
+    auto rst = m_users.find(user_id);
+    return (rst != m_users.end());
+}
+
+int prod_im_s_mod_uinfo::user_get_chat_msg(const std::string& user_id,
+                                           std::vector<prod_im_chat_msg>& chat_msg)
+{
+    auto rst = m_users.find(user_id);
+    if (rst == m_users.end()) {
+        return -2;
+    }
+    auto& u_msg = rst->second.user_chat_msg;
+    if (u_msg.empty()) {
+        return 0;
+    }
+    chat_msg.insert(chat_msg.end(),
+                    std::make_move_iterator(u_msg.begin()),
+                    std::make_move_iterator(u_msg.end()));
+    return 0;
+}
+
+int prod_im_s_mod_uinfo::user_add_msg(const std::string& user_id, prod_im_chat_msg&& chat_msg)
+{
+    auto rst = m_users.find(user_id);
+    if (rst == m_users.end()) {
+        return -2;
+    }
+    auto& u_msg = rst->second.user_chat_msg;
+    u_msg.push_back(std::move(chat_msg));
+    return 0;
+}
+
 int prod_im_s_mod_uinfo::user_contact_add(const std::string& user_id,
                                           const std::string& contact_id,
                                           const std::string& contact_name)
