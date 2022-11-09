@@ -17,7 +17,8 @@
 #include <mod_common/log.h>
 #include <mod_ring_queue/mod_ring_queue.h>
 
-#include "app_prod_im_dt.h"
+#include "prod_im_dt.h"
+#include "prod_im_helper.h"
 
 
 int app_prod_im_server(int argc, char** argv);
@@ -267,19 +268,18 @@ struct im_s_main_client_msg_res {
 using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
 using prod_im_s_main_get_cont_list_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_cont_list>)>;
 
-// Fixme:  this class should have fixed size!!
 class prod_im_s_mod_main_msg {
 public:
     explicit prod_im_s_mod_main_msg() {}
     emIM_S_MAIN_MSG_type type;
-    union {
-        im_s_main_reg_req reg;
-        im_s_main_login_req login;
-        im_s_main_get_cont_list_req get_cont_list;
-        im_s_main_add_cont_req add_cont;
-        im_s_main_del_cont_req del_cont;
-        im_s_main_client_msg_req client_msg;
-    };
+
+    im_s_main_reg_req reg;
+    im_s_main_login_req login;
+    im_s_main_get_cont_list_req get_cont_list;
+    im_s_main_add_cont_req add_cont;
+    im_s_main_del_cont_req del_cont;
+    im_s_main_client_msg_req client_msg;
+
     prod_im_s_main_common_cb common_cb;
     prod_im_s_main_get_cont_list_cb get_cont_list_cb;
 };
@@ -289,12 +289,15 @@ public:
     explicit prod_im_s_mod_main_operation(boost::asio::io_context& io_ctx)
     : m_user_session(io_ctx),
       m_io_ctx(io_ctx),
-      m_op_mpool(4096, sizeof(prod_im_s_mod_main_msg)),
+      m_op_mpool(4096),
       m_op_queue(4096, m_op_mpool) {
         if (0 != m_op_mpool.init()) {
             log_error("m_op_mpool init failed!!");
             exit(-1);
         }
+    }
+    ~prod_im_s_mod_main_operation() {
+        m_op_mpool.deinit();
     }
 
     void read_operation();
@@ -303,7 +306,7 @@ public:
     prod_im_s_mod_main_msg* alloc_msg();
     void free_msg(prod_im_s_mod_main_msg* msg);
 
-//private:
+private:
     int process_operation(prod_im_s_mod_main_msg* msg);
 
     int user_register(const prod_im_user_account& user_acco);
@@ -324,7 +327,7 @@ public:
     std::mutex op_writer_lock;
     std::atomic<bool> m_op_msg_notification_on = false;
     std::function<void()> notify_to_read_op_func;
-    mempool m_op_mpool;
+    im_s_op_msg_mpool m_op_mpool;
     ring_queue m_op_queue;
 };
 

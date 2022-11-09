@@ -327,9 +327,10 @@ void prod_im_s_mod_main_operation::read_operation()
     while (!m_op_queue.empty()) {
         void* p = nullptr;
         m_op_queue.pop(p);
-        // todo  process msg
-        if (p) {
-            process_operation((prod_im_s_mod_main_msg*)p);
+        auto msg = (prod_im_s_mod_main_msg*)p;
+        if (msg) {
+            process_operation(msg);
+            free_msg(msg);
         }
     }
 

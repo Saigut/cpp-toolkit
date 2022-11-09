@@ -7,23 +7,24 @@
 #include <mod_atomic_queue/atomic_queue.h>
 
 
-using mempool_aq = atomic_queue::AtomicQueue2<void*, 65535>;
 
 class mempool {
 public:
+    mempool() = default;
     explicit mempool(size_t ele_num, size_t ele_size)
     : m_ele_num(ele_num), m_ele_size(ele_size) {}
-    int init();
-    void deinit();
-    void* alloc();
-    void free(void* buf);
-    void print_me() {
+    virtual int init();
+    virtual void deinit();
+    virtual void* alloc();
+    virtual void free(void* buf);
+    virtual void print_me() {
         printf("mempool: %p\n", this);
     }
 private:
-    size_t m_ele_num;
-    size_t m_ele_size;
+    size_t m_ele_num = 0;
+    size_t m_ele_size = 0;
     void* m_buf = nullptr;
+    using mempool_aq = atomic_queue::AtomicQueue2<void*, 65535>;
     mempool_aq m_q;
 };
 

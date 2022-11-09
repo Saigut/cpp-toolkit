@@ -1,5 +1,5 @@
-#ifndef CPP_TOOLKIT_APP_PROD_IM_DT_H
-#define CPP_TOOLKIT_APP_PROD_IM_DT_H
+#ifndef CPP_TOOLKIT_PROD_IM_DT_H
+#define CPP_TOOLKIT_PROD_IM_DT_H
 
 #include <string>
 
@@ -26,5 +26,4 @@ struct prod_im_chat_msg {
 };
 
 
-
-#endif //CPP_TOOLKIT_APP_PROD_IM_DT_H
+#endif //CPP_TOOLKIT_PROD_IM_DT_H
