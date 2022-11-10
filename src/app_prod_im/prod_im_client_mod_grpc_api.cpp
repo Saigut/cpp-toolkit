@@ -175,10 +175,11 @@ int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
 }
 
 std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::get_chat_msg(
-        const std::string& user_id)
+        const std::string& user_id, size_t msg_index)
 {
     get_msg_req req;
     req.set_user_id(user_id);
+    req.set_msg_index(msg_index);
 
     get_msg_res res;
 

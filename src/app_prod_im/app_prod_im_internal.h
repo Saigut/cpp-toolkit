@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include <map>
 #include <memory>
 #include <system_error>
@@ -52,7 +53,7 @@ public:
                       const std::string& receiver_id,
                       const std::string& chat_msg);
 
-    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id);
+    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id, size_t msg_index);
 
 private:
     std::unique_ptr<prod_im_server::prod_im_server_service::Stub> m_stub;
@@ -126,6 +127,7 @@ private:
     uint16_t m_client_port;
 
     std::string m_my_id;
+    size_t m_msg_index = 0;
 
     prod_im_c_chat_msg_sending m_chat_msg_sending;
 
@@ -183,6 +185,10 @@ public:
     bool user_exist(const std::string& user_id);
     // 0, ok; -1 error; -2 user not exist
     int user_get_chat_msg(const std::string& user_id, prod_im_chat_msg_list& chat_msg);
+    // 0, ok; -1 error; -2 user not exist
+    int user_get_chat_msg_from(const std::string& user_id,
+                               size_t msg_index,
+                               prod_im_chat_msg_list& chat_msg);
     // 0, ok; -1 error; -2 user not exist
     int user_add_msg(const std::string& user_id, prod_im_chat_msg&& chat_msg);
 
@@ -277,6 +283,7 @@ struct im_s_main_client_msg_res {
 
 struct im_s_main_get_chat_msg_req {
     std::string user_id;
+    size_t msg_index;
 };
 
 using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
@@ -335,7 +342,7 @@ private:
     int del_contact(const std::string& user_id, const std::string& contact_id);
     int client_chat_msg_relay(prod_im_chat_msg& chat_msg);
     int client_chat_msg(prod_im_chat_msg& chat_msg);
-    std::shared_ptr<prod_im_chat_msg_list> co_func_get_chat_msg(const std::string& user_id);
+    std::shared_ptr<prod_im_chat_msg_list> co_func_get_chat_msg(const std::string& user_id, size_t msg_index);
 
 
     prod_im_s_mod_uinfo m_user_info;
@@ -349,7 +356,7 @@ private:
     im_s_op_msg_mpool m_op_mpool;
     ring_queue m_op_queue;
 
-    std::map<std::string, std::function<void()>> get_chat_msg_notify_func;
+    std::map<std::string, std::list<std::function<void()>>> get_chat_msg_notify_func;
 };
 
 class prod_im_s_mod_main {
@@ -371,7 +378,7 @@ public:
     void client_chat_msg(const std::string& sender_id,
                          const std::string& receiver_id,
                          const std::string& chat_msg);
-    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id);
+    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id, size_t msg_index);
 
     int user_register(const prod_im_user_account& user_acco,
                       prod_im_s_main_common_cb&& cb);
@@ -385,7 +392,7 @@ public:
                     prod_im_s_main_common_cb&& cb);
     int del_contact(const std::string& user_id, const std::string& contact_id, prod_im_s_main_common_cb&& cb);
     int client_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
-    int get_chat_msg(const std::string& user_id, prod_im_s_main_get_chat_msg_cb&& cb);
+    int get_chat_msg(const std::string& user_id, size_t msg_index, prod_im_s_main_get_chat_msg_cb&& cb);
 
     void run();
 

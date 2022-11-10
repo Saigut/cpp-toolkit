@@ -66,6 +66,7 @@ message send_chat_msg_res {
 
 message get_msg_req {
     string user_id = 1;
+    uint32 msg_index = 2;
 }
 message get_msg_res {
     int32 result = 1;

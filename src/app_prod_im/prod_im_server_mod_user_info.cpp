@@ -69,6 +69,24 @@ int prod_im_s_mod_uinfo::user_get_chat_msg(const std::string& user_id,
     return 0;
 }
 
+int prod_im_s_mod_uinfo::user_get_chat_msg_from(const std::string& user_id,
+                                                size_t msg_index,
+                                                prod_im_chat_msg_list& chat_msg)
+{
+    auto rst = m_users.find(user_id);
+    if (rst == m_users.end()) {
+        return -2;
+    }
+    auto& u_msg = rst->second.user_chat_msg;
+    if (u_msg.empty()) {
+        return 0;
+    }
+    for (; msg_index < u_msg.size(); msg_index++) {
+        chat_msg.push_back(u_msg[msg_index]);
+    }
+    return 0;
+}
+
 int prod_im_s_mod_uinfo::user_add_msg(const std::string& user_id, prod_im_chat_msg&& chat_msg)
 {
     auto rst = m_users.find(user_id);

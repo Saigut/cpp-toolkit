@@ -55,7 +55,11 @@ void prod_im_c_mod_main::client_chat_msg(const std::string& sender_id,
 }
 std::shared_ptr<prod_im_chat_msg_list> prod_im_c_mod_main::get_chat_msg()
 {
-    return m_server_grpc_api->get_chat_msg(m_my_id);
+    auto rst = m_server_grpc_api->get_chat_msg(m_my_id, m_msg_index);
+    if (rst) {
+        m_msg_index += rst->size();
+    }
+    return rst;
 }
 void prod_im_c_mod_main::run()
 {
