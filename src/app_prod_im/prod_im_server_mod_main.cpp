@@ -627,24 +627,35 @@ int prod_im_s_mod_main_operation::client_chat_msg(prod_im_chat_msg& chat_msg)
     }
 
     int ret;
-    ret = m_user_info.user_add_msg(receiver_id, std::move(chat_msg));
+    ret = m_user_info.user_add_msg(receiver_id, chat_msg);
     if (0 != ret) {
-        log_error("user_add_msg failed! Receiver_id id: %s", receiver_id.c_str());
+        log_error("user_add_msg for receiver failed! Receiver id: %s", receiver_id.c_str());
         return -1;
     }
 
-    log_info("finding notify func for %s", receiver_id.c_str());
     auto find_rst = get_chat_msg_notify_func.find(receiver_id);
     if (find_rst != get_chat_msg_notify_func.end()) {
-        log_info("-------found %zu!", find_rst->second.size());
         while (!find_rst->second.empty()) {
             auto& cb = find_rst->second.front();
             cb();
-            log_info("-------called.");
             find_rst->second.pop_front();
         }
-    } else {
-        log_info("-------not found");
+    }
+
+    if (sender_id != receiver_id) {
+        ret = m_user_info.user_add_msg(sender_id, chat_msg);
+        if (0 != ret) {
+            log_error("user_add_msg for sender failed! Sender id: %s", sender_id.c_str());
+            return -1;
+        }
+        find_rst = get_chat_msg_notify_func.find(sender_id);
+        if (find_rst != get_chat_msg_notify_func.end()) {
+            while (!find_rst->second.empty()) {
+                auto& cb = find_rst->second.front();
+                cb();
+                find_rst->second.pop_front();
+            }
+        }
     }
 
     return 0;

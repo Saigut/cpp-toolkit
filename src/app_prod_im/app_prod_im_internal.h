@@ -190,7 +190,7 @@ public:
                                size_t msg_index,
                                prod_im_chat_msg_list& chat_msg);
     // 0, ok; -1 error; -2 user not exist
-    int user_add_msg(const std::string& user_id, prod_im_chat_msg&& chat_msg);
+    int user_add_msg(const std::string& user_id, prod_im_chat_msg& chat_msg);
 
     int user_contact_add(const std::string& user_id,
                          const std::string& contact_id,

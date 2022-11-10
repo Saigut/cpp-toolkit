@@ -59,9 +59,9 @@ static int cli_msg(std::vector<std::string>& tokens)
         message += tokens[i];
     }
     int ret = g_client_main->send_msg_to_contact(contact_id, message);
-    if (0 == ret) {
-        prod_im_client_mod_cli_recv_msg("<me>: %s\n", message.c_str());
-    }
+//    if (0 == ret) {
+//        prod_im_client_mod_cli_recv_msg("<me>: %s\n", message.c_str());
+//    }
     return ret;
 }
 
