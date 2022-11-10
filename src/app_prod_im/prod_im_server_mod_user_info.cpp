@@ -52,7 +52,7 @@ bool prod_im_s_mod_uinfo::user_exist(const std::string& user_id)
 }
 
 int prod_im_s_mod_uinfo::user_get_chat_msg(const std::string& user_id,
-                                           std::vector<prod_im_chat_msg>& chat_msg)
+                                           prod_im_chat_msg_list& chat_msg)
 {
     auto rst = m_users.find(user_id);
     if (rst == m_users.end()) {
@@ -65,6 +65,7 @@ int prod_im_s_mod_uinfo::user_get_chat_msg(const std::string& user_id,
     chat_msg.insert(chat_msg.end(),
                     std::make_move_iterator(u_msg.begin()),
                     std::make_move_iterator(u_msg.end()));
+    u_msg.clear();
     return 0;
 }
 

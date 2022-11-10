@@ -9,3 +9,9 @@ message prod_im_contact {
     string contact_id = 1;
     string contact_name = 2;
 }
+
+message prod_im_chat_msg {
+    string sender_id = 1;
+    string receiver_id = 2;
+    string chat_msg = 3;
+}

@@ -80,3 +80,22 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     response->set_result(0);
     return Status::OK;
 }
+
+::grpc::Status prod_im_server_grpc_api_impl::get_msg(::grpc::ServerContext* context,
+                                                     const ::prod_im_server::get_msg_req* request,
+                                                     ::prod_im_server::get_msg_res* response)
+{
+    auto msg_list = g_server_main->get_chat_msg(request->user_id());
+    if (!msg_list || msg_list->empty()) {
+        response->set_result(-1);
+    } else {
+        for (auto& msg : *msg_list) {
+            auto pb_msg = response->add_msg_list();
+            pb_msg->set_sender_id(msg.sender_id);
+            pb_msg->set_receiver_id(msg.receiver_id);
+            pb_msg->set_chat_msg(msg.chat_msg);
+        }
+        response->set_result(0);
+    }
+    return Status::OK;
+}

@@ -61,7 +61,7 @@ std::shared_ptr<prod_im_s_user_session> prod_im_s_mod_user_session::find(const s
 {
     auto rst = m_user_sessions.find(user_id);
     if (rst == m_user_sessions.end()) {
-        log_error("No such user session! User id: %s", user_id.c_str());
+//        log_error("No such user session! User id: %s", user_id.c_str());
         return nullptr;
     }
     auto& u_session = rst->second;

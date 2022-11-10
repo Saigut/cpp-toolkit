@@ -52,6 +52,8 @@ public:
                       const std::string& receiver_id,
                       const std::string& chat_msg);
 
+    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id);
+
 private:
     std::unique_ptr<prod_im_server::prod_im_server_service::Stub> m_stub;
 };
@@ -116,6 +118,7 @@ public:
                             const std::string& chat_msg);
     void client_chat_msg(const std::string& sender_id,
                          const std::string& chat_msg);
+    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg();
     void run();
 private:
     std::string m_server_ip;
@@ -179,7 +182,7 @@ public:
     std::shared_ptr<user_info_t> user_find(const std::string& user_id);
     bool user_exist(const std::string& user_id);
     // 0, ok; -1 error; -2 user not exist
-    int user_get_chat_msg(const std::string& user_id, std::vector<prod_im_chat_msg>& chat_msg);
+    int user_get_chat_msg(const std::string& user_id, prod_im_chat_msg_list& chat_msg);
     // 0, ok; -1 error; -2 user not exist
     int user_add_msg(const std::string& user_id, prod_im_chat_msg&& chat_msg);
 
@@ -224,6 +227,7 @@ enum emIM_S_MAIN_MSG_type {
     emIM_S_MAIN_MSG_type_ADD_CONT,
     emIM_S_MAIN_MSG_type_DEL_CONT,
     emIM_S_MAIN_MSG_type_CLIENT_MSG,
+    emIM_S_MAIN_MSG_type_GET_CHAT_MSG,
 };
 
 struct im_s_main_reg_req {
@@ -271,6 +275,10 @@ struct im_s_main_client_msg_res {
     int rst;
 };
 
+struct im_s_main_get_chat_msg_req {
+    std::string user_id;
+};
+
 using prod_im_s_main_common_cb = std::function<void(std::error_code)>;
 using prod_im_s_main_get_cont_list_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_cont_list>)>;
 using prod_im_s_main_get_chat_msg_cb = std::function<void(std::error_code, std::shared_ptr<prod_im_chat_msg_list>)>;
@@ -286,9 +294,11 @@ public:
     im_s_main_add_cont_req add_cont;
     im_s_main_del_cont_req del_cont;
     im_s_main_client_msg_req client_msg;
+    im_s_main_get_chat_msg_req get_chat_msg;
 
     prod_im_s_main_common_cb common_cb;
     prod_im_s_main_get_cont_list_cb get_cont_list_cb;
+    prod_im_s_main_get_chat_msg_cb get_chat_msg_cb;
 };
 
 class prod_im_s_mod_main_operation {
@@ -323,7 +333,9 @@ private:
     int add_contact(const std::string& user_id,
                     const prod_im_contact& cont);
     int del_contact(const std::string& user_id, const std::string& contact_id);
+    int client_chat_msg_relay(prod_im_chat_msg& chat_msg);
     int client_chat_msg(prod_im_chat_msg& chat_msg);
+    std::shared_ptr<prod_im_chat_msg_list> co_func_get_chat_msg(const std::string& user_id);
 
 
     prod_im_s_mod_uinfo m_user_info;
@@ -333,15 +345,18 @@ private:
 
     std::mutex op_writer_lock;
     std::atomic<bool> m_op_msg_notification_on = false;
-    std::function<void()> notify_to_read_op_func;
+    std::function<void()> notify_to_read_op_func = nullptr;
     im_s_op_msg_mpool m_op_mpool;
     ring_queue m_op_queue;
+
+    std::map<std::string, std::function<void()>> get_chat_msg_notify_func;
 };
 
 class prod_im_s_mod_main {
 public:
     explicit prod_im_s_mod_main(boost::asio::io_context& io_ctx)
     : m_operation(io_ctx) {}
+    /// Fixme:   deal with when api thread is broken
     int user_register(const std::string& user_id,
                       const std::string& user_pass);
     int login(const std::string& user_id, const std::string& user_pass, const std::string& client_ip,
@@ -405,6 +420,10 @@ public:
     ::grpc::Status send_chat_msg(::grpc::ServerContext* context,
                                  const ::prod_im_server::send_chat_msg_req* request,
                                  ::prod_im_server::send_chat_msg_res* response) override;
+
+    ::grpc::Status get_msg(::grpc::ServerContext* context,
+                           const ::prod_im_server::get_msg_req* request,
+                           ::prod_im_server::get_msg_res* response) override;
 };
 
 

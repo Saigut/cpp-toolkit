@@ -19,6 +19,8 @@ using prod_im_server::del_contact_req;
 using prod_im_server::del_contact_res;
 using prod_im_server::send_chat_msg_req;
 using prod_im_server::send_chat_msg_res;
+using prod_im_server::get_msg_req;
+using prod_im_server::get_msg_res;
 
 
 int call_im_server_grpc::user_register(const std::string& user_id,
@@ -169,6 +171,37 @@ int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
     } else {
         log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
         return -1;
+    }
+}
+
+std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::get_chat_msg(
+        const std::string& user_id)
+{
+    get_msg_req req;
+    req.set_user_id(user_id);
+
+    get_msg_res res;
+
+    ClientContext context;
+    Status status = m_stub->get_msg(&context, req, &res);
+
+    if (status.ok()) {
+        if (res.result() != 0) {
+//            log_error("get_chat_msg failed!");
+            return nullptr;
+        }
+        auto msg_list = std::make_shared<prod_im_chat_msg_list>();
+        auto pb_msg_list = res.msg_list();
+        auto msg = pb_msg_list.begin();
+        for (; msg != pb_msg_list.end(); msg++) {
+            msg_list->emplace_back(msg->sender_id(),
+                                   msg->receiver_id(),
+                                   msg->chat_msg());
+        }
+        return msg_list;
+    } else {
+        log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
+        return nullptr;
     }
 }
 

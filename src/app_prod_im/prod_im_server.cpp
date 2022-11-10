@@ -4,6 +4,7 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <mod_common/log.h>
+#include <mod_common/utils.h>
 
 
 using grpc::Server;
@@ -49,8 +50,9 @@ int app_prod_im_server(int argc, char** argv)
     g_server_main = std::make_shared<prod_im_s_mod_main>(io_ctx);
 
     std::thread thr_asio{ run_asio, std::ref(io_ctx) };
-    std::thread thr_grpc_api{ run_grpc_api };
     std::thread thr_main{ run_main };
+    cppt_msleep(200);
+    std::thread thr_grpc_api{ run_grpc_api };
 
     thr_main.join();
     thr_grpc_api.join();

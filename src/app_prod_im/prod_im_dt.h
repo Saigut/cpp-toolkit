@@ -20,6 +20,13 @@ struct prod_im_s_client_info {
 };
 
 struct prod_im_chat_msg {
+    explicit prod_im_chat_msg(const std::string& _sender_id,
+                              const std::string& _receiver_id,
+                              const std::string& _chat_msg)
+                              : sender_id(_sender_id),
+                                receiver_id(_receiver_id),
+                                chat_msg(_chat_msg) {}
+    explicit prod_im_chat_msg() {};
     std::string sender_id;
     std::string receiver_id;
     std::string chat_msg;

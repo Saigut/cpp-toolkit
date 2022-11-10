@@ -159,7 +159,7 @@ void prod_im_s_mod_main::client_chat_msg(const std::string& sender_id,
             prom.set_value(0);
         }
     };
-    prod_im_chat_msg st_chat_msg = {sender_id, receiver_id, chat_msg};
+    prod_im_chat_msg st_chat_msg{sender_id, receiver_id, chat_msg};
     expect_ret(0 == client_chat_msg(st_chat_msg, cb));
     auto fut = prom.get_future();
     ret = fut.get();
@@ -173,7 +173,7 @@ std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::get_chat_msg(
 
     auto cb = [&](std::error_code ec, std::shared_ptr<prod_im_chat_msg_list> _msg_list){
         if (ec) {
-            log_error("get_chat_msg failed! User id: %s", user_id.c_str());
+//            log_error("get_chat_msg failed! User id: %s", user_id.c_str());
             prom.set_value(-1);
         } else {
             log_info("get_chat_msg succeed! User id: %s", user_id.c_str());
@@ -181,7 +181,7 @@ std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::get_chat_msg(
             prom.set_value(0);
         }
     };
-    expect_ret_val(0 == get_chat_msg(user_id, cb), nullptr);
+    expect_ret_val(0 == get_chat_msg(user_id, std::move(cb)), nullptr);
     auto fut = prom.get_future();
     ret = fut.get();
 
@@ -328,6 +328,22 @@ fail_return:
 int prod_im_s_mod_main::get_chat_msg(const std::string& user_id,
                                      prod_im_s_main_get_chat_msg_cb&& cb)
 {
+    prod_im_s_mod_main_msg* msg = nullptr;
+
+    msg = m_operation.alloc_msg();
+    expect_goto(msg, fail_return);
+
+    msg->type = emIM_S_MAIN_MSG_type_GET_CHAT_MSG;
+    msg->get_chat_msg.user_id = user_id;
+    msg->get_chat_msg_cb = std::move(cb);
+    expect_goto(0 == m_operation.write_operation(msg), fail_return);
+
+    return 0;
+
+fail_return:
+    if (msg) {
+        m_operation.free_msg(msg);
+    }
     return -1;
 }
 
@@ -359,7 +375,6 @@ void prod_im_s_mod_main_operation::read_operation()
         auto msg = (prod_im_s_mod_main_msg*)p;
         if (msg) {
             process_operation(msg);
-            free_msg(msg);
         }
     }
 
@@ -436,11 +451,31 @@ int prod_im_s_mod_main_operation::process_operation(prod_im_s_mod_main_msg* msg)
             }
             break;
         }
+        case emIM_S_MAIN_MSG_type_GET_CHAT_MSG: {
+            auto co_get_chat_msg = [this, msg, user_id(msg->get_chat_msg.user_id)](){
+                auto rst = co_func_get_chat_msg(user_id);
+                if (!msg->get_chat_msg_cb) {
+                    log_error("get_chat_msg_cb is null! user id: %s", user_id.c_str());
+                } else {
+                    if (rst) {
+                        msg->get_chat_msg_cb(std::error_code(), rst);
+                    } else {
+                        msg->get_chat_msg_cb(std::make_error_code(std::errc::interrupted),
+                                             nullptr);
+                    }
+                }
+                free_msg(msg);
+            };
+            cppt_co_create(std::move(co_get_chat_msg));
+            return 0;
+        }
 
         default: {
+            free_msg(msg);
             return -1;
         }
     }
+    free_msg(msg);
     return 0;
 }
 
@@ -548,7 +583,7 @@ int prod_im_s_mod_main_operation::del_contact(const std::string& user_id,
     return 0;
 }
 
-int prod_im_s_mod_main_operation::client_chat_msg(prod_im_chat_msg& chat_msg)
+int prod_im_s_mod_main_operation::client_chat_msg_relay(prod_im_chat_msg& chat_msg)
 {
     auto& sender_id = chat_msg.sender_id;
     auto& receiver_id = chat_msg.receiver_id;
@@ -563,9 +598,96 @@ int prod_im_s_mod_main_operation::client_chat_msg(prod_im_chat_msg& chat_msg)
         log_error("Receiver does not login! Receiver id: %s", receiver_id.c_str());
         return -1;
     }
-    m_chat_msg_relay.relay_msg(rst->client_ip, rst->client_port,
-                               sender_id, receiver_id,
-                               chat_msg_text);
+    return m_chat_msg_relay.relay_msg(rst->client_ip, rst->client_port,
+                                      sender_id, receiver_id,
+                                      chat_msg_text);
+}
+
+int prod_im_s_mod_main_operation::client_chat_msg(prod_im_chat_msg& chat_msg)
+{
+    auto sender_id = chat_msg.sender_id;
+    auto receiver_id = chat_msg.receiver_id;
+
+    if (!m_user_info.user_exist(sender_id)) {
+        log_error("User is not registered! User id: %s", sender_id.c_str());
+        return -1;
+    }
+    if (!m_user_info.user_exist(receiver_id)) {
+        log_error("User is not registered! User id: %s", receiver_id.c_str());
+        return -1;
+    }
+
+    int ret;
+    ret = m_user_info.user_add_msg(receiver_id, std::move(chat_msg));
+    if (0 != ret) {
+        log_error("user_add_msg failed! Receiver_id id: %s", receiver_id.c_str());
+        return -1;
+    }
+
+    log_info("finding notify func for %s", receiver_id.c_str());
+    auto find_rst = get_chat_msg_notify_func.find(receiver_id);
+    if (find_rst != get_chat_msg_notify_func.end()) {
+        log_info("-------found!");
+        find_rst->second();
+        find_rst->second = nullptr;
+        log_info("-------called.");
+    } else {
+        log_info("-------not found");
+    }
+
+    return 0;
+}
+
+std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main_operation::co_func_get_chat_msg(
+        const std::string& user_id)
+{
+    auto find_rst = m_user_info.user_find(user_id);
+    if (!find_rst) {
+//        log_error("User is not registered! User id: %s", user_id.c_str());
+        return nullptr;
+    }
+    auto rst = m_user_session.find(user_id);
+    if (!rst) {
+//        log_error("User is not login! User id: %s", user_id.c_str());
+        return nullptr;
+    }
+    int ret;
+    auto ret_list = std::make_shared<prod_im_chat_msg_list>();
+    ret = m_user_info.user_get_chat_msg(user_id, *ret_list);
+    if (0 != ret) {
+        log_error("user_get_chat_msg failed! ret: %d, User id: %s", ret, user_id.c_str());
+        return nullptr;
+    }
+
+    if (!ret_list->empty()) {
+        return ret_list;
+    }
+
+    auto wrap_func = [this, user_id](std::function<void()>&& co_cb) {
+        auto find_rst = get_chat_msg_notify_func.find(user_id);
+        if (find_rst != get_chat_msg_notify_func.end()) {
+            if (find_rst->second) {
+                find_rst->second();
+            }
+            find_rst->second = std::move(co_cb);
+        } else {
+            auto rst = get_chat_msg_notify_func.insert({user_id, std::move(co_cb)});
+            if (rst.second) {
+                log_info("waiting message for %s", user_id.c_str());
+            } else {
+                log_error("failed to wait message for %s!!", user_id.c_str());
+            }
+        }
+    };
+    cppt_co_yield(wrap_func);
+
+    ret = m_user_info.user_get_chat_msg(user_id, *ret_list);
+    if (0 != ret) {
+        log_error("user_get_chat_msg failed! ret: %d, User id: %s", ret, user_id.c_str());
+        return nullptr;
+    }
+
+    return ret_list;
 }
 
 void prod_im_s_mod_main::run()

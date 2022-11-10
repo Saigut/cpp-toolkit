@@ -39,6 +39,22 @@ static void run_grpc_api(uint16_t listen_port)
     grpc_server->Wait();
 }
 
+static void run_get_chat_msg()
+{
+
+    while (true) {
+        auto msg_list = g_client_main->get_chat_msg();
+        if (!msg_list || msg_list->empty()) {
+            cppt_msleep(200);
+        } else {
+            for (auto& msg : *msg_list) {
+                g_client_main->client_chat_msg(msg.sender_id,
+                                               msg.chat_msg);
+            }
+        }
+    }
+}
+
 // argc >= 2
 int app_prod_im_client(int argc, char** argv)
 {
@@ -65,9 +81,13 @@ int app_prod_im_client(int argc, char** argv)
     printf("server ip: %s\n", server_ip.c_str());
     printf("server port: %u\n", server_port);
 
-    std::thread thr_grpc_api{ run_grpc_api, client_port };
+//    std::thread thr_grpc_api{ run_grpc_api, client_port };
     std::thread thr_read_loop{ run_read_loop };
-    thr_grpc_api.join();
+    cppt_msleep(500);
+    std::thread thr_get_chat_msg{ run_get_chat_msg };
+
+    //    thr_grpc_api.join();
+    thr_get_chat_msg.join();
     thr_read_loop.join();
 
     return 0;

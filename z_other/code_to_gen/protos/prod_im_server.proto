@@ -69,5 +69,5 @@ message get_msg_req {
 }
 message get_msg_res {
     int32 result = 1;
-    repeated string msgs = 2;
+    repeated common.prod_im_chat_msg msg_list = 2;
 }
