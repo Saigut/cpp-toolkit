@@ -15,8 +15,8 @@
     del_contact，参数：联系人ID 字符串
   * 向联系人发送消息
     send_msg_to_contact，参数：联系人ID 字符串，聊天消息内容 字符串；返回值：结果 int
-  * 接收聊天消息
-    client_chat_msg，参数：发送者ID 字符串，聊天消息内容
+  * 客户端发送聊天消息
+    client_send_chat_msg，参数：发送者ID 字符串，聊天消息内容
   * 运行
     run
 */
@@ -45,7 +45,7 @@ void prod_im_c_mod_main::del_contact(const std::string& contact_id)
 int prod_im_c_mod_main::send_msg_to_contact(const std::string& contact_id,
                                             const std::string& chat_msg)
 {
-    return m_server_grpc_api->send_chat_msg(m_my_id, contact_id, chat_msg);
+    return m_server_grpc_api->client_send_chat_msg(m_my_id, contact_id, chat_msg);
 }
 void prod_im_c_mod_main::client_chat_msg(const std::string& sender_id,
                                          const std::string& chat_msg)
@@ -55,7 +55,7 @@ void prod_im_c_mod_main::client_chat_msg(const std::string& sender_id,
 }
 std::shared_ptr<prod_im_chat_msg_list> prod_im_c_mod_main::get_chat_msg()
 {
-    auto rst = m_server_grpc_api->get_chat_msg(m_my_id, m_msg_index);
+    auto rst = m_server_grpc_api->client_get_chat_msg(m_my_id, m_msg_index);
     if (rst) {
         m_msg_index += rst->size();
     }

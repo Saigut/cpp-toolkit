@@ -23,8 +23,8 @@
     add_contact，参数：用户ID 字符串，联系人ID 字符串，联系人名字 字符串；返回值：结果 int
   * 移除联系人
     del_contact，参数：用户ID 字符串，联系人ID 字符串；返回值：
-  * 接收消息
-    client_chat_msg，参数：发送者ID 字符串，接收者ID 字符串，聊天消息内容 字符串；返回值：结果 int
+  * 客户端发送聊天消息
+    client_send_chat_msg，参数：发送者ID 字符串，接收者ID 字符串，聊天消息内容 字符串；返回值：结果 int
   * 运行
     run
 */
@@ -143,28 +143,28 @@ int prod_im_s_mod_main::del_contact(const std::string& user_id,
 
     return ret;
 }
-void prod_im_s_mod_main::client_chat_msg(const std::string& sender_id,
-                                         const std::string& receiver_id,
-                                         const std::string& chat_msg)
+void prod_im_s_mod_main::client_send_chat_msg(const std::string& sender_id,
+                                              const std::string& receiver_id,
+                                              const std::string& chat_msg)
 {
     int ret = -1;
     std::promise<int> prom;
 
     auto cb = [&](std::error_code ec){
         if (ec) {
-            log_error("client_chat_msg failed! User id: %s", sender_id.c_str());
+            log_error("client_send_chat_msg failed! User id: %s", sender_id.c_str());
             prom.set_value(-1);
         } else {
-            log_info("client_chat_msg succeed! User id: %s", sender_id.c_str());
+            log_info("client_send_chat_msg succeed! User id: %s", sender_id.c_str());
             prom.set_value(0);
         }
     };
     prod_im_chat_msg st_chat_msg{sender_id, receiver_id, chat_msg};
-    expect_ret(0 == client_chat_msg(st_chat_msg, cb));
+    expect_ret(0 == client_send_chat_msg(st_chat_msg, cb));
     auto fut = prom.get_future();
     ret = fut.get();
 }
-std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::get_chat_msg(
+std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::client_get_chat_msg(
         const std::string& user_id, size_t msg_index)
 {
     int ret = -1;
@@ -173,15 +173,15 @@ std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::get_chat_msg(
 
     auto cb = [&](std::error_code ec, std::shared_ptr<prod_im_chat_msg_list> _msg_list){
         if (ec) {
-//            log_error("get_chat_msg failed! User id: %s", user_id.c_str());
+//            log_error("client_get_chat_msg failed! User id: %s", user_id.c_str());
             prom.set_value(-1);
         } else {
-            log_info("get_chat_msg succeed! User id: %s", user_id.c_str());
+            log_info("client_get_chat_msg succeed! User id: %s", user_id.c_str());
             rst = _msg_list;
             prom.set_value(0);
         }
     };
-    expect_ret_val(0 == get_chat_msg(user_id, msg_index, std::move(cb)), nullptr);
+    expect_ret_val(0 == client_get_chat_msg(user_id, msg_index, std::move(cb)), nullptr);
     auto fut = prom.get_future();
     ret = fut.get();
     size_t msg_num = 0;
@@ -307,8 +307,8 @@ fail_return:
     return -1;
 }
 
-int prod_im_s_mod_main::client_chat_msg(prod_im_chat_msg& chat_msg,
-                                        prod_im_s_main_common_cb&& cb)
+int prod_im_s_mod_main::client_send_chat_msg(prod_im_chat_msg& chat_msg,
+                                             prod_im_s_main_common_cb&& cb)
 {
     prod_im_s_mod_main_msg* msg = nullptr;
 
@@ -329,9 +329,9 @@ fail_return:
     return -1;
 }
 
-int prod_im_s_mod_main::get_chat_msg(const std::string& user_id,
-                                     size_t msg_index,
-                                     prod_im_s_main_get_chat_msg_cb&& cb)
+int prod_im_s_mod_main::client_get_chat_msg(const std::string& user_id,
+                                            size_t msg_index,
+                                            prod_im_s_main_get_chat_msg_cb&& cb)
 {
     prod_im_s_mod_main_msg* msg = nullptr;
 
@@ -449,7 +449,7 @@ int prod_im_s_mod_main_operation::process_operation(prod_im_s_mod_main_msg* msg)
             break;
         }
         case emIM_S_MAIN_MSG_type_CLIENT_MSG: {
-            if (0 == client_chat_msg(msg->client_msg.chat_msg)) {
+            if (0 == client_send_chat_msg(msg->client_msg.chat_msg)) {
                 msg->common_cb(std::error_code());
             } else {
                 msg->common_cb(
@@ -592,27 +592,7 @@ int prod_im_s_mod_main_operation::del_contact(const std::string& user_id,
     return 0;
 }
 
-int prod_im_s_mod_main_operation::client_chat_msg_relay(prod_im_chat_msg& chat_msg)
-{
-    auto& sender_id = chat_msg.sender_id;
-    auto& receiver_id = chat_msg.receiver_id;
-    auto& chat_msg_text = chat_msg.chat_msg;
-    auto rst = m_user_session.find(sender_id);
-    if (!rst) {
-        log_error("User does not login! User id: %s", sender_id.c_str());
-        return -1;
-    }
-    rst = m_user_session.find(receiver_id);
-    if (!rst) {
-        log_error("Receiver does not login! Receiver id: %s", receiver_id.c_str());
-        return -1;
-    }
-    return m_chat_msg_relay.relay_msg(rst->client_ip, rst->client_port,
-                                      sender_id, receiver_id,
-                                      chat_msg_text);
-}
-
-int prod_im_s_mod_main_operation::client_chat_msg(prod_im_chat_msg& chat_msg)
+int prod_im_s_mod_main_operation::client_send_chat_msg(prod_im_chat_msg& chat_msg)
 {
     auto sender_id = chat_msg.sender_id;
     auto receiver_id = chat_msg.receiver_id;

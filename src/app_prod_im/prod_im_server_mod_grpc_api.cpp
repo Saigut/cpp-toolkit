@@ -71,22 +71,22 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::send_chat_msg(::grpc::ServerContext* context,
-                                                           const ::prod_im_server::send_chat_msg_req* request,
-                                                           ::prod_im_server::send_chat_msg_res* response) {
-    g_server_main->client_chat_msg(request->sender_id(),
-                                   request->receiver_id(),
-                                   request->chat_msg());
+::grpc::Status prod_im_server_grpc_api_impl::client_send_chat_msg(::grpc::ServerContext* context,
+                                                                  const ::prod_im_server::send_chat_msg_req* request,
+                                                                  ::prod_im_server::send_chat_msg_res* response) {
+    g_server_main->client_send_chat_msg(request->sender_id(),
+                                        request->receiver_id(),
+                                        request->chat_msg());
     response->set_result(0);
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::get_msg(::grpc::ServerContext* context,
-                                                     const ::prod_im_server::get_msg_req* request,
-                                                     ::prod_im_server::get_msg_res* response)
+::grpc::Status prod_im_server_grpc_api_impl::client_get_chat_msg(::grpc::ServerContext* context,
+                                                                 const prod_im_server::get_chat_msg_req* request,
+                                                                 prod_im_server::get_chat_msg_res* response)
 {
-    auto msg_list = g_server_main->get_chat_msg(request->user_id(),
-                                                request->msg_index());
+    auto msg_list = g_server_main->client_get_chat_msg(request->user_id(),
+                                                       request->msg_index());
     if (!msg_list || msg_list->empty()) {
         response->set_result(-1);
     } else {

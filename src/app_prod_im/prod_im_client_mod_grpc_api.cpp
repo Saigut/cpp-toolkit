@@ -19,8 +19,8 @@ using prod_im_server::del_contact_req;
 using prod_im_server::del_contact_res;
 using prod_im_server::send_chat_msg_req;
 using prod_im_server::send_chat_msg_res;
-using prod_im_server::get_msg_req;
-using prod_im_server::get_msg_res;
+using prod_im_server::get_chat_msg_req;
+using prod_im_server::get_chat_msg_res;
 
 
 int call_im_server_grpc::user_register(const std::string& user_id,
@@ -149,9 +149,9 @@ int call_im_server_grpc::del_contact(const std::string& user_id,
     }
 }
 
-int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
-                                       const std::string& receiver_id,
-                                       const std::string& chat_msg) {
+int call_im_server_grpc::client_send_chat_msg(const std::string& sender_id,
+                                              const std::string& receiver_id,
+                                              const std::string& chat_msg) {
     send_chat_msg_req req;
     req.set_sender_id(sender_id);
     req.set_receiver_id(receiver_id);
@@ -160,11 +160,11 @@ int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
     send_chat_msg_res res;
 
     ClientContext context;
-    Status status = m_stub->send_chat_msg(&context, req, &res);
+    Status status = m_stub->client_send_chat_msg(&context, req, &res);
 
     if (status.ok()) {
         if (res.result() != 0) {
-            log_error("send_chat_msg failed!");
+            log_error("client_send_chat_msg failed!");
             return -1;
         }
         return 0;
@@ -174,21 +174,21 @@ int call_im_server_grpc::send_chat_msg(const std::string& sender_id,
     }
 }
 
-std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::get_chat_msg(
+std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::client_get_chat_msg(
         const std::string& user_id, size_t msg_index)
 {
-    get_msg_req req;
+    get_chat_msg_req req;
     req.set_user_id(user_id);
     req.set_msg_index(msg_index);
 
-    get_msg_res res;
+    get_chat_msg_res res;
 
     ClientContext context;
-    Status status = m_stub->get_msg(&context, req, &res);
+    Status status = m_stub->client_get_chat_msg(&context, req, &res);
 
     if (status.ok()) {
         if (res.result() != 0) {
-//            log_error("get_chat_msg failed!");
+//            log_error("client_get_chat_msg failed!");
             return nullptr;
         }
         auto msg_list = std::make_shared<prod_im_chat_msg_list>();
@@ -204,16 +204,4 @@ std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::get_chat_msg(
         log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
         return nullptr;
     }
-}
-
-extern std::shared_ptr<prod_im_c_mod_main> g_client_main;
-
-::grpc::Status prod_im_client_grpc_api_impl::send_chat_msg(::grpc::ServerContext* context,
-                                                           const ::prod_im_client::send_chat_msg_req* request,
-                                                           ::prod_im_client::send_chat_msg_res* response)
-{
-    g_client_main->client_chat_msg(request->sender_id(),
-                                   request->chat_msg());
-    response->set_result(0);
-    return Status::OK;
 }

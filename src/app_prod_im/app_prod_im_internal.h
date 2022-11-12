@@ -12,7 +12,6 @@
 #include <boost/asio/deadline_timer.hpp>
 
 #include <grpcpp/grpcpp.h>
-#include <prod_im_client.grpc.pb.h>
 #include <prod_im_server.grpc.pb.h>
 
 #include <mod_common/log.h>
@@ -49,11 +48,11 @@ public:
     int del_contact(const std::string& user_id,
                     const std::string& contact_id);
 
-    int send_chat_msg(const std::string& sender_id,
-                      const std::string& receiver_id,
-                      const std::string& chat_msg);
+    int client_send_chat_msg(const std::string& sender_id,
+                             const std::string& receiver_id,
+                             const std::string& chat_msg);
 
-    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id, size_t msg_index);
+    std::shared_ptr<prod_im_chat_msg_list> client_get_chat_msg(const std::string& user_id, size_t msg_index);
 
 private:
     std::unique_ptr<prod_im_server::prod_im_server_service::Stub> m_stub;
@@ -134,12 +133,6 @@ private:
     std::shared_ptr<call_im_server_grpc> m_server_grpc_api;
 };
 
-class prod_im_client_grpc_api_impl final : public prod_im_client::prod_im_client_service::Service {
-public:
-    ::grpc::Status send_chat_msg(::grpc::ServerContext* context, const ::prod_im_client::send_chat_msg_req* request,
-                                 ::prod_im_client::send_chat_msg_res* response) override;
-};
-
 int prod_im_client_mod_cli_read_loop();
 void prod_im_client_mod_cli_recv_msg(const char* fmt, ...);
 
@@ -213,17 +206,6 @@ public:
 private:
     std::map<std::string, prod_im_s_user_session> m_user_sessions;
     boost::asio::io_context& m_io_ctx;
-};
-
-class prod_im_s_mod_chat_msg_receiving {
-public:
-    void run();
-};
-
-class prod_im_s_mod_chat_msg_relay {
-public:
-    int relay_msg(const std::string& peer_ip, uint16_t peer_port, const std::string& sender_id,
-                  const std::string& receiver_id, const std::string& chat_content);
 };
 
 enum emIM_S_MAIN_MSG_type {
@@ -340,14 +322,12 @@ private:
     int add_contact(const std::string& user_id,
                     const prod_im_contact& cont);
     int del_contact(const std::string& user_id, const std::string& contact_id);
-    int client_chat_msg_relay(prod_im_chat_msg& chat_msg);
-    int client_chat_msg(prod_im_chat_msg& chat_msg);
+    int client_send_chat_msg(prod_im_chat_msg& chat_msg);
     std::shared_ptr<prod_im_chat_msg_list> co_func_get_chat_msg(const std::string& user_id, size_t msg_index);
 
 
     prod_im_s_mod_uinfo m_user_info;
     prod_im_s_mod_user_session m_user_session;
-    prod_im_s_mod_chat_msg_relay m_chat_msg_relay;
     boost::asio::io_context& m_io_ctx;
 
     std::mutex op_writer_lock;
@@ -375,10 +355,10 @@ public:
                     const std::string& contact_name);
     int del_contact(const std::string& user_id,
                     const std::string& contact_id);
-    void client_chat_msg(const std::string& sender_id,
-                         const std::string& receiver_id,
-                         const std::string& chat_msg);
-    std::shared_ptr<prod_im_chat_msg_list> get_chat_msg(const std::string& user_id, size_t msg_index);
+    void client_send_chat_msg(const std::string& sender_id,
+                              const std::string& receiver_id,
+                              const std::string& chat_msg);
+    std::shared_ptr<prod_im_chat_msg_list> client_get_chat_msg(const std::string& user_id, size_t msg_index);
 
     int user_register(const prod_im_user_account& user_acco,
                       prod_im_s_main_common_cb&& cb);
@@ -391,8 +371,8 @@ public:
                     const prod_im_contact& cont,
                     prod_im_s_main_common_cb&& cb);
     int del_contact(const std::string& user_id, const std::string& contact_id, prod_im_s_main_common_cb&& cb);
-    int client_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
-    int get_chat_msg(const std::string& user_id, size_t msg_index, prod_im_s_main_get_chat_msg_cb&& cb);
+    int client_send_chat_msg(prod_im_chat_msg& chat_msg, prod_im_s_main_common_cb&& cb);
+    int client_get_chat_msg(const std::string& user_id, size_t msg_index, prod_im_s_main_get_chat_msg_cb&& cb);
 
     void run();
 
@@ -424,13 +404,13 @@ public:
                                const ::prod_im_server::del_contact_req* request,
                                ::prod_im_server::del_contact_res* response) override;
 
-    ::grpc::Status send_chat_msg(::grpc::ServerContext* context,
-                                 const ::prod_im_server::send_chat_msg_req* request,
-                                 ::prod_im_server::send_chat_msg_res* response) override;
+    ::grpc::Status client_send_chat_msg(::grpc::ServerContext* context,
+                                        const ::prod_im_server::send_chat_msg_req* request,
+                                        ::prod_im_server::send_chat_msg_res* response) override;
 
-    ::grpc::Status get_msg(::grpc::ServerContext* context,
-                           const ::prod_im_server::get_msg_req* request,
-                           ::prod_im_server::get_msg_res* response) override;
+    ::grpc::Status client_get_chat_msg(::grpc::ServerContext* context,
+                                       const prod_im_server::get_chat_msg_req* request,
+                                       prod_im_server::get_chat_msg_res* response) override;
 };
 
 

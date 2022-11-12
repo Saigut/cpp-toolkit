@@ -18,5 +18,5 @@ prod_im_c_chat_msg_sending::send_msg(const std::string& server_ip,
     std::string im_server_listen_addr = server_ip + ":" + std::to_string(server_port);
     call_im_server_grpc call_to_im_server(grpc::CreateChannel(im_server_listen_addr,
                                                        grpc::InsecureChannelCredentials()));
-    return call_to_im_server.send_chat_msg(sender_id, receiver_id, msg_content);
+    return call_to_im_server.client_send_chat_msg(sender_id, receiver_id, msg_content);
 }

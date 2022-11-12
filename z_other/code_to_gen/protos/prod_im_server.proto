@@ -9,8 +9,8 @@ service prod_im_server_service {
     rpc get_contact_list (get_contact_list_req) returns (get_contact_list_res) {}
     rpc add_contact (add_contact_req) returns (add_contact_res) {}
     rpc del_contact (del_contact_req) returns (del_contact_res) {}
-    rpc send_chat_msg (send_chat_msg_req) returns (send_chat_msg_res) {}
-    rpc get_msg (get_msg_req) returns (get_msg_res) {}
+    rpc client_send_chat_msg (send_chat_msg_req) returns (send_chat_msg_res) {}
+    rpc client_get_chat_msg (get_chat_msg_req) returns (get_chat_msg_res) {}
 }
 
 message user_register_req {
@@ -64,11 +64,11 @@ message send_chat_msg_res {
     int32 result = 1;
 }
 
-message get_msg_req {
+message get_chat_msg_req {
     string user_id = 1;
     uint32 msg_index = 2;
 }
-message get_msg_res {
+message get_chat_msg_res {
     int32 result = 1;
     repeated common.prod_im_chat_msg msg_list = 2;
 }
