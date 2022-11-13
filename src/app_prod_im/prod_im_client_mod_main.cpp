@@ -47,8 +47,8 @@ int prod_im_c_mod_main::send_msg_to_contact(const std::string& contact_id,
 {
     return m_server_grpc_api->client_send_chat_msg(m_my_id, contact_id, chat_msg);
 }
-void prod_im_c_mod_main::client_chat_msg(const std::string& sender_id,
-                                         const std::string& chat_msg)
+void prod_im_c_mod_main::process_chat_msg(const std::string& sender_id,
+                                          const std::string& chat_msg)
 {
 //    printf("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
     prod_im_client_mod_cli_recv_msg("%s: %s\n", sender_id.c_str(), chat_msg.c_str());

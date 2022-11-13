@@ -116,8 +116,8 @@ public:
     void del_contact(const std::string& contact_id);
     int send_msg_to_contact(const std::string& contact_id,
                             const std::string& chat_msg);
-    void client_chat_msg(const std::string& sender_id,
-                         const std::string& chat_msg);
+    void process_chat_msg(const std::string& sender_id,
+                          const std::string& chat_msg);
     std::shared_ptr<prod_im_chat_msg_list> get_chat_msg();
     void run();
 private:

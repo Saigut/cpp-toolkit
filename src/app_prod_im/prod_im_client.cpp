@@ -29,8 +29,8 @@ static void run_get_chat_msg()
             cppt_msleep(200);
         } else {
             for (auto& msg : *msg_list) {
-                g_client_main->client_chat_msg(msg.sender_id,
-                                               msg.chat_msg);
+                g_client_main->process_chat_msg(msg.sender_id,
+                                                msg.chat_msg);
             }
         }
     }
