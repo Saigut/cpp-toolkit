@@ -51,7 +51,7 @@ void prod_im_c_mod_main::process_chat_msg(const std::string& sender_id,
                                           const std::string& chat_msg)
 {
 //    printf("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
-    prod_im_client_mod_cli_recv_msg("%s: %s\n", sender_id.c_str(), chat_msg.c_str());
+    prod_im_client_mod_cli_recv_msg(sender_id + ": " + chat_msg + "\n");
 }
 std::shared_ptr<prod_im_chat_msg_list> prod_im_c_mod_main::get_chat_msg()
 {

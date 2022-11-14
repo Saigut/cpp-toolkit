@@ -134,7 +134,7 @@ private:
 };
 
 int prod_im_client_mod_cli_read_loop();
-void prod_im_client_mod_cli_recv_msg(const char* fmt, ...);
+void prod_im_client_mod_cli_recv_msg(std::string&& msg);
 
 static void print_client_cli_usage()
 {

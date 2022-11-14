@@ -201,7 +201,7 @@ std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::client_get_chat_msg(
         }
         return msg_list;
     } else {
-        log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
+//        log_error("Call to im server failed! err msg: %s", status.error_message().c_str());
         return nullptr;
     }
 }

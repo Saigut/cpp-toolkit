@@ -2,7 +2,11 @@
 
 #include <thread>
 #include <sstream>
-#include <ncursesw/curses.h>
+#include <ftxui/component/captured_mouse.hpp>
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/util/ref.hpp>
 #include <mod_common/expect.h>
 #include <mod_common/utils.h>
 
@@ -29,9 +33,10 @@ static int cli_cont_list()
     }
 
     int cnt = 1;
-    prod_im_client_mod_cli_recv_msg("-| Contacts:\n", cnt);
+    prod_im_client_mod_cli_recv_msg("-| Contacts: " + std::to_string(cnt) + "\n");
     for (auto& item : *contact_list) {
-        prod_im_client_mod_cli_recv_msg("-| %d: %s, %s\n", cnt, item.contact_id.c_str(), item.contact_name.c_str());
+        prod_im_client_mod_cli_recv_msg(
+                "-| " + std::to_string(cnt) + ": " + item.contact_id + ", " + item.contact_name + "\n");
         cnt++;
     }
 
@@ -64,56 +69,6 @@ static int cli_msg(std::vector<std::string>& tokens)
 //    }
     return ret;
 }
-
-//int prod_im_client_mod_cli(int argc, char** argv)
-//{
-//    const char* cmd;
-//    std::string param_1;
-//    std::string param_2;
-//
-//    expect_goto(argc >= 1, fail_return);
-//    cmd = argv[0];
-//    if (argc >= 2) {
-//        param_1 = argv[1];
-//    }
-//    if (argc >= 3) {
-//        param_2 = argv[2];
-//    }
-//
-//    if (0 == strcmp("reg", cmd)) {
-//        expect_goto(argc >= 3, fail_return);
-//        return cli_reg(param_1, param_2);
-//
-//    } else if (0 == strcmp("login", cmd)) {
-//        expect_goto(argc >= 3, fail_return);
-//        return cli_login(param_1, param_2);
-//
-//    } else if (0 == strcmp("cont_list", cmd)) {
-//        expect_goto(argc >= 2, fail_return);
-//        return cli_cont_list(param_1);
-//
-//    }  else if (0 == strcmp("cont_add", cmd)) {
-//        expect_goto(argc >= 3, fail_return);
-//        return cli_cont_add(param_1, param_2);
-//
-//    }  else if (0 == strcmp("cont_del", cmd)) {
-//        expect_goto(argc >= 2, fail_return);
-//        return cli_cont_del(param_1);
-//
-//    }  else if (0 == strcmp("msg", cmd)) {
-//        expect_goto(argc >= 3, fail_return);
-//        return cli_msg(param_1, param_2);
-//
-//    } else {
-//        log_error("Unknown cmd: %s", cmd);
-//        print_client_cli_usage();
-//        return -1;
-//    }
-//
-//fail_return:
-//    print_client_cli_usage();
-//    return -1;
-//}
 
 static int process_read_in(std::vector<std::string> tokens)
 {
@@ -149,8 +104,9 @@ static int process_read_in(std::vector<std::string> tokens)
         return cli_msg(tokens);
 
     } else {
-        prod_im_client_mod_cli_recv_msg("-| Unknown cmd: %s, cmd str len: %zu\n",
-                                        cmd.c_str(), strlen(cmd.c_str()));
+        prod_im_client_mod_cli_recv_msg(
+                "-| Unknown cmd: " + cmd + ", cmd str len: "
+                + std::to_string(strlen(cmd.c_str())) + "\n");
         print_client_cli_usage();
         return -1;
     }
@@ -160,163 +116,111 @@ fail_return:
     return -1;
 }
 
-int prod_im_client_mod_cli_read_loop_old()
+
+static ftxui::ScreenInteractive gs_screen = ftxui::ScreenInteractive::Fullscreen();
+static std::list<std::string> gs_input_msgs;
+static std::mutex gs_thread_lock;
+
+void prod_im_client_mod_cli_recv_msg(std::string&& msg)
 {
-    std::string input_s;
+    std::lock_guard lock(gs_thread_lock);
+    gs_input_msgs.push_back(msg);
+    gs_screen.PostEvent(ftxui::Event::Custom);
+}
+
+int prod_im_client_mod_cli_read_loop()
+{
+    using namespace ftxui;
+
+    std::string input_msg;
+    Elements gs_display_msgs;
     std::string token;
-    printf(">> ");
-    while (std::getline(std::cin, input_s)) {
-        if (!input_s.empty()) {
-            std::stringstream ss(input_s);
+    Component msg_input_box;
+    float text_area_msg_cnt = 0;
+
+    // 输入框
+    InputOption input_option;
+    input_option.on_enter = [&](){
+        if (!input_msg.empty()) {
+//            display_msgs.push_back(hflow(paragraph(input_msg)));
+//            text_area_msg_cnt += 1;
+
+            std::stringstream ss(input_msg);
             std::vector<std::string> tokens;
             while (ss >> token) {
                 tokens.push_back(token);
             }
             process_read_in(tokens);
+
+            input_msg.clear();
         }
-        printf(">> ");
-    }
-    return 0;
-}
+    };
+    msg_input_box = Input(&input_msg, "", input_option);
 
-static WINDOW* win;
-static WINDOW* output_win;
-static WINDOW* input_win;
-static int row = 0, col = 0;
-static std::atomic<bool> flag(false);
-static std::string buf;
-
-static void ninit()
-{
-    win = initscr();
-    getmaxyx(win, row, col);
-
-    cbreak();
-    noecho();
-
-    nonl();
-    intrflush(stdscr, FALSE);
-    keypad(stdscr, TRUE);
-    refresh();
-}
-
-static void nprintf(std::string str)
-{
-    touchwin(win);
-    str += '\n';
-    wprintw(output_win, str.c_str());
-    box(output_win, 0, 0);
-    wrefresh(output_win);
-    box(input_win, 0, 0);
-    wrefresh(input_win);
-}
-
-void prod_im_client_mod_cli_recv_msg(const char* fmt, ...)
-{
-    touchwin(win);
-
-    wmove(output_win, getcury(output_win), 2);
-    va_list ap;
-    va_start(ap, fmt);
-    vw_printw(output_win, fmt, ap);
-    va_end(ap);
-
-    box(output_win, 0, 0);
-    box(input_win, 0, 0);
-    wrefresh(output_win);
-    wrefresh(input_win);
-}
-
-static void nmonitor()
-{
-    bool new_input = true;
-    while(true)
-    {
-        char x;
-        if (new_input) {
-            x = mvwgetch(input_win, 1, 2);
-            new_input = false;
-        } else {
-            x = wgetch(input_win);
+    // 显示消息
+    float taxt_area_cur_page = 0;
+    float lines_of_one_age = 15;
+    auto get_text_area_pos = [&](){
+        if (text_area_msg_cnt <= 0) {
+            text_area_msg_cnt = 0;
+            return .0f;
         }
-
-        if(x != '\r')
-        {
-            touchwin(win);
-//            prod_im_client_mod_cli_recv_msg("%d\n", x);
-            if (x == 8) {
-                waddch(input_win, x);
-                wdelch(input_win);
-                buf.pop_back();
-            } else {
-                buf += x;
-                waddch(input_win, x);
+        float h_per_line = 1.0f / text_area_msg_cnt;
+        float h_page = lines_of_one_age * h_per_line;
+        float max_page_num = text_area_msg_cnt / lines_of_one_age;
+        if (taxt_area_cur_page > max_page_num) {
+            taxt_area_cur_page = max_page_num;
+        }
+        return (1.0f - (taxt_area_cur_page * h_page));
+    };
+    auto get_text_area = [&](){
+        if (gs_thread_lock.try_lock()) {
+            while (!gs_input_msgs.empty()) {
+                auto msg = gs_input_msgs.front();
+                gs_display_msgs.push_back(text(msg));
+                text_area_msg_cnt += 1;
+                gs_input_msgs.pop_front();
             }
+            gs_thread_lock.unlock();
         }
-        else
-        {
-//            nprintf(buf);
-            touchwin(input_win);
-            flag = true;
-            wclear(input_win);
-            new_input = true;
-        }
-        box(input_win, 0, 0);
-        wrefresh(input_win);
-    }
-}
+        return vbox({ gs_display_msgs });
+    };
 
-static std::string nget()
-{
-    while(!flag) {
-        cppt_usleep(100);
-    }
-    std::string cmd = buf;
-    flag = false;
-    buf = "";
-    return cmd;
-}
+    auto get_msg_disp_box = [&](){
+        return vbox({
+                            filler(),
+                            get_text_area() | focusPositionRelative(0, get_text_area_pos()) | vscroll_indicator | frame,
+                    });
+    };
 
+    auto component = Container::Vertical({
+                                                 msg_input_box,
+                                         });
+    auto get_while_page = [&]() {
+        return vbox({
+                            get_msg_disp_box() | border | flex,
+                            hbox(text("Input: "), msg_input_box->Render()) | border,
+                    });
+    };
 
-int prod_im_client_mod_cli_read_loop()
-{
-    ninit();
-    fflush(stdin);
-
-    output_win = subwin(win, row - 3, col - 1, 0, 0);
-    scrollok(output_win, true);
-    input_win = subwin(win, 3, col - 1, row - 3, 0);
-
-    box(output_win, 0, 0);
-    box(input_win, 0, 0);
-    wmove(output_win, 1, 2);
-    wrefresh(output_win);
-    wrefresh(input_win);
-
-    std::thread nthr(nmonitor);
-
-    std::string input_s;
-    std::string token;
-    while (true)
-    {
-        input_s = nget();
-        if(input_s == "quit") {
-            break;
-        } else {
-            if (!input_s.empty()) {
-                std::stringstream ss(input_s);
-                std::vector<std::string> tokens;
-                while (ss >> token) {
-                    tokens.push_back(token);
-                }
-                process_read_in(tokens);
-//                prod_im_client_mod_cli_recv_msg(">> %s\n", input_s.c_str());
+//    auto screen = ScreenInteractive::Fullscreen();
+    auto ui_root_comp = Renderer(component, [&] {
+        return get_while_page();
+    });
+    auto root_comp = CatchEvent(ui_root_comp, [&](Event event) {
+        if (event == Event::PageUp) {
+            taxt_area_cur_page += 1;
+            return true;
+        } else if (event == Event::PageDown) {
+            taxt_area_cur_page -= 1;
+            if (taxt_area_cur_page < 0) {
+                taxt_area_cur_page = 0;
             }
+            return true;
         }
-    }
+        return false;
+    });
+    gs_screen.Loop(root_comp);
 
-    getch();
-
-    endwin();
     return 0;
 }
