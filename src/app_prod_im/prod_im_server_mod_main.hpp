@@ -164,6 +164,7 @@ public:
     void client_send_chat_msg(const std::string& sender_id,
                               const std::string& receiver_id,
                               const std::string& chat_msg);
+    void client_send_chat_msg(prod_im_chat_msg& chat_msg);
     std::shared_ptr<prod_im_chat_msg_list> client_get_chat_msg(const std::string& user_id, size_t msg_index);
 
     int user_register(const prod_im_user_account& user_acco,

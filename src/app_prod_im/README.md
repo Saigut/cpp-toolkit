@@ -211,7 +211,7 @@ msg <contact id> <message>
 ```
 
 #### 2. 服务端接口
-对客户端的 grpc 接口：
+##### grpc 接口
 * 注册  
 接口名称：register  
 参数：  
@@ -313,10 +313,37 @@ msg <contact id> <message>
 | result  |结果        |int      |
 | chat_msg  |聊天消息    |聊天消息数组 |
 
-命令行接口：
+##### jsonrpc 接口
+请求：
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "method_name",
+  "params": {}
+}
+```
+响应：
+```json
+{
+  "jsonrpc": "2.0",
+  "result": 0
+}
+```
+* 接口名称与参数  
+与 grpc 接口一致。  
+其中`接口名称`即为 jsonrpc 中的 method；参数和返回值都用 key-value 形式的 json 对象来表示，如：
+```json
+{
+  "user_id": "xxx",
+  "user_pass": "xxx"
+}
+```
+grpc 接口中的数组，对应 json 中的数组。
+
+##### 命令行接口
 * 启动
 ```shell
-./<program>
+./<program> s
 ```
 
 #### 3. 客户端内部模块接口

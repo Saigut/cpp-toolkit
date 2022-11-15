@@ -10,11 +10,11 @@ static int test_cpp_httplib(int argc, char** argv)
     // openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
     httplib::SSLServer svr("./cert.pem", "./key.pem");
 
-    svr.Get("/hi", [](const httplib::Request &, httplib::Response &res) {
+    svr.Get("/hi", [](const httplib::Request& req, httplib::Response& res) {
         res.set_content("Hello World!", "text/plain");
     });
 
-    svr.listen("0.0.0.0", 8080);
+    svr.listen("0.0.0.0", 60080);
     return 0;
 }
 

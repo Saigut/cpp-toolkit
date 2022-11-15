@@ -164,6 +164,24 @@ void prod_im_s_mod_main::client_send_chat_msg(const std::string& sender_id,
     auto fut = prom.get_future();
     ret = fut.get();
 }
+void prod_im_s_mod_main::client_send_chat_msg(prod_im_chat_msg& chat_msg)
+{
+    int ret = -1;
+    std::promise<int> prom;
+
+    auto cb = [&](std::error_code ec){
+        if (ec) {
+            log_error("client_send_chat_msg failed! User id: %s", chat_msg.sender_id.c_str());
+            prom.set_value(-1);
+        } else {
+            log_info("client_send_chat_msg succeed! User id: %s", chat_msg.sender_id.c_str());
+            prom.set_value(0);
+        }
+    };
+    expect_ret(0 == client_send_chat_msg(chat_msg, cb));
+    auto fut = prom.get_future();
+    ret = fut.get();
+}
 std::shared_ptr<prod_im_chat_msg_list> prod_im_s_mod_main::client_get_chat_msg(
         const std::string& user_id, size_t msg_index)
 {
