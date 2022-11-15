@@ -1,18 +1,12 @@
 #include "prod_im_server.hpp"
 
 #include <thread>
-#include <grpcpp/grpcpp.h>
-#include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <mod_common/log.h>
 #include <mod_common/utils.h>
 
 #include "prod_im_server_mod_main.hpp"
 #include "prod_im_server_mod_grpc_api.hpp"
 
-
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
 
 std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
@@ -25,20 +19,8 @@ static void run_asio(boost::asio::io_context& io_ctx)
 
 static void run_grpc_api()
 {
-    std::string server_address("0.0.0.0:60100");
-    prod_im_server_grpc_api_impl service;
-
-    grpc::EnableDefaultHealthCheckService(true);
-    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-    ServerBuilder builder;
-
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-
-    std::unique_ptr<Server> server(builder.BuildAndStart());
-    log_info("Prod im server listening on: %s", server_address.c_str());
-
-    server->Wait();
+    prod_im_server_grpc_api grpc_api;
+    grpc_api.run();
 }
 
 static void run_main()

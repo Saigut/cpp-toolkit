@@ -4,7 +4,7 @@
 #include <grpcpp/grpcpp.h>
 #include <prod_im_server.grpc.pb.h>
 
-class prod_im_server_grpc_api_impl final : public prod_im_server::prod_im_server_service::Service {
+class prod_im_server_grpc_api final : public prod_im_server::prod_im_server_service::Service {
 public:
     ::grpc::Status user_register(::grpc::ServerContext* context,
                                  const ::prod_im_server::user_register_req* request,
@@ -34,6 +34,8 @@ public:
     ::grpc::Status client_get_chat_msg(::grpc::ServerContext* context,
                                        const prod_im_server::get_chat_msg_req* request,
                                        prod_im_server::get_chat_msg_res* response) override;
+
+    int run();
 };
 
 

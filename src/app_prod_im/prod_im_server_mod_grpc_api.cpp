@@ -1,6 +1,7 @@
 #include "prod_im_server_mod_grpc_api.hpp"
 
 #include <grpcpp/grpcpp.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <prod_im_server.grpc.pb.h>
 #include <mod_common/log.h>
 
@@ -15,18 +16,18 @@ using prod_im_server::prod_im_server_service;
 extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
 
-::grpc::Status prod_im_server_grpc_api_impl::user_register(::grpc::ServerContext* context,
-                                                           const ::prod_im_server::user_register_req* request,
-                                                           ::prod_im_server::user_register_res* response)
+::grpc::Status prod_im_server_grpc_api::user_register(::grpc::ServerContext* context,
+                                                      const ::prod_im_server::user_register_req* request,
+                                                      ::prod_im_server::user_register_res* response)
 {
     response->set_result(
             g_server_main->user_register(request->user_id(), request->user_pass()));
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::login(::grpc::ServerContext* context,
-                                                   const ::prod_im_server::login_req* request,
-                                                   ::prod_im_server::login_res* response) {
+::grpc::Status prod_im_server_grpc_api::login(::grpc::ServerContext* context,
+                                              const ::prod_im_server::login_req* request,
+                                              ::prod_im_server::login_res* response) {
     const auto& peer_addr = context->peer();
     std::string peer_ip_addr;
     std::size_t maohao_pos = peer_addr.rfind(':');
@@ -42,9 +43,9 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::get_contact_list(::grpc::ServerContext* context,
-                                                              const ::prod_im_server::get_contact_list_req* request,
-                                                              ::prod_im_server::get_contact_list_res* response) {
+::grpc::Status prod_im_server_grpc_api::get_contact_list(::grpc::ServerContext* context,
+                                                         const ::prod_im_server::get_contact_list_req* request,
+                                                         ::prod_im_server::get_contact_list_res* response) {
     auto rst = g_server_main->get_contact_list(request->user_id());
     if (rst) {
         for (auto& contact : *rst) {
@@ -57,25 +58,25 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::add_contact(::grpc::ServerContext* context,
-                                                         const ::prod_im_server::add_contact_req* request,
-                                                         ::prod_im_server::add_contact_res* response) {
+::grpc::Status prod_im_server_grpc_api::add_contact(::grpc::ServerContext* context,
+                                                    const ::prod_im_server::add_contact_req* request,
+                                                    ::prod_im_server::add_contact_res* response) {
     response->set_result(
             g_server_main->add_contact(request->user_id(), request->contact_id(), request->contact_name()));
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::del_contact(::grpc::ServerContext* context,
-                                                         const ::prod_im_server::del_contact_req* request,
-                                                         ::prod_im_server::del_contact_res* response)
+::grpc::Status prod_im_server_grpc_api::del_contact(::grpc::ServerContext* context,
+                                                    const ::prod_im_server::del_contact_req* request,
+                                                    ::prod_im_server::del_contact_res* response)
 {
     response->set_result(g_server_main->del_contact(request->user_id(), request->contact_id()));
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::client_send_chat_msg(::grpc::ServerContext* context,
-                                                                  const ::prod_im_server::send_chat_msg_req* request,
-                                                                  ::prod_im_server::send_chat_msg_res* response) {
+::grpc::Status prod_im_server_grpc_api::client_send_chat_msg(::grpc::ServerContext* context,
+                                                             const ::prod_im_server::send_chat_msg_req* request,
+                                                             ::prod_im_server::send_chat_msg_res* response) {
     g_server_main->client_send_chat_msg(request->sender_id(),
                                         request->receiver_id(),
                                         request->chat_msg());
@@ -83,9 +84,9 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api_impl::client_get_chat_msg(::grpc::ServerContext* context,
-                                                                 const prod_im_server::get_chat_msg_req* request,
-                                                                 prod_im_server::get_chat_msg_res* response)
+::grpc::Status prod_im_server_grpc_api::client_get_chat_msg(::grpc::ServerContext* context,
+                                                            const prod_im_server::get_chat_msg_req* request,
+                                                            prod_im_server::get_chat_msg_res* response)
 {
     auto msg_list = g_server_main->client_get_chat_msg(request->user_id(),
                                                        request->msg_index());
@@ -101,4 +102,22 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
         response->set_result(0);
     }
     return Status::OK;
+}
+
+int prod_im_server_grpc_api::run()
+{
+    std::string server_address("0.0.0.0:60100");
+
+    grpc::EnableDefaultHealthCheckService(true);
+    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+    ServerBuilder builder;
+
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(this);
+
+    std::unique_ptr<Server> server(builder.BuildAndStart());
+    log_info("Prod im server listening on: %s", server_address.c_str());
+
+    server->Wait();
+    return 0;
 }
