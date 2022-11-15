@@ -1,8 +1,13 @@
 [requires]
 json-c/0.16
+openssl/1.1.1s
 grpc/1.48.0
 boost/1.80.0
 ftxui/3.0.0
+cpp-httplib/0.11.2
 
 [generators]
 cmake
+
+[options]
+cpp-httplib:with_openssl=True

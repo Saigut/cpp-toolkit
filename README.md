@@ -15,7 +15,7 @@ Here put some cross-platform tools for convenience of C++ development. And also 
     apt-get install pythonX.X-dev   # For boost. This can be skipped.
     mkdir build
     cd build
-    conan install ../z_other/conanfile_<os>.txt
+    conan install ../z_other/conanfile.txt
     ```
 
 # Build
