@@ -1,6 +1,7 @@
+#include "prod_im_server_mod_user_info.hpp"
+
 #include <mod_common/log.h>
 #include <algorithm>
-#include "app_prod_im_internal.h"
 
 /*
 * 用户信息

@@ -1,4 +1,4 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_client.hpp"
 
 #include <time.h>
 #include <thread>
@@ -7,6 +7,10 @@
 #include <mod_common/log.h>
 #include <mod_common/expect.h>
 #include <mod_common/utils.h>
+
+#include "prod_im_client_mod_main.hpp"
+#include "prod_im_client_mod_cli.hpp"
+
 
 using grpc::Server;
 using grpc::ServerBuilder;

@@ -1,4 +1,4 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_server_mod_user_session.hpp"
 
 #include <mod_common/log.h>
 #include <boost/asio/deadline_timer.hpp>

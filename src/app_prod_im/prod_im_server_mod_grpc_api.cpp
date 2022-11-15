@@ -1,8 +1,10 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_server_mod_grpc_api.hpp"
 
 #include <grpcpp/grpcpp.h>
 #include <prod_im_server.grpc.pb.h>
 #include <mod_common/log.h>
+
+#include "prod_im_server_mod_main.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;

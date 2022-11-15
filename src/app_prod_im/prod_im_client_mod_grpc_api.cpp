@@ -1,7 +1,8 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_client_mod_grpc_api.hpp"
 
 #include <prod_im_server.grpc.pb.h>
 #include <mod_common/log.h>
+
 
 using grpc::Channel;
 using grpc::ClientContext;

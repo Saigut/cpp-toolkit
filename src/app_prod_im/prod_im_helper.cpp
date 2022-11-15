@@ -1,5 +1,5 @@
 #include "prod_im_helper.h"
-#include "app_prod_im_internal.h"
+#include "prod_im_server_mod_main.hpp"
 
 int im_s_op_msg_mpool::init()
 {

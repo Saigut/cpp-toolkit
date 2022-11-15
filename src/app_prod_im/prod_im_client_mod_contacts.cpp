@@ -1,4 +1,4 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_client_mod_contacts.hpp"
 
 
 

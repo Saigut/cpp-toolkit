@@ -2,6 +2,7 @@
 #define CPP_TOOLKIT_PROD_IM_DT_H
 
 #include <string>
+#include <vector>
 
 struct prod_im_contact {
     std::string contact_id;

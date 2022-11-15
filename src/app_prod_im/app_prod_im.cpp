@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <mod_common/log.h>
 
-#include "app_prod_im_internal.h"
+#include "prod_im_client.hpp"
+#include "prod_im_server.hpp"
+
 
 static void print_usage()
 {

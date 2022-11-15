@@ -1,10 +1,13 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_server.hpp"
 
 #include <thread>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <mod_common/log.h>
 #include <mod_common/utils.h>
+
+#include "prod_im_server_mod_main.hpp"
+#include "prod_im_server_mod_grpc_api.hpp"
 
 
 using grpc::Server;

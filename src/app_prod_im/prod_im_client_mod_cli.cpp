@@ -1,4 +1,4 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_client_mod_cli.hpp"
 
 #include <thread>
 #include <sstream>
@@ -9,6 +9,8 @@
 #include <ftxui/util/ref.hpp>
 #include <mod_common/expect.h>
 #include <mod_common/utils.h>
+
+#include "prod_im_client_mod_main.hpp"
 
 
 extern std::shared_ptr<prod_im_c_mod_main> g_client_main;

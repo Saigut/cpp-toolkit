@@ -1,4 +1,5 @@
-#include "app_prod_im_internal.h"
+#include "prod_im_client_mod_main.hpp"
+#include "prod_im_client_mod_cli.hpp"
 
 
 /*
