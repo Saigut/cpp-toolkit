@@ -206,9 +206,13 @@ void cppt_co_main_run()
     }
 }
 
-void cppt_co_yield(
+// ret: 0, ok; -1 coroutine error
+int cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
 {
+    if (!g_cppt_co_c) {
+        return -1;
+    }
     auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
         wrapped_extern_func([co_wapper](){
             cppt_co_add_sptr(co_wapper);
@@ -216,14 +220,18 @@ void cppt_co_yield(
     };
     g_cur_co.m_f_after_execution = wrap_func;
     g_cppt_co_c = g_cppt_co_c.resume();
+    return 0;
 }
 
-// ret: 0, ok; 1 timeout
+// ret: 0, ok; 1 timeout; -1 coroutine error
 int cppt_co_yield_timeout(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func,
         unsigned int timeout_ms,
         std::function<void()>& f_cancel_operation)
 {
+    if (!g_cppt_co_c) {
+        return -1;
+    }
     bool is_timeout = false;
 
     boost::asio::deadline_timer timer{ g_io_ctx };

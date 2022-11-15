@@ -43,7 +43,8 @@ unsigned int cppt_co_awaitable_create(Function& f, Args... args)
 
 void cppt_co_main_run();
 
-void cppt_co_yield(
+// ret: 0, ok; -1 coroutine error
+int cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func);
 // ret: 0, ok; 1 timeout
 int cppt_co_yield_timeout(
