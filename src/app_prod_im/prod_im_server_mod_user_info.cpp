@@ -2,6 +2,7 @@
 
 #include <mod_common/log.h>
 #include <algorithm>
+#include <iterator>
 
 /*
 * 用户信息
