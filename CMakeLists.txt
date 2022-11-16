@@ -43,6 +43,8 @@ macro(setup_build_environment)
     setup_conan()
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
+    add_definitions(${CONAN_DEFINES})
+
     ## Setup product options
     ### set_product_options()
 

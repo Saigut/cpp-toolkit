@@ -1,7 +1,6 @@
 #include <iostream>
 #include <app_coroutine/app_coroutine.h>
 
-#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib/httplib.h>
 
 static int test_cpp_httplib(int argc, char** argv)

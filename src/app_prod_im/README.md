@@ -171,7 +171,7 @@ graph TB
 
 ### 协议与编程语言
 #### 1. 客户端与服务端之间的通信协议
-grpc、jsonrpc
+grpc、jsonrpc 2.0
 #### 2. 客户端编程语言
 C++
 #### 3. 服务端编程语言
@@ -218,14 +218,14 @@ msg <contact id> <message>
 
 |字段         |描述     |类型      |
 |----       |----     |----      |
-| user_id   |用户 ID    |字符串 |
-| user_pass  |用户密码  |字符串 |
+|user_id   |用户 ID    |字符串 |
+|user_pass  |用户密码  |字符串 |
 
 返回值：  
 
 |字段      |描述     |类型      |
 |----     |----      |----    |
-| result  |结果      |int      |
+|result  |结果      |int      |
 
 * 登录  
 接口名称：login  
@@ -233,19 +233,22 @@ msg <contact id> <message>
   
 |字段         |描述     |类型      |
 |----       |----     |----      |
-| user_id   |用户 ID    |字符串 |
-| user_pass  |用户密码  |字符串 |
+|user_id   |用户 ID    |字符串 |
+|user_pass  |用户密码  |字符串 |
   
 返回值：  
 
 |字段      |描述     |类型      |
 |----     |----      |----    |
-| result  |结果      |int      |
+|result  |结果      |int      |
 
 * 获取联系人列表  
 接口名称：get_contact_list  
-参数：无
- 
+参数：  
+|字段         |描述     |类型      |
+|----       |----     |----      |
+|user_id   |用户 ID    |字符串 |
+
 返回值：
 
 |字段           |描述         |类型     |
@@ -266,6 +269,7 @@ msg <contact id> <message>
   
 |字段         |描述     |类型      |
 |----       |----     |----      |
+|user_id   |用户 ID    |字符串 |
 |contact_id   |联系人ID    |字符串 |
 |contact_name  |联系人备注  |字符串 |
   
@@ -281,6 +285,7 @@ msg <contact id> <message>
 
 |字段         |描述     |类型      |
 |----       |----     |----      |
+|user_id   |用户 ID    |字符串 |
 |contact_id   |联系人ID    |字符串 |
 
 返回值：  
@@ -295,25 +300,37 @@ msg <contact id> <message>
 
 |字段             |描述          |类型      |
 |----           |----           |----      |
-| receiver_id   |接收者 ID     |字符串 |
-| chat_msg      |聊天消息内容    |字符串 |
+|sender_id     |发送者 ID     |字符串 |
+|receiver_id   |接收者 ID     |字符串 |
+|chat_msg      |聊天消息内容    |字符串 |
 
 * 客户端拉取消息  
 接口名称：client_get_chat_msg  
 参数：  
 
-|字段             |描述          |类型      |
-|----           |----           |----      |
-| user_id       |用户 ID         |字符串 |
+|字段         |描述          |类型      |
+|----        |----           |----      |
+|user_id     |用户 ID         |字符串 |
+|msg_index   |从某条消息开始拉取。消息从0开始编号   |正整数 |
 
 返回值：  
 
 |字段      |描述       |类型      |
 |----     |----       |----    |
-| result  |结果        |int      |
-| chat_msg  |聊天消息    |聊天消息数组 |
+|result  |结果        |int      |
+|msg_list  |聊天消息    |聊天消息数组 |
+
+聊天消息：  
+|字段             |描述          |类型      |
+|----           |----           |----      |
+|sender_id     |发送者 ID     |字符串 |
+|receiver_id   |接收者 ID     |字符串 |
+|chat_msg      |聊天消息内容    |字符串 |
 
 ##### jsonrpc 接口
+注：jsonrpc 请求/响应基于 http 的请求/响应，因此此处省略了 id 字段。  
+http method: PUT  
+http 请求路径: /jsonrpc  
 请求：
 ```json
 {
@@ -326,19 +343,26 @@ msg <contact id> <message>
 ```json
 {
   "jsonrpc": "2.0",
-  "result": 0
+  "result": {}
+}
+```
+```json
+{
+  "jsonrpc": "2.0",
+  "error": { "code": -1, "message": ""}
 }
 ```
 * 接口名称与参数  
-与 grpc 接口一致。  
-其中`接口名称`即为 jsonrpc 中的 method；参数和返回值都用 key-value 形式的 json 对象来表示，如：
+总体上与 grpc 接口一致。  
+1. 其中`接口名称`即为 jsonrpc 中的 method；参数和返回值都用 key-value 形式的 json 对象来表示，如：
 ```json
 {
   "user_id": "xxx",
   "user_pass": "xxx"
 }
 ```
-grpc 接口中的数组，对应 json 中的数组。
+2. grpc 接口中的数组，对应 json 中的数组。
+3. 当响应正常结果时，返回参数被放在 result 字段。当响应错误时，error.code 字段的值即为 grpc 接口中 result 的值。
 
 ##### 命令行接口
 * 启动
