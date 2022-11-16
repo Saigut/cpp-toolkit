@@ -9,16 +9,39 @@ include(common_var)
 include(helper)
 include(compiler)
 #include(external_lib)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
 macro(setup_platform_environment)
     ## Setup compilation options
     compiler_set_compilation_options()
 endmacro()
 
+macro(setup_conan)
+    find_program(V_conan_cmd conan)
+    if (NOT V_conan_cmd)
+        message(WARNING "conan is not found!" )
+    else()
+        message("Found conan: ${V_conan_cmd}")
+        set(V_conan_gen_files
+            "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+        set(V_conanfile
+            "${PROJECT_SOURCE_DIR}/${GV_other_dir}/conanfile.txt")
+        if (NOT EXISTS ${V_conanfile})
+            message(WARNING "${V_conanfile} is not found!" )
+        else()
+            if (${V_conanfile} IS_NEWER_THAN ${V_conan_gen_files})
+                file(REMOVE ${V_conan_gen_files})
+                execute_process(COMMAND conan install ${V_conanfile})
+            endif()
+        endif()
+    endif()
+endmacro()
+
 macro(setup_build_environment)
     ## Setup Conan
 #    conan_basic_setup()
+
+    setup_conan()
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
     ## Setup product options
     ### set_product_options()
