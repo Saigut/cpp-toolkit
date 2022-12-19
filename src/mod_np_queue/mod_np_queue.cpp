@@ -39,6 +39,8 @@ bool np_queue_t::do_dequeue()
     }
     // 3. 切换为 notify 模式
     m_is_notify_mode = true;
+    /// FIXME: 考虑线程安全问题！
+    m_notified = false;
     while (!m_notified && m_queue.try_pop(p)) {
         // call handler
         if (m_dequeue_handler) {
