@@ -5,6 +5,7 @@ set(CLANG false)
 set(GCC false)
 set(INTEL false)
 set(MSVC false)
+set(AppleClang false)
 
 # About OS
 set(OS_LINUX false)
