@@ -8,11 +8,11 @@ int np_queue_t::enqueue(void* p)
         return -1;
     }
     // 2. 检查模式。notify 模式则通知。
-    /// TODO: 多线程支持
     if (m_is_notify_mode) {
         if (!m_notified) {
             // notify
             if (m_notify_handler) {
+                // notify handler 需要是线程安全的
                 m_notify_handler();
             } else {
                 return -1;
@@ -38,9 +38,8 @@ bool np_queue_t::do_dequeue()
         }
     }
     // 3. 切换为 notify 模式
-    m_is_notify_mode = true;
-    /// FIXME: 考虑线程安全问题！
     m_notified = false;
+    m_is_notify_mode = true;
     while (!m_notified && m_queue.try_pop(p)) {
         // call handler
         if (m_dequeue_handler) {
