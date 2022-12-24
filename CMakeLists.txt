@@ -72,18 +72,25 @@ endmacro()
 
 macro(setup_directries)
     set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_other_dir}/gen)
-    set(V_dir_gen_grpc ${V_dir_gen}/grpc/cpp)
+    set(V_dir_gen_grpc ${V_dir_gen}/grpc)
+    set(V_dir_gen_grpc_cpp ${V_dir_gen}/grpc/cpp)
     set(V_dir_gen_lib ${V_dir_gen}/lib)
     add_custom_command(
         OUTPUT "${V_dir_gen}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen}
+        DEPENDS "${PROJECT_SOURCE_DIR}/${GV_other_dir}"
     )
     add_custom_command(
         OUTPUT "${V_dir_gen_grpc}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_grpc}
         DEPENDS "${V_dir_gen}"
     )
-    add_custom_target(GT_dir_gen_grpc DEPENDS "${V_dir_gen_grpc}")
+    add_custom_command(
+        OUTPUT "${V_dir_gen_grpc_cpp}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_grpc_cpp}
+        DEPENDS "${V_dir_gen_grpc}"
+    )
+    add_custom_target(GT_dir_gen_grpc_cpp DEPENDS "${V_dir_gen_grpc_cpp}")
     add_custom_command(
         OUTPUT "${V_dir_gen_lib}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_lib}
@@ -116,22 +123,22 @@ macro(setup_grpc_target)
         list(APPEND GV_proto_bnames ${V_bname})
 
         set(V_gen_cpp_grpc_srcs
-            "${V_dir_gen_grpc}/${V_bname}.pb.h"
-            "${V_dir_gen_grpc}/${V_bname}.pb.cc"
-            "${V_dir_gen_grpc}/${V_bname}.grpc.pb.h"
-            "${V_dir_gen_grpc}/${V_bname}.grpc.pb.cc"
+            "${V_dir_gen_grpc_cpp}/${V_bname}.pb.h"
+            "${V_dir_gen_grpc_cpp}/${V_bname}.pb.cc"
+            "${V_dir_gen_grpc_cpp}/${V_bname}.grpc.pb.h"
+            "${V_dir_gen_grpc_cpp}/${V_bname}.grpc.pb.cc"
             )
         list(APPEND GV_gen_cpp_grpc_srcs ${V_gen_cpp_grpc_srcs})
 
         add_custom_command(
             OUTPUT ${V_gen_cpp_grpc_srcs}
             COMMAND ${V_ptotoc_cmd}
-            ARGS --grpc_out "${V_dir_gen_grpc}"
-                --cpp_out "${V_dir_gen_grpc}"
+            ARGS --grpc_out "${V_dir_gen_grpc_cpp}"
+                --cpp_out "${V_dir_gen_grpc_cpp}"
                 -I "${V_dir_grpc_proto_a}"
                 --plugin=protoc-gen-grpc=${V_ptotoc_cpp_plugin}
                 ${one_proto_file}
-            DEPENDS "${one_proto_file}" GT_dir_gen_grpc
+            DEPENDS "${one_proto_file}" GT_dir_gen_grpc_cpp
         )
         add_custom_target(GT_gen_${V_bname}_grpc_cpp_src DEPENDS ${V_gen_cpp_grpc_srcs})
         list(APPEND GV_gen_grpc_cpp_src_targets GT_gen_${V_bname}_grpc_cpp_src)
