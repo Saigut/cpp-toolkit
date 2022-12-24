@@ -61,7 +61,6 @@ int np_queue_t::do_dequeue_wait()
         if (!do_dequeue()) {
             return 0;
         }
-        // 等待 condition 信号
     } while (m_waiting_handler());
 
     return 0;
