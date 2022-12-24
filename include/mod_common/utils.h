@@ -94,7 +94,7 @@ public:
                 transport_speed_KiB = (m_total_sent_bytes * 1000 /
                                       (cur_ts_ms - m_start_ts_ms)) / 1024;
                 printf("Data sent! Average speed: %" PRIu64 " KiB/s\n", transport_speed_KiB);
-                printf("Data size: %" PRIu64 " KiB\n", m_total_sent_bytes / 1024);
+                printf("Data size: %zu KiB\n", m_total_sent_bytes / 1024);
                 printf("Spent time: %" PRIu64 "ms\n", cur_ts_ms - m_start_ts_ms);
                 m_state = emSEND_DATA_STATE_FINISHED;
             }
@@ -198,7 +198,7 @@ public:
             transport_speed_KiB = (m_total_recv_bytes * 1000 /
                                   (cur_ts_ms - m_start_ts_ms)) / 1024;
             printf("Data received! Average speed: %" PRIu64 " KiB/s\n", transport_speed_KiB);
-            printf("Data size: %" PRIu64 " KiB\n", m_total_recv_bytes / 1024);
+            printf("Data size: %zu KiB\n", m_total_recv_bytes / 1024);
             printf("Spent time: %" PRIu64 "ms\n", cur_ts_ms - m_start_ts_ms);
             m_state = emRECV_DATA_STATE_FINISHED;
             return -1;
