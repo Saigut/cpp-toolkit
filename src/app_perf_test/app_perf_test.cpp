@@ -188,7 +188,7 @@ struct Build_index_tuple
 
       using __type = __make_integer_seq<_IdxTuple, size_t, Num>;
 #else
-    using __type = _Index_tuple<__integer_pack(Num)...>;
+//    using __type = _Index_tuple<__integer_pack(Num)...>;
 #endif
 };
 
@@ -219,9 +219,10 @@ struct Invoker
     typename _result<Tuple>::type
     operator()()
     {
-        using Indices
-        = typename Build_index_tuple<std::tuple_size<Tuple>::value>::__type;
-        return M_invoke(Indices());
+//        using Indices
+//        = typename Build_index_tuple<std::tuple_size<Tuple>::value>::__type;
+//        return M_invoke(Indices());
+        /// Fixme: How to do
     }
 };
 

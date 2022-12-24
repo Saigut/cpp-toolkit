@@ -22,7 +22,7 @@ int util_bind_thread_to_core(unsigned int core_id)
     } else {
         return 0;
     }
-#else
+#elif defined(__linux__)
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     if (core_id >= num_cores) {
         return -1;
@@ -35,6 +35,8 @@ int util_bind_thread_to_core(unsigned int core_id)
     } else {
         return 0;
     }
+#else
+    return -1;
 #endif
 }
 
