@@ -8,6 +8,7 @@
 #include <boost/asio/io_context.hpp>
 #include <mod_atomic_queue/atomic_queue.h>
 #include <boost/asio/deadline_timer.hpp>
+#include <mod_np_queue/mod_np_queue.hpp>
 
 
 // Types
@@ -40,22 +41,22 @@ private:
     uint32_t m_co_id;
 };
 
-class cppt_co_exec_queue_ele {
+class cppt_co_exec_queue_ele_t {
 public:
     cppt_co_wrapper* m_co_wrapper = nullptr;
     std::function<void()> m_f_before_execution = nullptr;
     std::function<void(cppt_co_wrapper*)> m_f_after_execution = nullptr;
 };
 
-using cppt_co_queue_t = atomic_queue::AtomicQueue2<cppt_co_exec_queue_ele, 65535>;
+using cppt_co_queue_t = atomic_queue::AtomicQueue2<cppt_co_exec_queue_ele_t, 65535>;
 
 
 // Values
 thread_local context::continuation g_cppt_co_c;
 thread_local std::map<uint32_t, std::function<void()>> g_co_awaitable_map;
 thread_local std::queue<uint32_t> g_awaitable_id_queue;
-thread_local cppt_co_exec_queue_ele g_cur_co;
-cppt_co_queue_t g_co_exec_queue;
+thread_local cppt_co_exec_queue_ele_t g_cur_co;
+np_queue_t<cppt_co_exec_queue_ele_t> g_co_exec_queue;
 bool g_run_flag = true;
 
 io_context g_io_ctx;
@@ -73,9 +74,9 @@ void cppt_co_add_c(context::continuation&& c)
 {
     auto new_co = new cppt_co_wrapper(
             std::make_shared<context::continuation>(std::move(c)));
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = new_co;
-    if (!g_co_exec_queue.try_push(ele)) {
+    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
         delete new_co;
     }
@@ -83,18 +84,18 @@ void cppt_co_add_c(context::continuation&& c)
 void cppt_co_add_c_sptr(std::shared_ptr<context::continuation> c)
 {
     auto new_co = new cppt_co_wrapper(c);
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = new_co;
-    if (!g_co_exec_queue.try_push(ele)) {
+    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
         delete new_co;
     }
 }
 static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
 {
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = wrapper;
-    if (!g_co_exec_queue.try_push(ele)) {
+    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
         delete wrapper;
     }
@@ -102,10 +103,10 @@ static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
 static void cppt_co_add_sptr_f_before(cppt_co_wrapper* wrapper,
                                       std::function<void()>& f_before)
 {
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = wrapper;
     ele.m_f_before_execution = f_before;
-    if (!g_co_exec_queue.try_push(ele)) {
+    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
         delete wrapper;
     }
@@ -143,9 +144,9 @@ context::continuation cppt_co_wrapper_awaitable::start_user_co()
 // Interfaces
 void cppt_co_create0(std::function<void()> user_co)
 {
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = new cppt_co_wrapper(std::move(user_co));
-    g_co_exec_queue.push(ele);
+    g_co_exec_queue.enqueue(std::move(ele));
 }
 
 unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
@@ -156,9 +157,9 @@ unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
     }
     uint32_t id = g_awaitable_id_queue.front();
     g_awaitable_id_queue.pop();
-    cppt_co_exec_queue_ele ele;
+    cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = new cppt_co_wrapper_awaitable(std::move(user_co), id);
-    g_co_exec_queue.push(ele);
+    g_co_exec_queue.enqueue(std::move(ele));
     return id;
 }
 
@@ -171,39 +172,63 @@ static void asio_thread(io_context& io_ctx)
 
 void cppt_co_main_run()
 {
+    auto dequeue_handler =
+            [](cppt_co_exec_queue_ele_t& cur_co)
+    {
+        g_cur_co = cur_co;
+        auto co_wrapper = g_cur_co.m_co_wrapper;
+        if (!co_wrapper->m_co_started) {
+            co_wrapper->m_co_started = true;
+            *co_wrapper->m_c = std::move(co_wrapper->start_user_co());
+        } else if (*co_wrapper->m_c) {
+            if (g_cur_co.m_f_before_execution) {
+                g_cur_co.m_f_before_execution();
+                g_cur_co.m_f_before_execution = nullptr;
+            }
+            *co_wrapper->m_c = std::move(co_wrapper->m_c->resume());
+        } else {
+            delete g_cur_co.m_co_wrapper;
+            g_cur_co.m_co_wrapper = nullptr;
+            return g_run_flag;
+        }
+        if (g_cur_co.m_f_after_execution) {
+            g_cur_co.m_f_after_execution(g_cur_co.m_co_wrapper);
+            g_cur_co.m_f_after_execution = nullptr;
+        } else {
+            delete g_cur_co.m_co_wrapper;
+            g_cur_co.m_co_wrapper = nullptr;
+        }
+        return g_run_flag;
+    };
+
+    std::mutex cond_lock;
+    std::condition_variable cond_cv;
+    auto notify_handler =
+            [&]()
+    {
+        std::unique_lock<std::mutex> u_lock(cond_lock);
+        cond_cv.wait(u_lock);
+    };
+
+    auto wait_handler =
+            [&]()
+    {
+        {
+            std::lock_guard lock(cond_lock);
+            cond_cv.notify_one();
+        }
+        return g_run_flag;
+    };
+
+    g_co_exec_queue.set_handlers(
+            dequeue_handler, notify_handler,wait_handler);
+
     std::thread asio_thr{ asio_thread, std::ref(g_io_ctx) };
     asio_thr.detach();
 
     init_awaitable_id_queue();
-    while (g_run_flag) {
-        if (!g_co_exec_queue.was_empty()) {
-            g_cur_co = g_co_exec_queue.pop();
-            auto co_wrapper = g_cur_co.m_co_wrapper;
-            if (!co_wrapper->m_co_started) {
-                co_wrapper->m_co_started = true;
-                *co_wrapper->m_c = std::move(co_wrapper->start_user_co());
-            } else if (*co_wrapper->m_c) {
-                if (g_cur_co.m_f_before_execution) {
-                    g_cur_co.m_f_before_execution();
-                    g_cur_co.m_f_before_execution = nullptr;
-                }
-                *co_wrapper->m_c = std::move(co_wrapper->m_c->resume());
-            } else {
-                delete g_cur_co.m_co_wrapper;
-                g_cur_co.m_co_wrapper = nullptr;
-                continue;
-            }
-            if (g_cur_co.m_f_after_execution) {
-                g_cur_co.m_f_after_execution(g_cur_co.m_co_wrapper);
-                g_cur_co.m_f_after_execution = nullptr;
-            } else {
-                delete g_cur_co.m_co_wrapper;
-                g_cur_co.m_co_wrapper = nullptr;
-            }
-        } else {
-            cppt_nanosleep(1);
-        }
-    }
+
+    g_co_exec_queue.do_dequeue_wait();
 }
 
 // ret: 0, ok; -1 coroutine error
@@ -215,6 +240,7 @@ int cppt_co_yield(
     }
     auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
         wrapped_extern_func([co_wapper](){
+            /// Fixme: how to do when executing queue is full?
             cppt_co_add_sptr(co_wapper);
         });
     };
@@ -242,6 +268,7 @@ int cppt_co_yield_timeout(
                 // stop timer
                 timer.cancel();
             };
+            /// Fixme: how to do when executing queue is full?
             cppt_co_add_sptr_f_before(co_wapper, f_before);
         });
         timer.expires_from_now(boost::posix_time::milliseconds(timeout_ms));
@@ -256,6 +283,7 @@ int cppt_co_yield_timeout(
                     f_cancel_operation();
                 }
             };
+            /// Fixme: how to do when executing queue is full?
             cppt_co_add_sptr_f_before(co_wapper, f_before);
         });
     };
