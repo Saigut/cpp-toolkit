@@ -207,16 +207,16 @@ void cppt_co_main_run()
     auto notify_handler =
             [&]()
     {
-        std::unique_lock<std::mutex> u_lock(cond_lock);
-        cond_cv.wait(u_lock);
+        std::lock_guard lock(cond_lock);
+        cond_cv.notify_one();
     };
 
     auto wait_handler =
             [&]()
     {
         {
-            std::lock_guard lock(cond_lock);
-            cond_cv.notify_one();
+            std::unique_lock<std::mutex> u_lock(cond_lock);
+            cond_cv.wait(u_lock);
         }
         return g_run_flag;
     };
