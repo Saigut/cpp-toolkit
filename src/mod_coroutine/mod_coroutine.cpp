@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <condition_variable>
 #include <boost/context/continuation.hpp>
 #include <boost/asio/io_context.hpp>
 #include <mod_atomic_queue/atomic_queue.h>
