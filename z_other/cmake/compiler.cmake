@@ -67,11 +67,10 @@ macro(compiler_set_compilation_options)
     if (OS_WINDOWS)
         # _WIN32_WINNT for boost
         add_definitions(-D_WIN32_WINNT=0x0601)
-        add_definitions(-D_CRT_SECURE_NO_WARNINGS)
         add_definitions(-DJSON_C_HAVE_INTTYPES_H=1) # for json-c
         if (MSVC)
+            add_definitions(-D_CRT_SECURE_NO_WARNINGS)
             add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
-            add_definitions(-D_WIN32_WINNT=0x0601)
             add_definitions(-DNCURSES_STATIC)
             set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /O2")
         endif ()
