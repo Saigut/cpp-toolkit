@@ -3,6 +3,7 @@
 cmake-build-*
 
 build/*
+build_*
 z_other/external/*
 !z_other/external/CMakeLists.txt
 z_other/package/*

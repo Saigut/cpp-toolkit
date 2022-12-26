@@ -80,21 +80,23 @@ macro(setup_directries)
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen}
         DEPENDS "${PROJECT_SOURCE_DIR}/${GV_other_dir}"
     )
+    add_custom_target(GT_dir_gen DEPENDS "${V_dir_gen}")
     add_custom_command(
         OUTPUT "${V_dir_gen_grpc}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_grpc}
-        DEPENDS "${V_dir_gen}"
+        DEPENDS GT_dir_gen
     )
+    add_custom_target(GT_dir_gen_grpc DEPENDS "${V_dir_gen_grpc}")
     add_custom_command(
         OUTPUT "${V_dir_gen_grpc_cpp}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_grpc_cpp}
-        DEPENDS "${V_dir_gen_grpc}"
+        DEPENDS GT_dir_gen_grpc
     )
     add_custom_target(GT_dir_gen_grpc_cpp DEPENDS "${V_dir_gen_grpc_cpp}")
     add_custom_command(
         OUTPUT "${V_dir_gen_lib}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen_lib}
-        DEPENDS "${V_dir_gen}"
+        DEPENDS GT_dir_gen
     )
     add_custom_target(GT_dir_gen_lib DEPENDS "${V_dir_gen_lib}")
 endmacro()
