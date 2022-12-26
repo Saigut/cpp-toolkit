@@ -62,7 +62,7 @@ macro(compiler_set_compilation_options)
     endif ()
     if (GCC)
         # Force GCC to use the old ABI version. In case dependency libraries were built using old ABI version.
-        add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+#        add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
     endif()
     if (OS_WINDOWS)
         # _WIN32_WINNT for boost
