@@ -1,10 +1,10 @@
-#ifndef CPP_TOOLKIT_PROD_IM_SERVER_MOD_GRPC_API_HPP
-#define CPP_TOOLKIT_PROD_IM_SERVER_MOD_GRPC_API_HPP
+#ifndef CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_GRPC_HPP
+#define CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_GRPC_HPP
 
 #include <grpcpp/grpcpp.h>
 #include <prod_im_server.grpc.pb.h>
 
-class prod_im_server_grpc_api final : public prod_im_server::prod_im_server_service::Service {
+class prod_im_server_api_grpc final : public prod_im_server::prod_im_server_service::Service {
 public:
     ::grpc::Status user_register(::grpc::ServerContext* context,
                                  const ::prod_im_server::user_register_req* request,
@@ -39,4 +39,4 @@ public:
 };
 
 
-#endif //CPP_TOOLKIT_PROD_IM_SERVER_MOD_GRPC_API_HPP
+#endif //CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_GRPC_HPP

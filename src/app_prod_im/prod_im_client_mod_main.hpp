@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include "prod_im_client_mod_grpc_api.hpp"
+#include "prod_im_client_mod_api_grpc.hpp"
 #include "prod_im_dt.h"
 
 class prod_im_c_mod_main {
@@ -14,7 +14,7 @@ public:
                        uint16_t mServerPort,
                        uint16_t mClientPort,
                        const std::string& mMyId,
-                       std::shared_ptr<call_im_server_grpc> mServerGrpcApi)
+                       std::shared_ptr<call_im_server_api_grpc> mServerGrpcApi)
             : m_server_ip(mServerIp),
               m_server_port(mServerPort),
               m_client_port(mClientPort),
@@ -41,7 +41,7 @@ private:
     std::string m_my_id;
     size_t m_msg_index = 0;
 
-    std::shared_ptr<call_im_server_grpc> m_server_grpc_api;
+    std::shared_ptr<call_im_server_api_grpc> m_server_grpc_api;
 };
 
 #endif //CPP_TOOLKIT_PROD_IM_CLIENT_MOD_MAIN_HPP

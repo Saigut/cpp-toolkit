@@ -1,4 +1,4 @@
-#include "prod_im_client_mod_grpc_api.hpp"
+#include "prod_im_client_mod_api_grpc.hpp"
 
 #include <prod_im_server.grpc.pb.h>
 #include <mod_common/log.h>
@@ -24,8 +24,8 @@ using prod_im_server::get_chat_msg_req;
 using prod_im_server::get_chat_msg_res;
 
 
-int call_im_server_grpc::user_register(const std::string& user_id,
-                                       const std::string& user_pass) {
+int call_im_server_api_grpc::user_register(const std::string& user_id,
+                                           const std::string& user_pass) {
     user_register_req req;
     req.set_user_id(user_id);
     req.set_user_pass(user_pass);
@@ -47,9 +47,9 @@ int call_im_server_grpc::user_register(const std::string& user_id,
     }
 }
 
-int call_im_server_grpc::login(const std::string& user_id,
-                               const std::string& user_pass,
-                               uint16_t client_port) {
+int call_im_server_api_grpc::login(const std::string& user_id,
+                                   const std::string& user_pass,
+                                   uint16_t client_port) {
     login_req req;
     req.set_user_id(user_id);
     req.set_user_pass(user_pass);
@@ -73,7 +73,7 @@ int call_im_server_grpc::login(const std::string& user_id,
 }
 
 std::shared_ptr<prod_im_cont_list>
-call_im_server_grpc::get_contact_list(const std::string& user_id) {
+call_im_server_api_grpc::get_contact_list(const std::string& user_id) {
     get_contact_list_req req;
     req.set_user_id(user_id);
 
@@ -102,9 +102,9 @@ call_im_server_grpc::get_contact_list(const std::string& user_id) {
     }
 }
 
-int call_im_server_grpc::add_contact(const std::string& user_id,
-                                     const std::string& contact_id,
-                                     const std::string& contact_name) {
+int call_im_server_api_grpc::add_contact(const std::string& user_id,
+                                         const std::string& contact_id,
+                                         const std::string& contact_name) {
     add_contact_req req;
     req.set_user_id(user_id);
     req.set_contact_id(contact_id);
@@ -127,8 +127,8 @@ int call_im_server_grpc::add_contact(const std::string& user_id,
     }
 }
 
-int call_im_server_grpc::del_contact(const std::string& user_id,
-                                     const std::string& contact_id) {
+int call_im_server_api_grpc::del_contact(const std::string& user_id,
+                                         const std::string& contact_id) {
     del_contact_req req;
     req.set_user_id(user_id);
     req.set_contact_id(contact_id);
@@ -150,9 +150,9 @@ int call_im_server_grpc::del_contact(const std::string& user_id,
     }
 }
 
-int call_im_server_grpc::client_send_chat_msg(const std::string& sender_id,
-                                              const std::string& receiver_id,
-                                              const std::string& chat_msg) {
+int call_im_server_api_grpc::client_send_chat_msg(const std::string& sender_id,
+                                                  const std::string& receiver_id,
+                                                  const std::string& chat_msg) {
     send_chat_msg_req req;
     req.set_sender_id(sender_id);
     req.set_receiver_id(receiver_id);
@@ -175,7 +175,7 @@ int call_im_server_grpc::client_send_chat_msg(const std::string& sender_id,
     }
 }
 
-std::shared_ptr<prod_im_chat_msg_list> call_im_server_grpc::client_get_chat_msg(
+std::shared_ptr<prod_im_chat_msg_list> call_im_server_api_grpc::client_get_chat_msg(
         const std::string& user_id, size_t msg_index)
 {
     get_chat_msg_req req;

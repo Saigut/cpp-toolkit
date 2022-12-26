@@ -1,11 +1,11 @@
-#ifndef CPP_TOOLKIT_PROD_IM_SERVER_MOD_JSONRPC_API_HPP
-#define CPP_TOOLKIT_PROD_IM_SERVER_MOD_JSONRPC_API_HPP
+#ifndef CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_JSONRPC_HPP
+#define CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_JSONRPC_HPP
 
 #include <httplib/httplib.h>
 #include <nlohmann/json.hpp>
 #include "prod_im_dt.h"
 
-class prod_im_server_jsonrpc_api {
+class prod_im_server_api_jsonrpc {
 public:
     int run();
 private:
@@ -30,4 +30,4 @@ private:
     int process_req(const httplib::Request& req, httplib::Response& res);
 };
 
-#endif //CPP_TOOLKIT_PROD_IM_SERVER_MOD_JSONRPC_API_HPP
+#endif //CPP_TOOLKIT_PROD_IM_SERVER_MOD_API_JSONRPC_HPP

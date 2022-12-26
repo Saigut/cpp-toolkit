@@ -1,5 +1,5 @@
-#ifndef CPP_TOOLKIT_PROD_IM_CLIENT_MOD_GRPC_API_HPP
-#define CPP_TOOLKIT_PROD_IM_CLIENT_MOD_GRPC_API_HPP
+#ifndef CPP_TOOLKIT_PROD_IM_CLIENT_MOD_API_GRPC_HPP
+#define CPP_TOOLKIT_PROD_IM_CLIENT_MOD_API_GRPC_HPP
 
 #include <memory>
 #include <string>
@@ -7,9 +7,9 @@
 #include <prod_im_server.grpc.pb.h>
 #include "prod_im_dt.h"
 
-class call_im_server_grpc {
+class call_im_server_api_grpc {
 public:
-    call_im_server_grpc(std::shared_ptr<grpc::Channel> channel)
+    call_im_server_api_grpc(std::shared_ptr<grpc::Channel> channel)
             /* Caution: Must include grpcpp/channel for grpc::Channel!*/
             : m_stub(prod_im_server::prod_im_server_service::NewStub(channel)) {}
 
@@ -39,4 +39,4 @@ private:
 };
 
 
-#endif //CPP_TOOLKIT_PROD_IM_CLIENT_MOD_GRPC_API_HPP
+#endif //CPP_TOOLKIT_PROD_IM_CLIENT_MOD_API_GRPC_HPP

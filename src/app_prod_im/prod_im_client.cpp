@@ -49,7 +49,7 @@ int app_prod_im_client(int argc, char** argv)
     uint16_t server_port = 60100;
     std::string my_id = argv[1];
     std::string im_server_listen_addr = server_ip + ":" + std::to_string(server_port);
-    auto im_server_grpc_api = std::make_shared<call_im_server_grpc>(
+    auto im_server_grpc_api = std::make_shared<call_im_server_api_grpc>(
             grpc::CreateChannel(im_server_listen_addr,
                                 grpc::InsecureChannelCredentials()));
     g_client_main = std::make_shared<prod_im_c_mod_main>(

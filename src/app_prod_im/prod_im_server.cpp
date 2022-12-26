@@ -5,8 +5,8 @@
 #include <mod_common/utils.h>
 
 #include "prod_im_server_mod_main.hpp"
-#include "prod_im_server_mod_grpc_api.hpp"
-#include "prod_im_server_mod_jsonrpc_api.hpp"
+#include "prod_im_server_mod_api_grpc.hpp"
+#include "prod_im_server_mod_api_jsonrpc.hpp"
 
 
 std::shared_ptr<prod_im_s_mod_main> g_server_main;
@@ -20,13 +20,13 @@ static void run_asio(boost::asio::io_context& io_ctx)
 
 static void run_grpc_api()
 {
-    prod_im_server_grpc_api grpc_api;
+    prod_im_server_api_grpc grpc_api;
     grpc_api.run();
 }
 
 static void run_jsonrpc_api()
 {
-    prod_im_server_jsonrpc_api jsonrpc_api;
+    prod_im_server_api_jsonrpc jsonrpc_api;
     jsonrpc_api.run();
 }
 

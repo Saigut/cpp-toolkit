@@ -1,4 +1,4 @@
-#include "prod_im_server_mod_jsonrpc_api.hpp"
+#include "prod_im_server_mod_api_jsonrpc.hpp"
 
 #include <mod_common/log.h>
 #include <mod_common/expect.h>
@@ -10,7 +10,7 @@ using json = nlohmann::json;
 
 extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
-int prod_im_server_jsonrpc_api::user_register(nlohmann::json& params_obj,
+int prod_im_server_api_jsonrpc::user_register(nlohmann::json& params_obj,
                                               nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -23,7 +23,7 @@ int prod_im_server_jsonrpc_api::user_register(nlohmann::json& params_obj,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::login(nlohmann::json& params_obj,
+int prod_im_server_api_jsonrpc::login(nlohmann::json& params_obj,
                                       nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -37,7 +37,7 @@ int prod_im_server_jsonrpc_api::login(nlohmann::json& params_obj,
 }
 
 int
-prod_im_server_jsonrpc_api::get_contact_list(nlohmann::json& params_obj,
+prod_im_server_api_jsonrpc::get_contact_list(nlohmann::json& params_obj,
                                              nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -56,7 +56,7 @@ prod_im_server_jsonrpc_api::get_contact_list(nlohmann::json& params_obj,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::add_contact(nlohmann::json& params_obj,
+int prod_im_server_api_jsonrpc::add_contact(nlohmann::json& params_obj,
                                             nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -70,7 +70,7 @@ int prod_im_server_jsonrpc_api::add_contact(nlohmann::json& params_obj,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::del_contact(nlohmann::json& params_obj,
+int prod_im_server_api_jsonrpc::del_contact(nlohmann::json& params_obj,
                                             nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -84,7 +84,7 @@ int prod_im_server_jsonrpc_api::del_contact(nlohmann::json& params_obj,
 }
 
 int
-prod_im_server_jsonrpc_api::client_send_chat_msg(nlohmann::json& params_obj,
+prod_im_server_api_jsonrpc::client_send_chat_msg(nlohmann::json& params_obj,
                                                  nlohmann::json& result_obj)
 {
     auto sender_id = params_obj["sender_id"].get<std::string>();
@@ -97,7 +97,7 @@ prod_im_server_jsonrpc_api::client_send_chat_msg(nlohmann::json& params_obj,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::client_get_chat_msg(nlohmann::json& params_obj,
+int prod_im_server_api_jsonrpc::client_get_chat_msg(nlohmann::json& params_obj,
                                                     nlohmann::json& result_obj)
 {
     auto user_id = params_obj["user_id"].get<std::string>();
@@ -118,7 +118,7 @@ int prod_im_server_jsonrpc_api::client_get_chat_msg(nlohmann::json& params_obj,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::process_req_method(std::string& method,
+int prod_im_server_api_jsonrpc::process_req_method(std::string& method,
                                                    nlohmann::json& params_obj,
                                                    nlohmann::json& result_obj)
 {
@@ -149,7 +149,7 @@ int prod_im_server_jsonrpc_api::process_req_method(std::string& method,
     }
 }
 
-int prod_im_server_jsonrpc_api::process_req(const httplib::Request& req,
+int prod_im_server_api_jsonrpc::process_req(const httplib::Request& req,
                                             httplib::Response& res)
 {
     auto& json_str = req.body;
@@ -209,7 +209,7 @@ int prod_im_server_jsonrpc_api::process_req(const httplib::Request& req,
     return 0;
 }
 
-int prod_im_server_jsonrpc_api::run()
+int prod_im_server_api_jsonrpc::run()
 {
     // HTTPS
     // openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem

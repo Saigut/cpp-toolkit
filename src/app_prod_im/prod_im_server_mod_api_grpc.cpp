@@ -1,4 +1,4 @@
-#include "prod_im_server_mod_grpc_api.hpp"
+#include "prod_im_server_mod_api_grpc.hpp"
 
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
@@ -16,7 +16,7 @@ using prod_im_server::prod_im_server_service;
 extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
 
 
-::grpc::Status prod_im_server_grpc_api::user_register(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::user_register(::grpc::ServerContext* context,
                                                       const ::prod_im_server::user_register_req* request,
                                                       ::prod_im_server::user_register_res* response)
 {
@@ -25,7 +25,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::login(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::login(::grpc::ServerContext* context,
                                               const ::prod_im_server::login_req* request,
                                               ::prod_im_server::login_res* response) {
     const auto& peer_addr = context->peer();
@@ -43,7 +43,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::get_contact_list(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::get_contact_list(::grpc::ServerContext* context,
                                                          const ::prod_im_server::get_contact_list_req* request,
                                                          ::prod_im_server::get_contact_list_res* response) {
     auto rst = g_server_main->get_contact_list(request->user_id());
@@ -58,7 +58,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::add_contact(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::add_contact(::grpc::ServerContext* context,
                                                     const ::prod_im_server::add_contact_req* request,
                                                     ::prod_im_server::add_contact_res* response) {
     response->set_result(
@@ -66,7 +66,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::del_contact(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::del_contact(::grpc::ServerContext* context,
                                                     const ::prod_im_server::del_contact_req* request,
                                                     ::prod_im_server::del_contact_res* response)
 {
@@ -74,7 +74,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::client_send_chat_msg(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::client_send_chat_msg(::grpc::ServerContext* context,
                                                              const ::prod_im_server::send_chat_msg_req* request,
                                                              ::prod_im_server::send_chat_msg_res* response) {
     g_server_main->client_send_chat_msg(request->sender_id(),
@@ -84,7 +84,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-::grpc::Status prod_im_server_grpc_api::client_get_chat_msg(::grpc::ServerContext* context,
+::grpc::Status prod_im_server_api_grpc::client_get_chat_msg(::grpc::ServerContext* context,
                                                             const prod_im_server::get_chat_msg_req* request,
                                                             prod_im_server::get_chat_msg_res* response)
 {
@@ -104,7 +104,7 @@ extern std::shared_ptr<prod_im_s_mod_main> g_server_main;
     return Status::OK;
 }
 
-int prod_im_server_grpc_api::run()
+int prod_im_server_api_grpc::run()
 {
     std::string server_address("0.0.0.0:60100");
 
