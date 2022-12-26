@@ -173,37 +173,9 @@ static void asio_thread(io_context& io_ctx)
 
 void cppt_co_main_run()
 {
-    auto dequeue_handler =
-            [](cppt_co_exec_queue_ele_t& cur_co)
-    {
-        g_cur_co = cur_co;
-        auto co_wrapper = g_cur_co.m_co_wrapper;
-        if (!co_wrapper->m_co_started) {
-            co_wrapper->m_co_started = true;
-            *co_wrapper->m_c = std::move(co_wrapper->start_user_co());
-        } else if (*co_wrapper->m_c) {
-            if (g_cur_co.m_f_before_execution) {
-                g_cur_co.m_f_before_execution();
-                g_cur_co.m_f_before_execution = nullptr;
-            }
-            *co_wrapper->m_c = std::move(co_wrapper->m_c->resume());
-        } else {
-            delete g_cur_co.m_co_wrapper;
-            g_cur_co.m_co_wrapper = nullptr;
-            return g_run_flag;
-        }
-        if (g_cur_co.m_f_after_execution) {
-            g_cur_co.m_f_after_execution(g_cur_co.m_co_wrapper);
-            g_cur_co.m_f_after_execution = nullptr;
-        } else {
-            delete g_cur_co.m_co_wrapper;
-            g_cur_co.m_co_wrapper = nullptr;
-        }
-        return g_run_flag;
-    };
-
     std::mutex cond_lock;
     std::condition_variable cond_cv;
+
     auto notify_handler =
             [&]()
     {
@@ -221,15 +193,38 @@ void cppt_co_main_run()
         return g_run_flag;
     };
 
-    g_co_exec_queue.set_handlers(
-            dequeue_handler, notify_handler,wait_handler);
+    g_co_exec_queue.set_handlers(notify_handler,wait_handler);
 
     std::thread asio_thr{ asio_thread, std::ref(g_io_ctx) };
     asio_thr.detach();
 
     init_awaitable_id_queue();
-
-    g_co_exec_queue.do_dequeue_wait();
+    while (g_run_flag) {
+        if (g_co_exec_queue.dequeue(g_cur_co)) {
+            auto co_wrapper = g_cur_co.m_co_wrapper;
+            if (!co_wrapper->m_co_started) {
+                co_wrapper->m_co_started = true;
+                *co_wrapper->m_c = std::move(co_wrapper->start_user_co());
+            } else if (*co_wrapper->m_c) {
+                if (g_cur_co.m_f_before_execution) {
+                    g_cur_co.m_f_before_execution();
+                    g_cur_co.m_f_before_execution = nullptr;
+                }
+                *co_wrapper->m_c = std::move(co_wrapper->m_c->resume());
+            } else {
+                delete g_cur_co.m_co_wrapper;
+                g_cur_co.m_co_wrapper = nullptr;
+                continue;
+            }
+            if (g_cur_co.m_f_after_execution) {
+                g_cur_co.m_f_after_execution(g_cur_co.m_co_wrapper);
+                g_cur_co.m_f_after_execution = nullptr;
+            } else {
+                delete g_cur_co.m_co_wrapper;
+                g_cur_co.m_co_wrapper = nullptr;
+            }
+        }
+    }
 }
 
 // ret: 0, ok; -1 coroutine error
