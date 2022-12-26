@@ -1,7 +1,7 @@
 # C++ Toolkit
 Here put some cross-platform tools for convenience of C++ development. And also as a good sample for building C++ project.
 
-# Dependency
+## Dependency
 1. Install conan package manager
 2. Adjust installation location of conan packages
     ```shell
@@ -10,17 +10,17 @@ Here put some cross-platform tools for convenience of C++ development. And also 
     # change
     conan config set storage.path=<your path>
     ```
-3. Install dependency packages. Execute:
-    ```shell
-    apt-get install pythonX.X-dev   # For boost. This can be skipped.
-    mkdir build
-    cd build
-    conan install ../z_other/conanfile.txt
-    ```
 
-# Build
+## Build
 ```shell
+mkdir build
 cd build
 cmake ..
 cmake --build . --parallel
 ```
+**Caution:** `conan install` maybe failed when `cmake ..` running, causing by compiler settings. Then you can refer to below settings for conan config file (eg: `~/.conan/profiles/default`, `[settings]` section, with gcc 9 and using c++11 ABI)
+   ```
+   compiler=gcc
+   compiler.version=9
+   compiler.libcxx=libstdc++11
+   ```
