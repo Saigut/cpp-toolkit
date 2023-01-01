@@ -1,3 +1,7 @@
+*.bak
+*.bak.*
+*.o
+
 .idea/
 .DS_Store
 cmake-build-*

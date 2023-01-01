@@ -1,8 +1,9 @@
 [requires]
 json-c/0.16
 openssl/1.1.1s
+zlib/1.2.13
 grpc/1.48.0
-boost/1.80.0
+boost/1.81.0
 ftxui/3.0.0
 cpp-httplib/0.11.2
 nlohmann_json/3.11.2
