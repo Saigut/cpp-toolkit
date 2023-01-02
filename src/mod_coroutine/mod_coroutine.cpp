@@ -16,27 +16,14 @@
 namespace context = boost::context;
 using boost::asio::io_context;
 
-class cppt_co_wrapper {
-public:
-    explicit cppt_co_wrapper(std::function<void()> user_co)
-            : m_c(std::make_shared<context::continuation>()),
-              m_user_co(std::move(user_co)) {}
-    explicit cppt_co_wrapper(std::shared_ptr<context::continuation> c)
-            : m_c(c), m_co_started(true) {}
-    virtual context::continuation start_user_co();
-    std::shared_ptr<context::continuation> m_c;
-//protected:
-    std::function<void()> m_user_co;
-    bool m_co_started = false;
-};
 
-class cppt_co_wrapper_awaitable : public cppt_co_wrapper {
+class cppt_co_wrapper_awaitable : public cppt_co_t {
 public:
     explicit cppt_co_wrapper_awaitable(std::function<void()> user_co, uint32_t co_id)
-            : cppt_co_wrapper(std::move(user_co)), m_co_id(co_id) {}
+            : cppt_co_t(std::move(user_co)), m_co_id(co_id) {}
     explicit cppt_co_wrapper_awaitable(std::shared_ptr<context::continuation> c,
                                        uint32_t co_id)
-            : cppt_co_wrapper(c), m_co_id(co_id) {}
+            : cppt_co_t(c), m_co_id(co_id) {}
     context::continuation start_user_co() override;
 private:
     uint32_t m_co_id;
@@ -44,9 +31,9 @@ private:
 
 class cppt_co_exec_queue_ele_t {
 public:
-    cppt_co_wrapper* m_co_wrapper = nullptr;
+    cppt_co_sp_t m_co_wrapper = nullptr;
     std::function<void()> m_f_before_execution = nullptr;
-    std::function<void(cppt_co_wrapper*)> m_f_after_execution = nullptr;
+    std::function<void(cppt_co_sp_t)> m_f_after_execution = nullptr;
 };
 
 using cppt_co_queue_t = atomic_queue::AtomicQueue2<cppt_co_exec_queue_ele_t, 65535>;
@@ -71,37 +58,15 @@ static void init_awaitable_id_queue()
         g_awaitable_id_queue.push(i);
     }
 }
-void cppt_co_add_c(context::continuation&& c)
-{
-    auto new_co = new cppt_co_wrapper(
-            std::make_shared<context::continuation>(std::move(c)));
-    cppt_co_exec_queue_ele_t ele;
-    ele.m_co_wrapper = new_co;
-    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
-        log_error("g_co_exec_queue full!");
-        delete new_co;
-    }
-}
-void cppt_co_add_c_sptr(std::shared_ptr<context::continuation> c)
-{
-    auto new_co = new cppt_co_wrapper(c);
-    cppt_co_exec_queue_ele_t ele;
-    ele.m_co_wrapper = new_co;
-    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
-        log_error("g_co_exec_queue full!");
-        delete new_co;
-    }
-}
-static void cppt_co_add_sptr(cppt_co_wrapper* wrapper)
+static void cppt_co_add_sptr(cppt_co_sp_t wrapper)
 {
     cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = wrapper;
     if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
-        delete wrapper;
     }
 }
-static void cppt_co_add_sptr_f_before(cppt_co_wrapper* wrapper,
+static void cppt_co_add_sptr_f_before(cppt_co_sp_t wrapper,
                                       std::function<void()>& f_before)
 {
     cppt_co_exec_queue_ele_t ele;
@@ -109,12 +74,11 @@ static void cppt_co_add_sptr_f_before(cppt_co_wrapper* wrapper,
     ele.m_f_before_execution = f_before;
     if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
         log_error("g_co_exec_queue full!");
-        delete wrapper;
     }
 }
 
 // Type implementation
-context::continuation cppt_co_wrapper::start_user_co()
+context::continuation cppt_co_t::start_user_co()
 {
     return context::callcc([&](context::continuation && c) {
         g_cppt_co_c = std::move(c);
@@ -143,11 +107,13 @@ context::continuation cppt_co_wrapper_awaitable::start_user_co()
 
 
 // Interfaces
-void cppt_co_create0(std::function<void()> user_co)
+cppt_co_sp_t cppt_co_create0(std::function<void()> user_co)
 {
     cppt_co_exec_queue_ele_t ele;
-    ele.m_co_wrapper = new cppt_co_wrapper(std::move(user_co));
+    auto co_wrapper = std::make_shared<cppt_co_t>(std::move(user_co));
+    ele.m_co_wrapper = co_wrapper;
     g_co_exec_queue.enqueue(std::move(ele));
+    return co_wrapper;
 }
 
 unsigned int cppt_co_awaitable_create0(std::function<void()> user_co)
@@ -212,7 +178,6 @@ void cppt_co_main_run()
                 }
                 *co_wrapper->m_c = std::move(co_wrapper->m_c->resume());
             } else {
-                delete g_cur_co.m_co_wrapper;
                 g_cur_co.m_co_wrapper = nullptr;
                 continue;
             }
@@ -220,7 +185,6 @@ void cppt_co_main_run()
                 g_cur_co.m_f_after_execution(g_cur_co.m_co_wrapper);
                 g_cur_co.m_f_after_execution = nullptr;
             } else {
-                delete g_cur_co.m_co_wrapper;
                 g_cur_co.m_co_wrapper = nullptr;
             }
         }
@@ -234,7 +198,7 @@ int cppt_co_yield(
     if (!g_cppt_co_c) {
         return -1;
     }
-    auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
+    auto wrap_func = [&](cppt_co_sp_t co_wapper) {
         wrapped_extern_func([co_wapper](){
             /// Fixme: how to do when executing queue is full?
             cppt_co_add_sptr(co_wapper);
@@ -258,7 +222,7 @@ int cppt_co_yield_timeout(
 
     boost::asio::deadline_timer timer{ g_io_ctx };
 
-    auto wrap_func = [&](cppt_co_wrapper* co_wapper) {
+    auto wrap_func = [&](cppt_co_sp_t co_wapper) {
         wrapped_extern_func([&, co_wapper](){
             std::function<void()> f_before = [&](){
                 // stop timer

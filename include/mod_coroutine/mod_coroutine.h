@@ -4,29 +4,48 @@
 #include <functional>
 #include <mod_common/utils.h>
 #include <boost/context/continuation.hpp>
+#include <mod_atomic_queue/atomic_queue.h>
 
-extern thread_local boost::context::continuation g_cppt_co_c;
+using cppt_co_wait_queue_t = atomic_queue::AtomicQueue2<boost::context::continuation, 100>;
 
-void cppt_co_create0(std::function<void()> user_co);
+class cppt_co_t {
+public:
+    explicit cppt_co_t(std::function<void()> user_co)
+            : m_c(std::make_shared<boost::context::continuation>()),
+              m_user_co(std::move(user_co)) {}
+    explicit cppt_co_t(std::shared_ptr<boost::context::continuation> c)
+            : m_c(c), m_co_started(true) {}
+    virtual boost::context::continuation start_user_co();
+    std::shared_ptr<boost::context::continuation> m_c;
+//protected:
+    std::function<void()> m_user_co;
+    bool m_co_started = false;
+
+    cppt_co_wait_queue_t m_wait_cos;
+};
+using cppt_co_sp_t = std::shared_ptr<cppt_co_t>;
+
+
+cppt_co_sp_t cppt_co_create0(std::function<void()> user_co);
 
 template<typename Function, typename... Args>
-void cppt_co_create(Function& f, Args... args)
+cppt_co_sp_t cppt_co_create(Function& f, Args... args)
 {
     auto params = std::make_tuple(std::forward<Args>(args)...);
     auto user_co = [=](){
         call_with_variadic_arg(f, params);
     };
-    cppt_co_create0(std::move(user_co));
+    return cppt_co_create0(std::move(user_co));
 }
 
 template<typename Function, typename... Args>
-void cppt_co_create(Function&& f, Args... args)
+cppt_co_sp_t cppt_co_create(Function&& f, Args... args)
 {
     auto params = std::make_tuple(std::forward<Args>(args)...);
     auto user_co = [=](){
         call_with_variadic_arg(f, params);
     };
-    cppt_co_create0(std::move(user_co));
+    return cppt_co_create0(std::move(user_co));
 }
 
 unsigned int cppt_co_awaitable_create0(std::function<void()> user_co);
@@ -52,7 +71,5 @@ int cppt_co_yield_timeout(
         unsigned int timeout_ms,
         std::function<void()>& f_cancel_operation);
 void cppt_co_await(unsigned int co_id);
-
-void cppt_co_add_c(boost::context::continuation&& c);
 
 #endif //CPP_TOOLKIT_MOD_COROUTINE_H

@@ -475,95 +475,95 @@ static void reset_log_record(log_record& log)
 
 const int switch_num = 100000;
 
-void cppt_co0()
-{
-    namespace context = boost::context;
-    log_record logs;
-    int i;
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine just switch 1 time");
-    for (i = 0; i < 1; i++) {
-        logs.t1 = util_now_ts_ns();
-        g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
-            logs.t2 = util_now_ts_ns();
-            cppt_co_add_c(std::move(c));
-            logs.t3 = util_now_ts_ns();
-            return std::move(g_cppt_co_c);
-        });
-        logs.t4 = util_now_ts_ns();
-        logs.t5 = util_now_ts_ns();
-    }
-    print_log_record_ns(logs);
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine 1 1time");
-    for (i = 0; i < 1; i++) {
-        logs.t1 = util_now_ts_ns();
-        auto wrap_func = [&logs](std::function<void()>&& co_cb) {
-            logs.t3 = util_now_ts_ns();
-            co_cb();
-            logs.t4 = util_now_ts_ns();
-        };
-        logs.t2 = util_now_ts_ns();
-        cppt_co_yield(wrap_func);
-        logs.t5 = util_now_ts_ns();
-    }
-    print_log_record_ns(logs);
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine just switch init");
-    logs.t1 = util_now_ts_us();
-    for (i = 0; i < switch_num; i++) {
-        g_cppt_co_c = context::callcc([](context::continuation && c) {
-            cppt_co_add_c(std::move(c));
-            return std::move(g_cppt_co_c);
-        });
-    }
-    logs.t2 = util_now_ts_us();
-    print_log_record(logs);
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine 1");
-    logs.t1 = util_now_ts_us();
-    for (i = 0; i < switch_num; i++) {
-        auto wrap_func = [](std::function<void()>&& co_cb) {
-            co_cb();
-        };
-        cppt_co_yield(wrap_func);
-    }
-    logs.t2 = util_now_ts_us();
-    print_log_record(logs);
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine 2");
-    logs.t1 = util_now_ts_us();
-    auto wrap_func = [&](std::function<void()>&& co_cb) {
-        co_cb();
-    };
-    for (i = 0; i < switch_num; i++) {
-        cppt_co_yield(wrap_func);
-    }
-    logs.t2 = util_now_ts_us();
-    print_log_record(logs);
-
-    reset_log_record(logs);
-    log_info("test cppt coroutine 3");
-    logs.t1 = util_now_ts_us();
-    auto wrap_func3 = [](std::function<void()>&& co_cb) {
-        co_cb();
-    };
-    for (i = 0; i < switch_num; i++) {
-        cppt_co_yield(wrap_func3);
-    }
-    logs.t2 = util_now_ts_us();
-    print_log_record(logs);
-}
+//void cppt_co0()
+//{
+//    namespace context = boost::context;
+//    log_record logs;
+//    int i;
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine just switch 1 time");
+//    for (i = 0; i < 1; i++) {
+//        logs.t1 = util_now_ts_ns();
+//        g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
+//            logs.t2 = util_now_ts_ns();
+//            cppt_co_add_c(std::move(c));
+//            logs.t3 = util_now_ts_ns();
+//            return std::move(g_cppt_co_c);
+//        });
+//        logs.t4 = util_now_ts_ns();
+//        logs.t5 = util_now_ts_ns();
+//    }
+//    print_log_record_ns(logs);
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine 1 1time");
+//    for (i = 0; i < 1; i++) {
+//        logs.t1 = util_now_ts_ns();
+//        auto wrap_func = [&logs](std::function<void()>&& co_cb) {
+//            logs.t3 = util_now_ts_ns();
+//            co_cb();
+//            logs.t4 = util_now_ts_ns();
+//        };
+//        logs.t2 = util_now_ts_ns();
+//        cppt_co_yield(wrap_func);
+//        logs.t5 = util_now_ts_ns();
+//    }
+//    print_log_record_ns(logs);
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine just switch init");
+//    logs.t1 = util_now_ts_us();
+//    for (i = 0; i < switch_num; i++) {
+//        g_cppt_co_c = context::callcc([](context::continuation && c) {
+//            cppt_co_add_c(std::move(c));
+//            return std::move(g_cppt_co_c);
+//        });
+//    }
+//    logs.t2 = util_now_ts_us();
+//    print_log_record(logs);
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine 1");
+//    logs.t1 = util_now_ts_us();
+//    for (i = 0; i < switch_num; i++) {
+//        auto wrap_func = [](std::function<void()>&& co_cb) {
+//            co_cb();
+//        };
+//        cppt_co_yield(wrap_func);
+//    }
+//    logs.t2 = util_now_ts_us();
+//    print_log_record(logs);
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine 2");
+//    logs.t1 = util_now_ts_us();
+//    auto wrap_func = [&](std::function<void()>&& co_cb) {
+//        co_cb();
+//    };
+//    for (i = 0; i < switch_num; i++) {
+//        cppt_co_yield(wrap_func);
+//    }
+//    logs.t2 = util_now_ts_us();
+//    print_log_record(logs);
+//
+//    reset_log_record(logs);
+//    log_info("test cppt coroutine 3");
+//    logs.t1 = util_now_ts_us();
+//    auto wrap_func3 = [](std::function<void()>&& co_cb) {
+//        co_cb();
+//    };
+//    for (i = 0; i < switch_num; i++) {
+//        cppt_co_yield(wrap_func3);
+//    }
+//    logs.t2 = util_now_ts_us();
+//    print_log_record(logs);
+//}
 
 static void test_cppt_co()
 {
-    cppt_co_create(cppt_co0);
-    cppt_co_main_run();
+//    cppt_co_create(cppt_co0);
+//    cppt_co_main_run();
 }
 
 template< std::size_t Max, std::size_t Default, std::size_t Min >
