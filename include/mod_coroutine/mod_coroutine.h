@@ -6,7 +6,8 @@
 #include <boost/context/continuation.hpp>
 #include <mod_atomic_queue/atomic_queue.h>
 
-using cppt_co_wait_queue_t = atomic_queue::AtomicQueue2<boost::context::continuation, 100>;
+using cppt_co_c_sp_t = std::shared_ptr<boost::context::continuation>;
+using cppt_co_wait_queue_t = atomic_queue::AtomicQueue2<cppt_co_c_sp_t, 100>;
 
 class cppt_co_t {
 public:
@@ -16,11 +17,14 @@ public:
     explicit cppt_co_t(std::shared_ptr<boost::context::continuation> c)
             : m_c(c), m_co_started(true) {}
     virtual boost::context::continuation start_user_co();
-    std::shared_ptr<boost::context::continuation> m_c;
+    void await_co();
+    cppt_co_c_sp_t m_c;
 //protected:
     std::function<void()> m_user_co;
     bool m_co_started = false;
 
+private:
+    std::atomic<bool> m_co_stopped = false;
     cppt_co_wait_queue_t m_wait_cos;
 };
 using cppt_co_sp_t = std::shared_ptr<cppt_co_t>;

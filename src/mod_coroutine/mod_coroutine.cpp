@@ -58,7 +58,16 @@ static void init_awaitable_id_queue()
         g_awaitable_id_queue.push(i);
     }
 }
-static void cppt_co_add_sptr(cppt_co_sp_t wrapper)
+void cppt_co_add_c_ptr(cppt_co_c_sp_t cc)
+{
+    auto new_co = std::make_shared<cppt_co_t>(cc);
+    cppt_co_exec_queue_ele_t ele;
+    ele.m_co_wrapper = new_co;
+    if (!g_co_exec_queue.try_enqueue(std::move(ele))) {
+        log_error("g_co_exec_queue full!");
+    }
+}
+static void cppt_co_add_ptr(cppt_co_sp_t wrapper)
 {
     cppt_co_exec_queue_ele_t ele;
     ele.m_co_wrapper = wrapper;
@@ -83,6 +92,34 @@ context::continuation cppt_co_t::start_user_co()
     return context::callcc([&](context::continuation && c) {
         g_cppt_co_c = std::move(c);
         m_user_co();
+        cppt_co_c_sp_t waiting_c;
+        m_co_stopped = true;
+        while (m_wait_cos.try_pop(waiting_c)) {
+            if (*waiting_c) {
+                cppt_co_add_c_ptr(waiting_c);
+            }
+        }
+        return std::move(g_cppt_co_c);
+    });
+}
+
+void cppt_co_t::await_co()
+{
+    if (m_co_stopped) {
+        return;
+    }
+    context::callcc([&](context::continuation && c) {
+        auto caller_c = std::make_shared<context::continuation>(std::move(c));
+        if (!m_wait_cos.try_push(caller_c)) {
+            /// Fixme: how to do then queue is full?
+            log_error("m_wait_cos queue is full!!!");
+            return std::move(g_cppt_co_c);
+        }
+        if (m_co_stopped) {
+            if (*caller_c) {
+                return std::move(*caller_c);
+            }
+        }
         return std::move(g_cppt_co_c);
     });
 }
@@ -201,7 +238,7 @@ int cppt_co_yield(
     auto wrap_func = [&](cppt_co_sp_t co_wapper) {
         wrapped_extern_func([co_wapper](){
             /// Fixme: how to do when executing queue is full?
-            cppt_co_add_sptr(co_wapper);
+            cppt_co_add_ptr(co_wapper);
         });
     };
     g_cur_co.m_f_after_execution = wrap_func;
