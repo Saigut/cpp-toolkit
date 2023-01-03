@@ -1,6 +1,6 @@
 
-set(V_program_name test_ftxui)
-add_executable(${V_program_name} exec_test_ftxui.cpp)
+set(V_program_name test)
+add_executable(${V_program_name} exec_test.cpp)
 set(V_dep_libs ${CONAN_LIBS})
 list(FILTER V_dep_libs EXCLUDE REGEX "boost")
 

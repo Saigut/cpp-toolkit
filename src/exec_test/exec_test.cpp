@@ -255,16 +255,23 @@ static int test_box(int argc, const char* argv[])
     return EXIT_SUCCESS;
 }
 
+static int test_co(int argc, const char* argv[])
+{
+
+    return 0;
+}
+
 static int program_main(int argc, const char* argv[])
 {
     int ret = -1;
 //    ret = test_box(argc, argv);
 //    ret = test_pixel(argc, argv);
 //    ret = test_input(argc, argv);
-    ret = test_input2(argc, argv);
+//    ret = test_input2(argc, argv);
 //    ret = test_html_like(argc, argv);
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
+    ret = test_co(argc, argv);
     return ret;
 }
 
