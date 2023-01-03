@@ -26,8 +26,6 @@ public:
 
 // Values
 thread_local context::continuation g_cppt_co_c;
-thread_local std::map<uint32_t, std::function<void()>> g_co_awaitable_map;
-thread_local std::queue<uint32_t> g_awaitable_id_queue;
 thread_local cppt_co_exec_queue_ele_t g_cur_co;
 np_queue_t<cppt_co_exec_queue_ele_t> g_co_exec_queue;
 bool g_run_flag = true;
@@ -36,13 +34,6 @@ io_context g_io_ctx;
 
 
 // Helpers
-static void init_awaitable_id_queue()
-{
-    int i;
-    for (i = 0; i < 65536; i++) {
-        g_awaitable_id_queue.push(i);
-    }
-}
 void cppt_co_add_c_ptr(cppt_co_c_sp c)
 {
     auto new_co = std::make_shared<cppt_co_t>(c);
@@ -175,7 +166,6 @@ void cppt_co_main_run()
     std::thread asio_thr{ asio_thread, std::ref(g_io_ctx) };
     asio_thr.detach();
 
-    init_awaitable_id_queue();
     while (g_run_flag) {
         if (g_co_exec_queue.dequeue(g_cur_co)) {
             auto co_wrapper = g_cur_co.m_co_wrapper;
