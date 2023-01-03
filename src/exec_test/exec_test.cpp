@@ -1,4 +1,5 @@
 #include <iostream>
+#include <mod_coroutine/mod_coroutine.h>
 
 #include "ftxui/component/captured_mouse.hpp"  // for ftxui
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
@@ -255,9 +256,67 @@ static int test_box(int argc, const char* argv[])
     return EXIT_SUCCESS;
 }
 
-static int test_co(int argc, const char* argv[])
-{
+void async_sleep_thread(unsigned ts_us, std::function<void(int result)>&& cb) {
+    cppt_usleep(ts_us);
+    cb(rand() % ts_us);
+}
 
+void async_sleep(unsigned ts_us, std::function<void(int result)> cb)
+{
+    std::thread t(async_sleep_thread, ts_us, std::move(cb));
+    t.detach();
+}
+
+int co_sleep(unsigned ts_us)
+{
+    int sleep_result;
+    auto wrap_func = [&](std::function<void()>&& co_cb) {
+        auto async_sleep_cb = [&, co_cb](int result) {
+            sleep_result = result;
+            co_cb();
+        };
+        async_sleep(ts_us, async_sleep_cb);
+    };
+    cppt_co_yield(wrap_func);
+    return sleep_result;
+}
+
+void my_co1()
+{
+    log_info("1");
+    log_info("result: %d", co_sleep(111));
+    log_info("2");
+    log_info("result: %d", co_sleep(222));
+    log_info("3");
+}
+
+void my_co2(int n, cppt_co_sp wait_co)
+{
+    wait_co->join();
+    log_info("11: %d", n);
+    log_info("result: %d", co_sleep(333));
+    log_info("22");
+    log_info("result: %d", co_sleep(444));
+    log_info("33");
+}
+
+void my_co0()
+{
+    auto co1 = cppt_co_create(my_co1);
+    cppt_co_create(my_co2, 3, co1);
+    co1->join();
+    co1->join();
+    co1->join();
+    co_sleep(333);
+    co1->join();
+    co1->join();
+    co1->join();
+}
+
+static int test_cppt_co(int argc, const char* argv[])
+{
+    cppt_co_create(my_co0);
+    cppt_co_main_run();
     return 0;
 }
 
@@ -271,7 +330,7 @@ static int program_main(int argc, const char* argv[])
 //    ret = test_html_like(argc, argv);
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
-    ret = test_co(argc, argv);
+    ret = test_cppt_co(argc, argv);
     return ret;
 }
 

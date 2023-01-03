@@ -156,8 +156,8 @@ void my_co2(int n)
 
 void my_co0()
 {
-    auto id = cppt_co_awaitable_create(my_co1);
-    cppt_co_await(id);
+    auto co1 = cppt_co_create(my_co1);
+    co1->join();
     cppt_co_create(my_co2, 3);
 }
 
