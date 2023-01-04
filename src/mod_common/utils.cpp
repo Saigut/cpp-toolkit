@@ -22,7 +22,7 @@
 int util_bind_thread_to_core(unsigned int core_id)
 {
 #if defined(_WIN32)
-    if (0 == SetThreadAffinityMask(GetCurrentThread(), 1 << core_id)) {
+    if (0 == SetThreadAffinityMask(GetCurrentThread(), 0x1 << core_id)) {
         return -1;
     } else {
         return 0;
