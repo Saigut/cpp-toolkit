@@ -25,7 +25,8 @@ public:
 
 
 // Values
-static std::vector<np_queue_t<cppt_task_t>> g_task_queues(1);
+#define CO_MAX_QUEUE_NUM 256
+static std::vector<np_queue_t<cppt_task_t>> g_task_queues(CO_MAX_QUEUE_NUM);
 static thread_local unsigned tq_idx = 0;
 static thread_local context::continuation g_executor_c;
 static thread_local cppt_task_t g_cur_task_c;
@@ -203,7 +204,6 @@ static void cppt_co_main_run_thread(unsigned core_idx)
             }
         }
     }
-    log_info("Thread %s quit.", thr_name);
 }
 
 void cppt_co_main_run()
@@ -216,6 +216,8 @@ void cppt_co_main_run()
     auto core_num = std::thread::hardware_concurrency();
     if (0 == core_num) {
         gs_core_num = 1;
+    } else if (core_num > CO_MAX_QUEUE_NUM) {
+        gs_core_num = CO_MAX_QUEUE_NUM;
     } else {
         gs_core_num = core_num;
     }
