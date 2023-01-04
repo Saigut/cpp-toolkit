@@ -313,9 +313,40 @@ void my_co0()
     co1->join();
 }
 
+uint64_t fib(uint64_t n)
+{
+    if (n <= 1)
+        return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+void cal_co()
+{
+    uint64_t n = 32;
+    auto begin_ts_ms = util_now_ts_ms();
+    uint64_t rst = fib(n);
+    auto end_ts_ms = util_now_ts_ms();
+    auto time_diff = end_ts_ms - begin_ts_ms;
+    printf("fib %" PRIu64 ": %" PRIu64 "\n", n, rst);
+    printf("time consume: %" PRIu64 "s%" PRIu64 "ms\n",
+           time_diff / 1000, time_diff % 1000);
+}
+
+void cal_co_main()
+{
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+    cppt_co_create(cal_co);
+}
+
 static int test_cppt_co(int argc, const char* argv[])
 {
-    cppt_co_create(my_co0);
+//    cppt_co_create(my_co0);
+    cppt_co_create(cal_co_main);
     cppt_co_main_run();
     return 0;
 }

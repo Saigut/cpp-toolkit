@@ -14,7 +14,7 @@ public:
     explicit cppt_co_t(std::function<void()> user_co)
             : m_c(std::make_shared<boost::context::continuation>()),
               m_user_co(std::move(user_co)) {}
-    explicit cppt_co_t(std::shared_ptr<boost::context::continuation> c)
+    explicit cppt_co_t(cppt_co_c_sp c)
             : m_c(c), m_co_started(true) {}
 
     bool is_started();

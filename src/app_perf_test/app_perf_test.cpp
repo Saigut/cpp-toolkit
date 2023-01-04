@@ -485,11 +485,11 @@ const int switch_num = 100000;
 //    log_info("test cppt coroutine just switch 1 time");
 //    for (i = 0; i < 1; i++) {
 //        logs.t1 = util_now_ts_ns();
-//        g_cppt_co_c = context::callcc([&logs](context::continuation && c) {
+//        g_executor_c = context::callcc([&logs](context::continuation && c) {
 //            logs.t2 = util_now_ts_ns();
 //            cppt_co_add_c(std::move(c));
 //            logs.t3 = util_now_ts_ns();
-//            return std::move(g_cppt_co_c);
+//            return std::move(g_executor_c);
 //        });
 //        logs.t4 = util_now_ts_ns();
 //        logs.t5 = util_now_ts_ns();
@@ -515,9 +515,9 @@ const int switch_num = 100000;
 //    log_info("test cppt coroutine just switch init");
 //    logs.t1 = util_now_ts_us();
 //    for (i = 0; i < switch_num; i++) {
-//        g_cppt_co_c = context::callcc([](context::continuation && c) {
+//        g_executor_c = context::callcc([](context::continuation && c) {
 //            cppt_co_add_c(std::move(c));
-//            return std::move(g_cppt_co_c);
+//            return std::move(g_executor_c);
 //        });
 //    }
 //    logs.t2 = util_now_ts_us();
