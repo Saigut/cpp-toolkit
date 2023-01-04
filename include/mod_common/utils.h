@@ -11,6 +11,7 @@
 
 
 int util_bind_thread_to_core(unsigned int core_id);
+void util_thread_set_self_name(std::string&& name);
 
 uint64_t util_now_ts_ms();
 uint64_t util_now_ts_us();

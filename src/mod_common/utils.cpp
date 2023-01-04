@@ -13,10 +13,15 @@
     #include <sys/time.h>
 #endif
 
+#ifdef __APPLE__
+    #include <mach/thread_policy.h>
+    #include <mach/thread_act.h>
+#endif
+
 
 int util_bind_thread_to_core(unsigned int core_id)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (0 == SetThreadAffinityMask(GetCurrentThread(), 1 << core_id)) {
         return -1;
     } else {
@@ -35,8 +40,27 @@ int util_bind_thread_to_core(unsigned int core_id)
     } else {
         return 0;
     }
+#elif defined(__APPLE__)
+    thread_affinity_policy_data_t policy_data = { (int)core_id + 1 };
+    thread_policy_set(pthread_mach_thread_np(pthread_self()),
+                      THREAD_AFFINITY_POLICY,
+                      (thread_policy_t)&policy_data,
+                      THREAD_AFFINITY_POLICY_COUNT);
+    return -1;
 #else
     return -1;
+#endif
+}
+
+void util_thread_set_self_name(std::string&& name)
+{
+#if defined(_WIN32)
+    SetThreadDescription(GetCurrentThread(), name.c_str());
+#elif defined(__linux__)
+    pthread_setname_np(pthread_self(), name.c_str());
+#elif defined(__APPLE__)
+    pthread_setname_np(name.c_str());
+#else
 #endif
 }
 
