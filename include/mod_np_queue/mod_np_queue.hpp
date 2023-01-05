@@ -22,8 +22,8 @@ public:
         m_notify_handler = std::move(other.m_notify_handler);
         m_waiting_handler = std::move(other.m_waiting_handler);
         ELE_T tmp_ele;
-        while (other.m_queue.template try_pop(tmp_ele)) {
-            m_queue.template try_push(tmp_ele);
+        while (other.m_queue.try_pop(tmp_ele)) {
+            m_queue.try_push(tmp_ele);
         }
     }
     void set_handlers(std::function<void()>&& notify_handler,

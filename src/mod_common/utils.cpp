@@ -91,6 +91,11 @@ void util_printf_buf(uint8_t* buf, size_t size)
     printf("\n");
 }
 
+void cppt_sleep(unsigned ts_s)
+{
+    std::this_thread::sleep_for(std::chrono::seconds(ts_s));
+}
+
 void cppt_msleep(unsigned ts_ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ts_ms));

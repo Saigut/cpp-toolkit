@@ -234,6 +234,7 @@ private:
 };
 
 
+void cppt_sleep(unsigned ts_s);
 void cppt_msleep(unsigned ts_ms);
 void cppt_usleep(unsigned ts_us);
 void cppt_nanosleep(unsigned ts_ns);
