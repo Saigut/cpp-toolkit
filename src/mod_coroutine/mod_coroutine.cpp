@@ -153,7 +153,7 @@ cppt_co_sp cppt_co_create0(std::function<void()> user_co)
 
 static void asio_thread(io_context& io_ctx)
 {
-    util_thread_set_self_name("asio thr");
+    util_thread_set_self_name("co_asio");
     boost::asio::io_context::work io_work(io_ctx);
     io_ctx.run();
     log_info("Asio io context quit!!");
@@ -161,9 +161,9 @@ static void asio_thread(io_context& io_ctx)
 
 static void cppt_co_main_run_thread(unsigned core_idx)
 {
-    char thr_name[8];
+    char thr_name[16];
     util_bind_thread_to_core(core_idx);
-    snprintf(thr_name, sizeof(thr_name), "co%02u", core_idx);
+    snprintf(thr_name, sizeof(thr_name), "co_%02u", core_idx);
     util_thread_set_self_name(thr_name);
 
     tls_tq_idx = core_idx;
@@ -183,7 +183,7 @@ static void cppt_co_main_run_thread(unsigned core_idx)
     {
         {
             std::unique_lock<std::mutex> u_lock(cond_lock);
-            cond_cv.wait_for(u_lock, std::chrono::milliseconds (300));
+            cond_cv.wait_for(u_lock, std::chrono::milliseconds (500));
         }
         return g_run_flag;
     };
