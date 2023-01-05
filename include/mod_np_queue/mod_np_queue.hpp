@@ -6,21 +6,31 @@
 
 
 // Notify to polling queue。多写单读
-template <class eleT>
+template <class ELE_T, unsigned SIZE = 2048>
 class np_queue_t {
 private:
-    using np_queue_aq_t = atomic_queue::AtomicQueue2<eleT, 65535>;
+    using np_queue_aq_t = atomic_queue::AtomicQueue2<ELE_T, SIZE>;
 public:
     np_queue_t() = default;;
     np_queue_t(std::function<void()>&& notify_handler,
                std::function<bool()>&& waiting_handler)
                : m_notify_handler(notify_handler),
                  m_waiting_handler(waiting_handler) {}
+    np_queue_t(np_queue_t<ELE_T, SIZE>&& other) noexcept {
+        m_is_notify_mode.store(other.m_is_notify_mode);
+        m_notified.store(other.m_notified);
+        m_notify_handler = std::move(other.m_notify_handler);
+        m_waiting_handler = std::move(other.m_waiting_handler);
+        ELE_T tmp_ele;
+        while (other.m_queue.template try_pop(tmp_ele)) {
+            m_queue.template try_push(tmp_ele);
+        }
+    }
     void set_handlers(std::function<void()>&& notify_handler,
                       std::function<bool()>&& waiting_handler);
-    bool try_enqueue(eleT&& p);
-    bool enqueue(eleT&& p);
-    bool dequeue(eleT& p);
+    bool try_enqueue(ELE_T&& p);
+    bool enqueue(ELE_T&& p);
+    bool dequeue(ELE_T& p);
 
 private:
     int notify();
@@ -37,8 +47,8 @@ private:
     std::function<bool()> m_waiting_handler;
 };
 
-template <class eleT>
-void np_queue_t<eleT>::set_handlers(
+template <class ELE_T, unsigned SIZE>
+void np_queue_t<ELE_T, SIZE>::set_handlers(
         std::function<void()> &&notify_handler,
         std::function<bool()> &&waiting_handler)
 {
@@ -46,8 +56,8 @@ void np_queue_t<eleT>::set_handlers(
     m_waiting_handler = waiting_handler;
 }
 
-template <class eleT>
-int np_queue_t<eleT>::notify()
+template <class ELE_T, unsigned SIZE>
+int np_queue_t<ELE_T, SIZE>::notify()
 {
     // 检查模式。notify 模式则通知
     if (m_is_notify_mode) {
@@ -65,8 +75,8 @@ int np_queue_t<eleT>::notify()
     return 0;
 }
 
-template <class eleT>
-bool np_queue_t<eleT>::enqueue(eleT&& p)
+template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::enqueue(ELE_T&& p)
 {
     // 1. 写入
     m_queue.push(p);
@@ -77,8 +87,8 @@ bool np_queue_t<eleT>::enqueue(eleT&& p)
     return true;
 }
 
-template <class eleT>
-bool np_queue_t<eleT>::try_enqueue(eleT&& p)
+template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::try_enqueue(ELE_T&& p)
 {
     // 1. 写入
     if (!m_queue.try_push(p)) {
@@ -91,8 +101,8 @@ bool np_queue_t<eleT>::try_enqueue(eleT&& p)
     return true;
 }
 
-template<class eleT>
-bool np_queue_t<eleT>::dequeue(eleT& p)
+template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p)
 {
     if (m_queue.try_pop(p)) {
         return true;
