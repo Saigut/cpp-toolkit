@@ -322,7 +322,7 @@ uint64_t fib(uint64_t n)
 
 void cal_co()
 {
-    uint64_t n = 32;
+    uint64_t n = 46;
     auto begin_ts_ms = util_now_ts_ms();
     uint64_t rst = fib(n);
     auto end_ts_ms = util_now_ts_ms();
@@ -334,6 +334,7 @@ void cal_co()
 
 void cal_co_main()
 {
+    cppt_co_create(cal_co);
     cppt_co_create(cal_co);
     cppt_co_create(cal_co);
     cppt_co_create(cal_co);
