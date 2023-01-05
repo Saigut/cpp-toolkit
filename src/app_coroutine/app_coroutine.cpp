@@ -13,7 +13,7 @@ using boost::asio::io_context;
 
 static void asio_thread(io_context& io_ctx)
 {
-    util_bind_thread_to_core(2);
+    util_thread_set_self_name("app_asio");
     boost::asio::io_context::work io_work(io_ctx);
     io_ctx.run();
     log_info("Asio io context quit!!");
@@ -25,7 +25,7 @@ static void asio_pool_thread(io_context_pool& io_ctx_pool)
     log_info("Asio io context quit!!");
 }
 
-void my_co_net(io_context& io_ctx)
+static void my_co_net(io_context& io_ctx)
 {
     cppt_co_tcp_socket_builder builder(io_ctx);
     auto peer_socket = builder.connect("127.0.0.1", 80);
@@ -56,7 +56,7 @@ func_return:
     return;
 }
 
-void my_co_net_main(io_context& io_ctx)
+static void my_co_net_main(io_context& io_ctx)
 {
     for (int i = 0; i < 50; i++) {
         cppt_co_create(my_co_net, std::ref(io_ctx));
@@ -65,7 +65,7 @@ void my_co_net_main(io_context& io_ctx)
     }
 }
 
-void test_http_client()
+static void test_http_client()
 {
     io_context io_ctx;
     std::thread asio_thr{asio_thread, std::ref(io_ctx)};
@@ -101,17 +101,17 @@ struct request
     std::string content;
 };
 
-bool is_char(int c)
+static bool is_char(int c)
 {
     return c >= 0 && c <= 127;
 }
 
-bool is_ctl(int c)
+static bool is_ctl(int c)
 {
     return (c >= 0 && c <= 31) || (c == 127);
 }
 
-bool is_tspecial(int c)
+static bool is_tspecial(int c)
 {
     switch (c)
     {
@@ -125,17 +125,17 @@ bool is_tspecial(int c)
     }
 }
 
-bool is_digit(int c)
+static bool is_digit(int c)
 {
     return c >= '0' && c <= '9';
 }
 
-bool tolower_compare(char a, char b)
+static bool tolower_compare(char a, char b)
 {
     return std::tolower(a) == std::tolower(b);
 }
 
-bool headers_equal(const std::string& a, const std::string& b)
+static bool headers_equal(const std::string& a, const std::string& b)
 {
     if (a.length() != b.length())
         return false;
@@ -146,11 +146,23 @@ bool headers_equal(const std::string& a, const std::string& b)
 
 std::string content_length_name_ = "Content-Length";
 
-#define read_in_char() do { if (ph_read_pos < ph_data_size) {c = ph_recv_buf[ph_read_pos++]; } \
-else { ph_read_socket(); if ('\0' == c) { return -1; }} } while(false)
+#define read_in_char() \
+do { \
+    if (ph_read_pos < ph_data_size) { \
+        c = ph_recv_buf[ph_read_pos++]; \
+    } else { \
+        ph_read_socket(); \
+        if (0 == ph_data_size) { \
+            return -1; \
+        } \
+        if ('\0' == c) { \
+            return -1; \
+        } \
+    } \
+} while(false)
 
 // ret: 0 finished; -1 error; 1 no data;
-int consume_header(request& req, cppt_co_tcp_socket& tcp_socket)
+static int consume_header(request& req, cppt_co_tcp_socket& tcp_socket)
 {
     char c;
     size_t content_length_ = 0;
@@ -337,10 +349,9 @@ static void print_log_record(log_record& log)
 //    log_info("[t5,t6]: %" PRIu64 "us", get_ts_diff(log.t6, log.t5));
 }
 
-void co_http_server_process_request(cppt_co_tcp_socket* tcp_socket,
+static void co_http_server_process_request(cppt_co_tcp_socket* tcp_socket,
                                     log_record& logs)
 {
-
     int ret;
     while (true) {
         request req;
@@ -368,7 +379,7 @@ void co_http_server_process_request(cppt_co_tcp_socket* tcp_socket,
     }
 }
 
-void co_http_server_main(io_context& io_ctx)
+static void co_http_server_main(io_context& io_ctx)
 {
     log_record logs;
     cppt_co_tcp_socket_builder builder(io_ctx);
@@ -382,7 +393,7 @@ void co_http_server_main(io_context& io_ctx)
     }
 }
 
-void co_http_server_main2(io_context_pool& io_ctx_pool)
+static void co_http_server_main2(io_context_pool& io_ctx_pool)
 {
     log_record logs;
     cppt_co_tcp_socket_builder builder(io_ctx_pool.get_io_context());
@@ -397,19 +408,18 @@ void co_http_server_main2(io_context_pool& io_ctx_pool)
     }
 }
 
-void test_http_server()
+static void test_http_server()
 {
-//    io_context_pool io_ctx_pool{8};
-//    std::thread asio_pool_thr{asio_pool_thread, std::ref(io_ctx_pool)};
-//    asio_pool_thr.detach();
-//    cppt_co_create(co_http_server_main2, std::ref(io_ctx_pool));
+    io_context_pool io_ctx_pool{4};
+    std::thread asio_pool_thr{asio_pool_thread, std::ref(io_ctx_pool)};
+    asio_pool_thr.detach();
+    cppt_co_create(co_http_server_main2, std::ref(io_ctx_pool));
 
-    io_context io_ctx;
-    std::thread asio_thr{ asio_thread, std::ref(io_ctx) };
-    asio_thr.detach();
-    cppt_co_create(co_http_server_main, std::ref(io_ctx));
+//    io_context io_ctx;
+//    std::thread asio_thr{ asio_thread, std::ref(io_ctx) };
+//    asio_thr.detach();
+//    cppt_co_create(co_http_server_main, std::ref(io_ctx));
 
-    util_bind_thread_to_core(3);
     cppt_co_main_run();
 }
 

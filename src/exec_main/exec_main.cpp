@@ -20,8 +20,8 @@ static int test_cpp_httplib(int argc, char** argv)
 static int program_main(int argc, char** argv)
 {
     int ret = 0;
-//    ret = app_coroutine(argc, argv);
-    ret = test_cpp_httplib(argc, argv);
+    ret = app_coroutine(argc, argv);
+//    ret = test_cpp_httplib(argc, argv);
     return ret;
 }
 

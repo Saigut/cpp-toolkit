@@ -32,6 +32,8 @@ public:
     bool enqueue(ELE_T&& p);
     bool dequeue(ELE_T& p);
 
+    unsigned int get_size();
+
 private:
     int notify();
 
@@ -61,16 +63,23 @@ int np_queue_t<ELE_T, SIZE>::notify()
 {
     // 检查模式。notify 模式则通知
     if (m_is_notify_mode) {
-        if (!m_notified) {
-            // notify
-            if (m_notify_handler) {
-                // notify handler 需要是线程安全的
-                m_notify_handler();
-            } else {
-                return -1;
-            }
-            m_notified = true;
+//        if (!m_notified) {
+//            // notify
+//            if (m_notify_handler) {
+//                // notify handler 需要是线程安全的
+//                m_notify_handler();
+//            } else {
+//                return -1;
+//            }
+//            m_notified = true;
+//        }
+        if (m_notify_handler) {
+            // notify handler 需要是线程安全的
+            m_notify_handler();
+        } else {
+            return -1;
         }
+        m_notified = true;
     }
     return 0;
 }
@@ -123,6 +132,12 @@ bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p)
 
     m_is_notify_mode = false;
     return false;
+}
+
+template <class ELE_T, unsigned SIZE>
+unsigned int np_queue_t<ELE_T, SIZE>::get_size()
+{
+    return m_queue.was_size();
 }
 
 #endif //CPP_TOOLKIT_MOD_NP_QUEUE_HPP

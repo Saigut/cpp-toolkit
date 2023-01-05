@@ -31,6 +31,14 @@ namespace {
                 });
             };
             cppt_co_yield(wrap_func);
+//            auto timeout_func = [&](){
+//                m_socket.close();
+//            };
+//            int ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            if (0 != ret) {
+//                log_error("async error occurred. ret: %d", ret);
+//                return -1;
+//            }
             return wrote_size;
         }
         ssize_t read_some(uint8_t* recv_buf, size_t buf_sz) {
@@ -47,6 +55,14 @@ namespace {
                 });
             };
             cppt_co_yield(wrap_func);
+//            auto timeout_func = [&](){
+//                m_socket.close();
+//            };
+//            int ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            if (0 != ret) {
+//                log_error("async error occurred. ret: %d", ret);
+//                return -1;
+//            }
             return read_size;
         }
         bool write(uint8_t* buf, size_t data_sz) {
@@ -110,6 +126,13 @@ namespace {
                         });
             };
             cppt_co_yield(wrap_func);
+//            auto timeout_func = [&](){
+//            };
+//            ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            if (0 != ret) {
+//                log_error("async error occurred. ret: %d", ret);
+//                return nullptr;
+//            }
             if (ret != 0) {
                 return nullptr;
             }

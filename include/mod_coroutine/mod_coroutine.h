@@ -7,7 +7,11 @@
 #include <mod_atomic_queue/atomic_queue.h>
 
 using cppt_co_c_sp = std::shared_ptr<boost::context::continuation>;
-using cppt_co_wait_queue_t = atomic_queue::AtomicQueue2<cppt_co_c_sp, 100>;
+struct  cppt_co_wait_queue_ele_t {
+    cppt_co_c_sp c;
+    unsigned tq_idx;
+};
+using cppt_co_wait_queue_t = atomic_queue::AtomicQueue2<cppt_co_wait_queue_ele_t, 100>;
 
 class cppt_co_t {
 public:
@@ -67,6 +71,6 @@ int cppt_co_yield(
 int cppt_co_yield_timeout(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func,
         unsigned int timeout_ms,
-        std::function<void()>& f_cancel_operation);
+        const std::function<void()>& f_cancel_operation);
 
 #endif //CPP_TOOLKIT_MOD_COROUTINE_H
