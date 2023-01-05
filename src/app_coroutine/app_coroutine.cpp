@@ -384,6 +384,7 @@ static void co_http_server_main(io_context& io_ctx)
     log_record logs;
     cppt_co_tcp_socket_builder builder(io_ctx);
     expect_ret(builder.listen("0.0.0.0", 10666));
+    log_info("http server listening on: 0.0.0.0:10666");
     while (true) {
         cppt_co_tcp_socket* peer_socket = builder.accept(io_ctx);
         if (!peer_socket) {
@@ -398,6 +399,7 @@ static void co_http_server_main2(io_context_pool& io_ctx_pool)
     log_record logs;
     cppt_co_tcp_socket_builder builder(io_ctx_pool.get_io_context());
     expect_ret(builder.listen("0.0.0.0", 10666));
+    log_info("http server listening on: 0.0.0.0:10666");
     while (true) {
         cppt_co_tcp_socket* peer_socket = builder.accept(io_ctx_pool.get_io_context());
         if (!peer_socket) {
