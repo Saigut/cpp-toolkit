@@ -235,11 +235,11 @@ void cppt_co_main_run()
     }
     while (g_run_flag) {
         cppt_sleep(5);
-        printf("------------\n");
-        for (unsigned i = 0; i < gs_core_num; i++) {
-            printf("tq[%02u] task num: %02u\n", i, g_task_queues[i].get_size());
-        }
-        printf("------------\n");
+//        printf("------------\n");
+//        for (unsigned i = 0; i < gs_core_num; i++) {
+//            printf("tq[%02u] task num: %02u\n", i, g_task_queues[i].get_size());
+//        }
+//        printf("------------\n");
     }
 }
 
