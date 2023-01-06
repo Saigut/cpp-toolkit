@@ -170,11 +170,13 @@ static void cppt_co_main_run_thread(unsigned core_idx)
 
     std::mutex cond_lock;
     std::condition_variable cond_cv;
+    bool notified = false;
 
     auto notify_handler =
             [&]()
     {
         std::lock_guard lock(cond_lock);
+        notified = true;
         cond_cv.notify_one();
     };
 
@@ -183,7 +185,13 @@ static void cppt_co_main_run_thread(unsigned core_idx)
     {
         {
             std::unique_lock<std::mutex> u_lock(cond_lock);
-            cond_cv.wait_for(u_lock, std::chrono::milliseconds (500));
+            cond_cv.wait(u_lock, [&notified](){
+                if (notified) {
+                    return true;
+                }
+                return false;
+            });
+            notified = false;
         }
         return g_run_flag;
     };
