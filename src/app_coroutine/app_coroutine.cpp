@@ -403,11 +403,13 @@ static void co_http_server_main2(io_context_pool& io_ctx_pool)
     while (true) {
         cppt_co_tcp_socket* peer_socket = builder.accept(io_ctx_pool.get_io_context());
         if (!peer_socket) {
-            return;
+            log_error("failed to accept!");
+            break;
         }
 //        logs.t1 = util_now_ts_us();
         cppt_co_create(co_http_server_process_request, peer_socket, std::ref(logs));
     }
+    log_info("http server quit.");
 }
 
 static void test_http_server()
