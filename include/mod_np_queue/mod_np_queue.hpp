@@ -28,9 +28,10 @@ public:
     }
     void set_handlers(std::function<void()>&& notify_handler,
                       std::function<bool()>&& waiting_handler);
-    bool try_enqueue(ELE_T&& p);
     bool enqueue(ELE_T&& p);
+    bool try_enqueue(ELE_T&& p);
     bool dequeue(ELE_T& p);
+    bool try_dequeue(ELE_T& p);
 
     unsigned int get_size();
 
@@ -131,6 +132,15 @@ bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p)
     } while(m_waiting_handler());
 
     m_is_notify_mode = false;
+    return false;
+}
+
+template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::try_dequeue(ELE_T& p)
+{
+    if (m_queue.try_pop(p)) {
+        return true;
+    }
     return false;
 }
 
