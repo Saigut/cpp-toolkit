@@ -41,12 +41,12 @@ int util_bind_thread_to_core(unsigned int core_id)
         return 0;
     }
 #elif defined(__APPLE__)
-    thread_affinity_policy_data_t policy_data = { (int)core_id + 1 };
-    thread_policy_set(pthread_mach_thread_np(pthread_self()),
-                      THREAD_AFFINITY_POLICY,
-                      (thread_policy_t)&policy_data,
-                      THREAD_AFFINITY_POLICY_COUNT);
-    return -1;
+//    thread_affinity_policy_data_t policy_data = { (int)core_id + 1 };
+//    thread_policy_set(pthread_mach_thread_np(pthread_self()),
+//                      THREAD_AFFINITY_POLICY,
+//                      (thread_policy_t)&policy_data,
+//                      THREAD_AFFINITY_POLICY_COUNT);
+    return 0;
 #else
     return -1;
 #endif
