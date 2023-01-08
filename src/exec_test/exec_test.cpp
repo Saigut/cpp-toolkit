@@ -352,7 +352,7 @@ void co_mutex_1(cppt_co_mutex_t& mutex)
     mutex.lock();
     log_info("3");
     log_info("4");
-    sleep(5);
+    cppt_sleep(5);
     mutex.unlock();
     log_info("5");
     log_info("6");
@@ -363,12 +363,12 @@ void co_mutex_2(cppt_co_mutex_t& mutex)
     log_info("a");
     log_info("b");
     mutex.lock();
+    log_info("c");
+    log_info("d");
+    cppt_sleep(5);
+    mutex.unlock();
     log_info("e");
     log_info("f");
-    sleep(5);
-    mutex.unlock();
-    log_info("g");
-    log_info("h");
 }
 
 void co_main_mutex()
