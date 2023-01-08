@@ -18,7 +18,7 @@ using boost::asio::io_context;
 
 class cppt_task_t {
 public:
-    cppt_co_sp m_co_wrapper = nullptr;
+    cppt_co_sp m_co = nullptr;
     std::function<void()> m_f_before_execution = nullptr;
     std::function<void(cppt_co_sp)> m_f_after_execution = nullptr;
 };
@@ -29,21 +29,20 @@ static void cppt_co_main_run_thread(co_executor_sp executor);
 class co_executor_t {
 public:
     co_executor_t() = default;
-    explicit co_executor_t(unsigned _tls_tq_idx) : tls_tq_idx(_tls_tq_idx) {}
+    explicit co_executor_t(unsigned tq_idx) : m_tq_idx(tq_idx) {}
     void start(co_executor_sp executor) {
-        executor->turn_on = true;
+        executor->m_turn_on = true;
         m_t = std::thread(cppt_co_main_run_thread, executor);
         m_t.detach();
     }
 
-    bool turn_on = false;
-    bool is_executing = false;
-    bool is_blocking = false;
+    bool m_turn_on = false;
+    bool m_is_executing = false;
+    bool m_is_blocking = false;
 
-    unsigned tls_tq_idx = 0;
-    context::continuation g_executor_c;
-    bool g_is_executor = false;
-    cppt_task_t g_cur_task_c;
+    unsigned m_tq_idx = 0;
+    context::continuation m_executor_c;
+    cppt_task_t m_cur_task_c;
     std::thread m_t;
 };
 
@@ -72,18 +71,19 @@ static void cppt_co_add_task_global(cppt_task_t&& task)
     } while (core_cnt <= gs_core_num);
     log_error("coroutine task queues full!");
 }
-static void cppt_co_add_task(cppt_task_t&& task, unsigned tq_idx)
+static bool cppt_co_add_task(cppt_task_t&& task, unsigned tq_idx)
 {
     if (!g_task_queues[tq_idx]
             .try_enqueue(std::move(task))) {
         log_error("coroutine task queue %u full!", tq_idx);
-        return;
+        return false;
     }
+    return true;
 }
-static void cppt_co_add_ptr(cppt_co_sp wrapper, unsigned tq_idx)
+static void cppt_co_add_ptr(cppt_co_sp co, unsigned tq_idx)
 {
     cppt_task_t task;
-    task.m_co_wrapper = wrapper;
+    task.m_co = co;
     cppt_co_add_task(std::move(task), tq_idx);
 }
 static void cppt_co_add_c_ptr(cppt_co_c_sp c, unsigned tq_idx)
@@ -92,12 +92,12 @@ static void cppt_co_add_c_ptr(cppt_co_c_sp c, unsigned tq_idx)
     cppt_co_add_ptr(new_co, tq_idx);
 }
 
-static void cppt_co_add_sptr_f_before(cppt_co_sp wrapper,
+static void cppt_co_add_sptr_f_before(cppt_co_sp co,
                                       std::function<void()>& f_before,
                                       unsigned tq_idx)
 {
     cppt_task_t task;
-    task.m_co_wrapper = wrapper;
+    task.m_co = co;
     task.m_f_before_execution = f_before;
     cppt_co_add_task(std::move(task), tq_idx);
 }
@@ -106,7 +106,7 @@ static void cppt_co_add_sptr_f_before(cppt_co_sp wrapper,
 void cppt_co_t::start_user_co()
 {
     *m_c = context::callcc([&](context::continuation && c) {
-        g_executor->g_executor_c = std::move(c);
+        g_executor->m_executor_c = std::move(c);
         m_co_started = true;
         m_user_co();
         m_co_stopped = true;
@@ -116,7 +116,7 @@ void cppt_co_t::start_user_co()
                 cppt_co_add_c_ptr(ele.c, ele.tq_idx);
             }
         }
-        return std::move(g_executor->g_executor_c);
+        return std::move(g_executor->m_executor_c);
     });
 }
 
@@ -140,26 +140,26 @@ void cppt_co_t::join()
     if (m_co_stopped) {
         return;
     }
-    auto ret_co = context::callcc([&, tq_idx(g_executor->tls_tq_idx)](context::continuation && c) {
+    auto ret_co = context::callcc([&, tq_idx(g_executor->m_tq_idx)](context::continuation && c) {
         auto caller_c = std::make_shared<context::continuation>(std::move(c));
         cppt_co_wait_queue_ele_t ele = { caller_c, tq_idx };
         if (!m_wait_cos.try_push(ele)) {
             /// Fixme: how to do then queue is full?
             log_error("m_wait_cos queue is full!!!");
-            return std::move(g_executor->g_executor_c);
+            return std::move(g_executor->m_executor_c);
         }
         if (m_co_stopped) {
             if (*caller_c) {
                 return std::move(*caller_c);
             }
         }
-        return std::move(g_executor->g_executor_c);
+        return std::move(g_executor->m_executor_c);
     });
     if (!ret_co) {
         // caller resume by self
         return;
     }
-    g_executor->g_executor_c = std::move(ret_co);
+    g_executor->m_executor_c = std::move(ret_co);
 }
 
 
@@ -167,10 +167,10 @@ void cppt_co_t::join()
 cppt_co_sp cppt_co_create0(std::function<void()> user_co)
 {
     cppt_task_t task;
-    auto co_wrapper = std::make_shared<cppt_co_t>(std::move(user_co));
-    task.m_co_wrapper = co_wrapper;
+    auto co = std::make_shared<cppt_co_t>(std::move(user_co));
+    task.m_co = co;
     cppt_co_add_task_global(std::move(task));
-    return co_wrapper;
+    return co;
 }
 
 static void asio_thread(io_context& io_ctx)
@@ -184,12 +184,13 @@ static void asio_thread(io_context& io_ctx)
 static void cppt_co_main_run_thread(co_executor_sp executor)
 {
     char thr_name[16];
-    util_bind_thread_to_core(executor->tls_tq_idx);
-    snprintf(thr_name, sizeof(thr_name), "co_%02u", executor->tls_tq_idx);
+    util_bind_thread_to_core(executor->m_tq_idx);
+    snprintf(thr_name, sizeof(thr_name), "co_%02u", executor->m_tq_idx);
     util_thread_set_self_name(thr_name);
 
     g_executor = executor;
 
+    const unsigned tls_tq_idx = g_executor->m_tq_idx;
     std::mutex cond_lock;
     std::condition_variable cond_cv;
     bool notified = false;
@@ -205,6 +206,29 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
     auto wait_handler =
             [&]()
     {
+        // work stealing
+        unsigned next_tq_idx = (tls_tq_idx + 1) % gs_core_num;
+        unsigned task_num = g_task_queues[next_tq_idx].get_size();
+        if (task_num > 0) {
+            unsigned steal_task_num = std::min(task_num/2 + 1, 10U);
+            cppt_task_t task;
+            unsigned i = 0;
+            for (; i < steal_task_num; i++) {
+                if (!g_task_queues[next_tq_idx].try_dequeue(task)) {
+                    break;
+                }
+                if (!g_task_queues[tls_tq_idx]
+                        .try_enqueue_no_notify(std::move(task))) {
+                    log_error("failed to enqueue task! tq idx: %u", tls_tq_idx);
+                    break;
+                }
+            }
+            if (0 != i) {
+                notified = false;
+                return g_run_flag;
+            }
+        }
+
         {
             std::unique_lock<std::mutex> u_lock(cond_lock);
             cond_cv.wait(u_lock, [&notified](){
@@ -215,38 +239,38 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
             });
             notified = false;
         }
+
         return g_run_flag;
     };
 
-    unsigned tls_tq_idx = g_executor->tls_tq_idx;
-    cppt_task_t& g_cur_task_c = g_executor->g_cur_task_c;
+    cppt_task_t& g_cur_task_c = g_executor->m_cur_task_c;
     g_task_queues[tls_tq_idx].set_handlers(notify_handler, wait_handler);
 
-    while (g_executor->turn_on && g_run_flag) {
+    while (g_executor->m_turn_on && g_run_flag) {
         if (g_task_queues[tls_tq_idx].dequeue(g_cur_task_c)) {
-            g_executor->is_executing = true;
-            auto co_wrapper = g_cur_task_c.m_co_wrapper;
-            if (!co_wrapper->is_started()) {
-                co_wrapper->start_user_co();
-            } else if (co_wrapper->can_resume()) {
+            g_executor->m_is_executing = true;
+            auto co = g_cur_task_c.m_co;
+            if (!co->is_started()) {
+                co->start_user_co();
+            } else if (co->can_resume()) {
                 if (g_cur_task_c.m_f_before_execution) {
                     g_cur_task_c.m_f_before_execution();
                     g_cur_task_c.m_f_before_execution = nullptr;
                 }
-                co_wrapper->resume_user_co();
+                co->resume_user_co();
             } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
-                g_executor->is_executing = false;
+                g_cur_task_c.m_co = nullptr;
+                g_executor->m_is_executing = false;
                 continue;
             }
             if (g_cur_task_c.m_f_after_execution) {
-                g_cur_task_c.m_f_after_execution(g_cur_task_c.m_co_wrapper);
+                g_cur_task_c.m_f_after_execution(g_cur_task_c.m_co);
                 g_cur_task_c.m_f_after_execution = nullptr;
             } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
+                g_cur_task_c.m_co = nullptr;
             }
-            g_executor->is_executing = false;
-            g_executor->is_blocking = false;
+            g_executor->m_is_executing = false;
+            g_executor->m_is_blocking = false;
         }
     }
 }
@@ -274,31 +298,40 @@ void cppt_co_main_run()
     struct executor_status_t {
         uint64_t blocking_start_ts_ms = 0;
     };
+    uint64_t now_ms = util_now_ts_ms();
+    uint64_t pre_ms = now_ms;
     const uint64_t timeout_ms = 1000;
     std::vector<executor_status_t> executor_status(gs_core_num);
+
     while (g_run_flag) {
         cppt_msleep(1000);
+        now_ms = util_now_ts_ms();
+
+        // replace blocking executor
         for (unsigned i = 0; i < gs_core_num; i++) {
             auto executor = g_executors[i];
-            if (executor->is_executing) {
-                if (executor->is_blocking) {
-                    if (timeout_ms < (util_now_ts_ms() - executor_status[i].blocking_start_ts_ms)) {
-                        executor->turn_on = false;
+            if (executor->m_is_executing) {
+                if (executor->m_is_blocking) {
+                    if (timeout_ms < (now_ms - executor_status[i].blocking_start_ts_ms)) {
+                        executor->m_turn_on = false;
                         g_executors[i] = std::make_shared<co_executor_t>(i);
                         g_executors[i]->start(g_executors[i]);
                     }
                 } else {
-                    executor->is_blocking = true;
-                    executor_status[i].blocking_start_ts_ms =
-                            util_now_ts_ms();
+                    executor->m_is_blocking = true;
+                    executor_status[i].blocking_start_ts_ms = now_ms;
                 }
             }
         }
-//        printf("------------\n");
-//        for (unsigned i = 0; i < gs_core_num; i++) {
-//            printf("tq[%02u] task num: %02u\n", i, g_task_queues[i].get_size());
+
+//        if ((now_ms - pre_ms) > 5000) {
+//            printf("------------\n");
+//            for (unsigned i = 0; i < gs_core_num; i++) {
+//                printf("tq[%02u] task num: %02u\n", i, g_task_queues[i].get_size());
+//            }
+//            printf("------------\n");
+//            pre_ms = now_ms;
 //        }
-//        printf("------------\n");
     }
 }
 
@@ -306,17 +339,17 @@ void cppt_co_main_run()
 int cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
 {
-    if (!g_executor->g_executor_c) {
+    if (!g_executor->m_executor_c) {
         return -1;
     }
-    auto wrap_func = [&, tq_idx(g_executor->tls_tq_idx)](cppt_co_sp co_wapper) {
-        wrapped_extern_func([co_wapper, tq_idx](){
+    auto wrap_func = [&, tq_idx(g_executor->m_tq_idx)](cppt_co_sp co) {
+        wrapped_extern_func([co, tq_idx](){
             /// Fixme: how to do when executing queue is full?
-            cppt_co_add_ptr(co_wapper, tq_idx);
+            cppt_co_add_ptr(co, tq_idx);
         });
     };
-    g_executor->g_cur_task_c.m_f_after_execution = wrap_func;
-    g_executor->g_executor_c = g_executor->g_executor_c.resume();
+    g_executor->m_cur_task_c.m_f_after_execution = wrap_func;
+    g_executor->m_executor_c = g_executor->m_executor_c.resume();
     return 0;
 }
 
@@ -326,24 +359,24 @@ int cppt_co_yield_timeout(
         unsigned int timeout_ms,
         const std::function<void()>& f_cancel_operation)
 {
-    if (!g_executor->g_executor_c) {
+    if (!g_executor->m_executor_c) {
         return -1;
     }
     bool is_timeout = false;
 
     boost::asio::deadline_timer timer{ g_io_ctx };
 
-    auto wrap_func = [&, tq_idx(g_executor->tls_tq_idx)](cppt_co_sp co_wapper) {
-        wrapped_extern_func([&, co_wapper, tq_idx](){
+    auto wrap_func = [&, tq_idx(g_executor->m_tq_idx)](cppt_co_sp co) {
+        wrapped_extern_func([&, co, tq_idx](){
             std::function<void()> f_before = [&](){
                 // stop timer
                 timer.cancel();
             };
             /// Fixme: how to do when executing queue is full?
-            cppt_co_add_sptr_f_before(co_wapper, f_before, tq_idx);
+            cppt_co_add_sptr_f_before(co, f_before, tq_idx);
         });
         timer.expires_from_now(boost::posix_time::milliseconds(timeout_ms));
-        timer.async_wait([&, co_wapper, tq_idx](const boost::system::error_code& ec){
+        timer.async_wait([&, co, tq_idx](const boost::system::error_code& ec){
             if (ec) {
                 return;
             }
@@ -355,12 +388,12 @@ int cppt_co_yield_timeout(
                 }
             };
             /// Fixme: how to do when executing queue is full?
-            cppt_co_add_sptr_f_before(co_wapper, f_before, tq_idx);
+            cppt_co_add_sptr_f_before(co, f_before, tq_idx);
         });
     };
 
-    g_executor->g_cur_task_c.m_f_after_execution = wrap_func;
-    g_executor->g_executor_c = g_executor->g_executor_c.resume();
+    g_executor->m_cur_task_c.m_f_after_execution = wrap_func;
+    g_executor->m_executor_c = g_executor->m_executor_c.resume();
 
     return is_timeout ? 1 : 0;
 }

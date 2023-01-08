@@ -30,10 +30,11 @@ public:
                       std::function<bool()>&& waiting_handler);
     bool enqueue(ELE_T&& p);
     bool try_enqueue(ELE_T&& p);
+    bool try_enqueue_no_notify(ELE_T&& p);
     bool dequeue(ELE_T& p);
     bool try_dequeue(ELE_T& p);
 
-    unsigned int get_size();
+    unsigned get_size();
 
 private:
     int notify();
@@ -112,6 +113,15 @@ bool np_queue_t<ELE_T, SIZE>::try_enqueue(ELE_T&& p)
 }
 
 template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::try_enqueue_no_notify(ELE_T&& p)
+{
+    if (!m_queue.try_push(p)) {
+        return false;
+    }
+    return true;
+}
+
+template <class ELE_T, unsigned SIZE>
 bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p)
 {
     if (m_queue.try_pop(p)) {
@@ -145,7 +155,7 @@ bool np_queue_t<ELE_T, SIZE>::try_dequeue(ELE_T& p)
 }
 
 template <class ELE_T, unsigned SIZE>
-unsigned int np_queue_t<ELE_T, SIZE>::get_size()
+unsigned np_queue_t<ELE_T, SIZE>::get_size()
 {
     return m_queue.was_size();
 }
