@@ -185,6 +185,7 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
             [&]()
     {
         // work stealing
+        #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
         unsigned next_tq_idx = (tls_tq_idx + 1) % gs_core_num;
         unsigned task_num = g_task_queues[next_tq_idx].get_size();
         if (task_num > 0) {
@@ -206,6 +207,7 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
                 return g_run_flag;
             }
         }
+        #endif
 
         {
             std::unique_lock<std::mutex> u_lock(cond_lock);
