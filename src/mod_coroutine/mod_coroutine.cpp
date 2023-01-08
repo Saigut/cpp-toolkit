@@ -23,14 +23,35 @@ public:
     std::function<void(cppt_co_sp)> m_f_after_execution = nullptr;
 };
 
+class co_executor_t;
+using co_executor_sp = std::shared_ptr<co_executor_t>;
+static void cppt_co_main_run_thread(co_executor_sp executor);
+class co_executor_t {
+public:
+    co_executor_t() = default;
+    explicit co_executor_t(unsigned _tls_tq_idx) : tls_tq_idx(_tls_tq_idx) {}
+    void start(co_executor_sp executor) {
+        executor->turn_on = true;
+        m_t = std::thread(cppt_co_main_run_thread, executor);
+        m_t.detach();
+    }
+
+    bool turn_on = false;
+    bool is_executing = false;
+    bool is_blocking = false;
+
+    unsigned tls_tq_idx = 0;
+    context::continuation g_executor_c;
+    bool g_is_executor = false;
+    cppt_task_t g_cur_task_c;
+    std::thread m_t;
+};
+
 
 // Values
 static std::vector<np_queue_t<cppt_task_t>> g_task_queues(1);
-static thread_local unsigned tls_tq_idx = 0;
-static thread_local context::continuation g_executor_c;
-static thread_local bool g_is_executor = false;
-static thread_local cppt_task_t g_cur_task_c;
-
+static std::vector<co_executor_sp> g_executors(1);
+static thread_local co_executor_sp g_executor;
 bool g_run_flag = true;
 static unsigned gs_core_num = 1;
 static unsigned gs_use_core = 0;
@@ -85,7 +106,7 @@ static void cppt_co_add_sptr_f_before(cppt_co_sp wrapper,
 void cppt_co_t::start_user_co()
 {
     *m_c = context::callcc([&](context::continuation && c) {
-        g_executor_c = std::move(c);
+        g_executor->g_executor_c = std::move(c);
         m_co_started = true;
         m_user_co();
         m_co_stopped = true;
@@ -95,7 +116,7 @@ void cppt_co_t::start_user_co()
                 cppt_co_add_c_ptr(ele.c, ele.tq_idx);
             }
         }
-        return std::move(g_executor_c);
+        return std::move(g_executor->g_executor_c);
     });
 }
 
@@ -119,83 +140,26 @@ void cppt_co_t::join()
     if (m_co_stopped) {
         return;
     }
-    auto ret_co = context::callcc([&, tq_idx(tls_tq_idx)](context::continuation && c) {
+    auto ret_co = context::callcc([&, tq_idx(g_executor->tls_tq_idx)](context::continuation && c) {
         auto caller_c = std::make_shared<context::continuation>(std::move(c));
         cppt_co_wait_queue_ele_t ele = { caller_c, tq_idx };
         if (!m_wait_cos.try_push(ele)) {
             /// Fixme: how to do then queue is full?
             log_error("m_wait_cos queue is full!!!");
-            return std::move(g_executor_c);
+            return std::move(g_executor->g_executor_c);
         }
         if (m_co_stopped) {
             if (*caller_c) {
                 return std::move(*caller_c);
             }
         }
-        return std::move(g_executor_c);
+        return std::move(g_executor->g_executor_c);
     });
     if (!ret_co) {
         // caller resume by self
         return;
     }
-    g_executor_c = std::move(ret_co);
-}
-
-boost::context::continuation cppt_co_t::start_user_co2(
-        const std::function<void(boost::context::continuation&&)>& func)
-{
-    return context::callcc([&](context::continuation && c) {
-        if (!g_is_executor) {
-            if (g_cur_task_c.m_f_after_execution) {
-                auto peer_co_wrapper =
-                        std::make_shared<cppt_co_t>(
-                                std::make_shared<context::continuation>(
-                                        std::move(c)));
-                g_cur_task_c.m_f_after_execution(peer_co_wrapper);
-                g_cur_task_c.m_f_after_execution = nullptr;
-            }
-        } else {
-            g_executor_c = std::move(c);
-        }
-
-        m_co_started = true;
-        m_user_co();
-        m_co_stopped = true;
-        cppt_co_wait_queue_ele_t ele;
-        while (m_wait_cos.try_pop(ele)) {
-            if (*(ele.c)) {
-                cppt_co_add_c_ptr(ele.c, ele.tq_idx);
-            }
-        }
-
-        while (g_task_queues[tls_tq_idx].try_dequeue(g_cur_task_c)) {
-            std::shared_ptr<cppt_co_t> peer_co_wrapper;
-            auto co_wrapper = g_cur_task_c.m_co_wrapper;
-            if (!co_wrapper->is_started()) {
-                g_cur_task_c.m_f_after_execution = nullptr;
-                g_is_executor = false;
-                co_wrapper->start_user_co2([](auto){});
-            } else if (co_wrapper->can_resume()) {
-                if (g_cur_task_c.m_f_before_execution) {
-                    g_cur_task_c.m_f_before_execution();
-                    g_cur_task_c.m_f_before_execution = nullptr;
-                }
-                g_cur_task_c.m_f_after_execution = nullptr;
-                g_is_executor = false;
-                return std::move(*co_wrapper->m_c);
-            } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
-                continue;
-            }
-        }
-
-        return std::move(g_executor_c);
-    });
-}
-
-boost::context::continuation cppt_co_t::resume2()
-{
-    return std::move(m_c->resume());
+    g_executor->g_executor_c = std::move(ret_co);
 }
 
 
@@ -217,14 +181,14 @@ static void asio_thread(io_context& io_ctx)
     log_info("Asio io context quit!!");
 }
 
-static void cppt_co_main_run_thread(unsigned core_idx)
+static void cppt_co_main_run_thread(co_executor_sp executor)
 {
     char thr_name[16];
-    util_bind_thread_to_core(core_idx);
-    snprintf(thr_name, sizeof(thr_name), "co_%02u", core_idx);
+    util_bind_thread_to_core(executor->tls_tq_idx);
+    snprintf(thr_name, sizeof(thr_name), "co_%02u", executor->tls_tq_idx);
     util_thread_set_self_name(thr_name);
 
-    tls_tq_idx = core_idx;
+    g_executor = executor;
 
     std::mutex cond_lock;
     std::condition_variable cond_cv;
@@ -254,10 +218,13 @@ static void cppt_co_main_run_thread(unsigned core_idx)
         return g_run_flag;
     };
 
+    unsigned tls_tq_idx = g_executor->tls_tq_idx;
+    cppt_task_t& g_cur_task_c = g_executor->g_cur_task_c;
     g_task_queues[tls_tq_idx].set_handlers(notify_handler, wait_handler);
 
-    while (g_run_flag) {
+    while (g_executor->turn_on && g_run_flag) {
         if (g_task_queues[tls_tq_idx].dequeue(g_cur_task_c)) {
+            g_executor->is_executing = true;
             auto co_wrapper = g_cur_task_c.m_co_wrapper;
             if (!co_wrapper->is_started()) {
                 co_wrapper->start_user_co();
@@ -269,6 +236,7 @@ static void cppt_co_main_run_thread(unsigned core_idx)
                 co_wrapper->resume_user_co();
             } else {
                 g_cur_task_c.m_co_wrapper = nullptr;
+                g_executor->is_executing = false;
                 continue;
             }
             if (g_cur_task_c.m_f_after_execution) {
@@ -277,81 +245,8 @@ static void cppt_co_main_run_thread(unsigned core_idx)
             } else {
                 g_cur_task_c.m_co_wrapper = nullptr;
             }
-        }
-    }
-}
-
-static void cppt_co_main_run_thread2(unsigned core_idx)
-{
-    char thr_name[16];
-    util_bind_thread_to_core(core_idx);
-    snprintf(thr_name, sizeof(thr_name), "co_%02u", core_idx);
-    util_thread_set_self_name(thr_name);
-
-    tls_tq_idx = core_idx;
-
-    std::mutex cond_lock;
-    std::condition_variable cond_cv;
-    bool notified = false;
-
-    auto notify_handler =
-            [&]()
-    {
-        std::lock_guard lock(cond_lock);
-        notified = true;
-        cond_cv.notify_one();
-    };
-
-    auto wait_handler =
-            [&]()
-    {
-        {
-            std::unique_lock<std::mutex> u_lock(cond_lock);
-            cond_cv.wait(u_lock, [&notified](){
-                if (notified) {
-                    return true;
-                }
-                return false;
-            });
-            notified = false;
-        }
-        return g_run_flag;
-    };
-
-    g_task_queues[tls_tq_idx].set_handlers(notify_handler, wait_handler);
-
-    while (g_run_flag) {
-        if (g_task_queues[tls_tq_idx].dequeue(g_cur_task_c)) {
-            std::shared_ptr<cppt_co_t> peer_co_wrapper;
-            auto co_wrapper = g_cur_task_c.m_co_wrapper;
-            if (!co_wrapper->is_started()) {
-                g_is_executor = true;
-                auto ret_c = co_wrapper->start_user_co2([](auto){});
-                peer_co_wrapper =
-                        std::make_shared<cppt_co_t>(
-                                std::make_shared<context::continuation>(
-                                        std::move(ret_c)));
-            } else if (co_wrapper->can_resume()) {
-                if (g_cur_task_c.m_f_before_execution) {
-                    g_cur_task_c.m_f_before_execution();
-                    g_cur_task_c.m_f_before_execution = nullptr;
-                }
-                g_is_executor = true;
-                auto ret_c = co_wrapper->resume2();
-                peer_co_wrapper =
-                        std::make_shared<cppt_co_t>(
-                                std::make_shared<context::continuation>(
-                                        std::move(ret_c)));
-            } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
-                continue;
-            }
-            if (g_cur_task_c.m_f_after_execution) {
-                g_cur_task_c.m_f_after_execution(peer_co_wrapper);
-                g_cur_task_c.m_f_after_execution = nullptr;
-            } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
-            }
+            g_executor->is_executing = false;
+            g_executor->is_blocking = false;
         }
     }
 }
@@ -370,12 +265,35 @@ void cppt_co_main_run()
         gs_core_num = core_num;
     }
     g_task_queues.resize(gs_core_num);
+    g_executors.resize(gs_core_num);
     for (unsigned i = 0; i < gs_core_num; i++) {
-        std::thread t{ cppt_co_main_run_thread, i };
-        t.detach();
+        g_executors[i] = std::make_shared<co_executor_t>(i);
+        g_executors[i]->start(g_executors[i]);
     }
+
+    struct executor_status_t {
+        uint64_t blocking_start_ts_ms = 0;
+    };
+    const uint64_t timeout_ms = 1000;
+    std::vector<executor_status_t> executor_status(gs_core_num);
     while (g_run_flag) {
-        cppt_sleep(5);
+        cppt_msleep(1000);
+        for (unsigned i = 0; i < gs_core_num; i++) {
+            auto executor = g_executors[i];
+            if (executor->is_executing) {
+                if (executor->is_blocking) {
+                    if (timeout_ms < (util_now_ts_ms() - executor_status[i].blocking_start_ts_ms)) {
+                        executor->turn_on = false;
+                        g_executors[i] = std::make_shared<co_executor_t>(i);
+                        g_executors[i]->start(g_executors[i]);
+                    }
+                } else {
+                    executor->is_blocking = true;
+                    executor_status[i].blocking_start_ts_ms =
+                            util_now_ts_ms();
+                }
+            }
+        }
 //        printf("------------\n");
 //        for (unsigned i = 0; i < gs_core_num; i++) {
 //            printf("tq[%02u] task num: %02u\n", i, g_task_queues[i].get_size());
@@ -388,97 +306,17 @@ void cppt_co_main_run()
 int cppt_co_yield(
         const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
 {
-    if (!g_executor_c) {
+    if (!g_executor->g_executor_c) {
         return -1;
     }
-    auto wrap_func = [&, tq_idx(tls_tq_idx)](cppt_co_sp co_wapper) {
+    auto wrap_func = [&, tq_idx(g_executor->tls_tq_idx)](cppt_co_sp co_wapper) {
         wrapped_extern_func([co_wapper, tq_idx](){
             /// Fixme: how to do when executing queue is full?
             cppt_co_add_ptr(co_wapper, tq_idx);
         });
     };
-    g_cur_task_c.m_f_after_execution = wrap_func;
-    g_executor_c = g_executor_c.resume();
-    return 0;
-}
-
-// ret: 0, ok; -1 coroutine error
-int cppt_co_yield2(
-        const std::function<void(std::function<void()>&&)>& wrapped_extern_func)
-{
-    if (!g_executor_c) {
-        return -1;
-    }
-    auto wrap_func = [&, tq_idx(tls_tq_idx)](cppt_co_sp co_wapper) {
-        wrapped_extern_func([co_wapper, tq_idx](){
-            /// Fixme: how to do when executing queue is full?
-            cppt_co_add_ptr(co_wapper, tq_idx);
-        });
-    };
-    while (g_task_queues[tls_tq_idx].try_dequeue(g_cur_task_c)) {
-        std::shared_ptr<cppt_co_t> peer_co_wrapper;
-        g_cur_task_c.m_f_after_execution = wrap_func;
-        auto co_wrapper = g_cur_task_c.m_co_wrapper;
-        if (!co_wrapper->is_started()) {
-            g_is_executor = false;
-            auto ret_c = co_wrapper->start_user_co2([](auto){});
-            if (!g_is_executor) {
-                peer_co_wrapper =
-                        std::make_shared<cppt_co_t>(
-                                std::make_shared<context::continuation>(
-                                        std::move(ret_c)));
-            } else {
-                g_executor_c = std::move(ret_c);
-            }
-        } else if (co_wrapper->can_resume()) {
-            if (g_cur_task_c.m_f_before_execution) {
-                g_cur_task_c.m_f_before_execution();
-                g_cur_task_c.m_f_before_execution = nullptr;
-            }
-            g_is_executor = false;
-            auto ret_c = co_wrapper->resume2();
-            if (!g_is_executor) {
-                peer_co_wrapper =
-                        std::make_shared<cppt_co_t>(
-                                std::make_shared<context::continuation>(
-                                        std::move(ret_c)));
-            } else {
-                g_executor_c = std::move(ret_c);
-            }
-        } else {
-            g_cur_task_c.m_co_wrapper = nullptr;
-            continue;
-        }
-        if (!g_is_executor) {
-            if (g_cur_task_c.m_f_after_execution) {
-                g_cur_task_c.m_f_after_execution(peer_co_wrapper);
-                g_cur_task_c.m_f_after_execution = nullptr;
-                g_cur_task_c.m_co_wrapper = nullptr;
-            } else {
-                g_cur_task_c.m_co_wrapper = nullptr;
-            }
-        }
-        return 0;
-    }
-
-    g_cur_task_c.m_f_after_execution = wrap_func;
-    auto ret_c = g_executor_c.resume();
-    if (!g_is_executor) {
-        if (g_cur_task_c.m_f_after_execution) {
-            auto peer_co_wrapper =
-                    std::make_shared<cppt_co_t>(
-                            std::make_shared<context::continuation>(
-                                    std::move(ret_c)));
-            g_cur_task_c.m_f_after_execution(peer_co_wrapper);
-            g_cur_task_c.m_f_after_execution = nullptr;
-            g_cur_task_c.m_co_wrapper = nullptr;
-        } else {
-            g_cur_task_c.m_co_wrapper = nullptr;
-        }
-
-    } else {
-        g_executor_c = std::move(ret_c);
-    }
+    g_executor->g_cur_task_c.m_f_after_execution = wrap_func;
+    g_executor->g_executor_c = g_executor->g_executor_c.resume();
     return 0;
 }
 
@@ -488,14 +326,14 @@ int cppt_co_yield_timeout(
         unsigned int timeout_ms,
         const std::function<void()>& f_cancel_operation)
 {
-    if (!g_executor_c) {
+    if (!g_executor->g_executor_c) {
         return -1;
     }
     bool is_timeout = false;
 
     boost::asio::deadline_timer timer{ g_io_ctx };
 
-    auto wrap_func = [&, tq_idx(tls_tq_idx)](cppt_co_sp co_wapper) {
+    auto wrap_func = [&, tq_idx(g_executor->tls_tq_idx)](cppt_co_sp co_wapper) {
         wrapped_extern_func([&, co_wapper, tq_idx](){
             std::function<void()> f_before = [&](){
                 // stop timer
@@ -521,8 +359,8 @@ int cppt_co_yield_timeout(
         });
     };
 
-    g_cur_task_c.m_f_after_execution = wrap_func;
-    g_executor_c = g_executor_c.resume();
+    g_executor->g_cur_task_c.m_f_after_execution = wrap_func;
+    g_executor->g_executor_c = g_executor->g_executor_c.resume();
 
     return is_timeout ? 1 : 0;
 }

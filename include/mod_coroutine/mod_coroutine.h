@@ -29,10 +29,6 @@ public:
 
     void join();
 
-public:
-    boost::context::continuation start_user_co2(const std::function<void(boost::context::continuation &&)> &func);
-    boost::context::continuation resume2();
-
 private:
     cppt_co_c_sp m_c;
     std::function<void()> m_user_co;
