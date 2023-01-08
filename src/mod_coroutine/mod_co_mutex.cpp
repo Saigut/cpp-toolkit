@@ -11,8 +11,8 @@ bool cppt_co_mutex_t::lock()
         return true;
     }
 
-    auto executor = cppt_get_cur_executor();
     auto ret_co = context::callcc([&](context::continuation && c) {
+        auto executor = cppt_get_cur_executor();
         auto caller_c = std::make_shared<context::continuation>(std::move(c));
         cppt_co_mutex_wait_queue_ele_t ele = { caller_c, executor->m_tq_idx };
         if (!m_wait_cos.try_push(ele)) {
@@ -28,12 +28,13 @@ bool cppt_co_mutex_t::lock()
         }
         return std::move(executor->m_executor_c);
     });
+
     if (!ret_co) {
         // caller resume by self
         return true;
     }
 
-    executor->m_executor_c = std::move(ret_co);
+    cppt_get_cur_executor()->m_executor_c = std::move(ret_co);
     return true;
 }
 
