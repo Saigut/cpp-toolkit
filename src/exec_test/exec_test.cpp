@@ -268,7 +268,7 @@ void async_sleep(unsigned ts_us, std::function<void(int result)> cb)
     t.detach();
 }
 
-int co_sleep(unsigned ts_us)
+int co_usleep(unsigned ts_us)
 {
     int sleep_result;
     auto wrap_func = [&](std::function<void()>&& co_cb) {
@@ -285,9 +285,9 @@ int co_sleep(unsigned ts_us)
 void my_co1()
 {
     log_info("1");
-    log_info("result: %d", co_sleep(111));
+    log_info("result: %d", co_usleep(111));
     log_info("2");
-    log_info("result: %d", co_sleep(222));
+    log_info("result: %d", co_usleep(222));
     log_info("3");
 }
 
@@ -295,9 +295,9 @@ void my_co2(int n, cppt_co_sp wait_co)
 {
     wait_co->join();
     log_info("11: %d", n);
-    log_info("result: %d", co_sleep(333));
+    log_info("result: %d", co_usleep(333));
     log_info("22");
-    log_info("result: %d", co_sleep(444));
+    log_info("result: %d", co_usleep(444));
     log_info("33");
 }
 
@@ -308,7 +308,7 @@ void my_co0()
     co1->join();
     co1->join();
     co1->join();
-    co_sleep(333);
+    co_usleep(333);
     co1->join();
     co1->join();
     co1->join();
