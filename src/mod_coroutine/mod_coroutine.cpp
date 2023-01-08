@@ -16,36 +16,6 @@
 namespace context = boost::context;
 using boost::asio::io_context;
 
-class cppt_task_t {
-public:
-    cppt_co_sp m_co = nullptr;
-    std::function<void()> m_f_before_execution = nullptr;
-    std::function<void(cppt_co_sp)> m_f_after_execution = nullptr;
-};
-
-class co_executor_t;
-using co_executor_sp = std::shared_ptr<co_executor_t>;
-static void cppt_co_main_run_thread(co_executor_sp executor);
-class co_executor_t {
-public:
-    co_executor_t() = default;
-    explicit co_executor_t(unsigned tq_idx) : m_tq_idx(tq_idx) {}
-    void start(co_executor_sp executor) {
-        executor->m_turn_on = true;
-        m_t = std::thread(cppt_co_main_run_thread, executor);
-        m_t.detach();
-    }
-
-    bool m_turn_on = false;
-    bool m_is_executing = false;
-    bool m_is_blocking = false;
-
-    unsigned m_tq_idx = 0;
-    context::continuation m_executor_c;
-    cppt_task_t m_cur_task_c;
-    std::thread m_t;
-};
-
 
 // Values
 static std::vector<np_queue_t<cppt_task_t>> g_task_queues(1);
@@ -86,7 +56,7 @@ static void cppt_co_add_ptr(cppt_co_sp co, unsigned tq_idx)
     task.m_co = co;
     cppt_co_add_task(std::move(task), tq_idx);
 }
-static void cppt_co_add_c_ptr(cppt_co_c_sp c, unsigned tq_idx)
+void cppt_co_add_c_ptr(cppt_co_c_sp c, unsigned tq_idx)
 {
     auto new_co = std::make_shared<cppt_co_t>(c);
     cppt_co_add_ptr(new_co, tq_idx);
@@ -103,6 +73,14 @@ static void cppt_co_add_sptr_f_before(cppt_co_sp co,
 }
 
 // Type implementation
+static void cppt_co_main_run_thread(co_executor_sp executor);
+void co_executor_t::start(co_executor_sp executor)
+{
+    executor->m_turn_on = true;
+    m_t = std::thread(cppt_co_main_run_thread, executor);
+    m_t.detach();
+}
+
 void cppt_co_t::start_user_co()
 {
     *m_c = context::callcc([&](context::continuation && c) {
@@ -396,4 +374,9 @@ int cppt_co_yield_timeout(
     g_executor->m_executor_c = g_executor->m_executor_c.resume();
 
     return is_timeout ? 1 : 0;
+}
+
+co_executor_sp cppt_get_cur_executor()
+{
+    return g_executor;
 }

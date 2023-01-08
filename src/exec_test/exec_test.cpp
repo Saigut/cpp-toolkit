@@ -1,5 +1,6 @@
 #include <iostream>
 #include <mod_coroutine/mod_coroutine.h>
+#include <mod_coroutine/mod_co_mutex.hpp>
 
 #include "ftxui/component/captured_mouse.hpp"  // for ftxui
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
@@ -344,10 +345,46 @@ void cal_co_main()
     cppt_co_create(cal_co);
 }
 
+void co_mutex_1(cppt_co_mutex_t& mutex)
+{
+    log_info("1");
+    log_info("2");
+    mutex.lock();
+    log_info("3");
+    log_info("4");
+    sleep(5);
+    mutex.unlock();
+    log_info("5");
+    log_info("6");
+}
+
+void co_mutex_2(cppt_co_mutex_t& mutex)
+{
+    log_info("a");
+    log_info("b");
+    mutex.lock();
+    log_info("e");
+    log_info("f");
+    sleep(5);
+    mutex.unlock();
+    log_info("g");
+    log_info("h");
+}
+
+void co_main_mutex()
+{
+    cppt_co_mutex_t mutex;
+    auto co1 = cppt_co_create(co_mutex_1, std::ref(mutex));
+    auto co2 = cppt_co_create(co_mutex_2, std::ref(mutex));
+    co1->join();
+    co2->join();
+}
+
 static int test_cppt_co(int argc, const char* argv[])
 {
 //    cppt_co_create(my_co0);
-    cppt_co_create(cal_co_main);
+//    cppt_co_create(cal_co_main);
+    cppt_co_create(co_main_mutex);
     cppt_co_main_run();
     return 0;
 }
