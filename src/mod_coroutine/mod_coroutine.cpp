@@ -211,7 +211,7 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
 
         {
             std::unique_lock<std::mutex> u_lock(cond_lock);
-            cond_cv.wait(u_lock, [&notified](){
+            cond_cv.wait_for(u_lock, std::chrono::seconds(1), [&notified](){
                 if (notified) {
                     return true;
                 }
