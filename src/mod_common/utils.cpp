@@ -7,6 +7,7 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <processthreadsapi.h>
+    #include <boost/locale.hpp>
 #else
     #include <pthread.h>
     #include <unistd.h>
@@ -55,7 +56,7 @@ int util_bind_thread_to_core(unsigned int core_id)
 void util_thread_set_self_name(std::string&& name)
 {
 #if defined(_WIN32)
-    SetThreadDescription(GetCurrentThread(), reinterpret_cast<PCWSTR>(name.c_str()));
+    SetThreadDescription(GetCurrentThread(), std::wstring(boost::locale::conv::utf_to_utf<wchar_t>(name.c_str())).c_str());
 #elif defined(__linux__)
     pthread_setname_np(pthread_self(), name.c_str());
 #elif defined(__APPLE__)
