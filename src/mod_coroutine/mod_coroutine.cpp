@@ -84,6 +84,7 @@ void co_executor_t::start(co_executor_sp executor)
 void cppt_co_t::start_user_co()
 {
     *m_c = context::callcc([&](context::continuation && c) {
+        /// Fixme: thread_local g_executor may cause bugs?
         g_executor->m_executor_c = std::move(c);
         m_co_started = true;
         m_user_co();
@@ -187,24 +188,27 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
     {
         // work stealing
         #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
-        unsigned task_num = g_task_queues[next_tq_idx].get_size();
-        if (task_num > 11) {
-            unsigned steal_task_num = std::min(task_num / 2, 10U);
-            cppt_task_t task;
-            unsigned i = 0;
-            for (; i < steal_task_num; i++) {
-                if (!g_task_queues[next_tq_idx].try_dequeue(task)) {
-                    break;
+//        #if 1
+        if (next_tq_idx != tq_idx) {
+            unsigned task_num = g_task_queues[next_tq_idx].get_size();
+            if (task_num > 11) {
+                unsigned steal_task_num = std::min(task_num / 2, 10U);
+                cppt_task_t task;
+                unsigned i = 0;
+                for (; i < steal_task_num; i++) {
+                    if (!g_task_queues[next_tq_idx].try_dequeue(task)) {
+                        break;
+                    }
+                    if (!g_task_queues[tq_idx]
+                            .try_enqueue_no_notify(std::move(task))) {
+                        log_error("failed to enqueue task! tq idx: %u", tq_idx);
+                        break;
+                    }
                 }
-                if (!g_task_queues[tq_idx]
-                        .try_enqueue_no_notify(std::move(task))) {
-                    log_error("failed to enqueue task! tq idx: %u", tq_idx);
-                    break;
+                if (0 != i) {
+                    notified = false;
+                    return g_run_flag;
                 }
-            }
-            if (0 != i) {
-                notified = false;
-                return g_run_flag;
             }
         }
         next_tq_idx = (next_tq_idx + 1) % gs_core_num;
