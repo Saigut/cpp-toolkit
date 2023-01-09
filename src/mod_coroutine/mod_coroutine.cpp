@@ -168,7 +168,7 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
 
     g_executor = executor;
 
-    const unsigned tls_tq_idx = g_executor->m_tq_idx;
+    const unsigned tq_idx = g_executor->m_tq_idx;
     std::mutex cond_lock;
     std::condition_variable cond_cv;
     bool notified = false;
@@ -181,24 +181,24 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
         cond_cv.notify_one();
     };
 
+    unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
     auto wait_handler =
             [&]()
     {
         // work stealing
         #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
-        unsigned next_tq_idx = (tls_tq_idx + 1) % gs_core_num;
         unsigned task_num = g_task_queues[next_tq_idx].get_size();
-        if (task_num > 0) {
-            unsigned steal_task_num = std::min(task_num/2 + 1, 10U);
+        if (task_num > 11) {
+            unsigned steal_task_num = std::min(task_num / 2, 10U);
             cppt_task_t task;
             unsigned i = 0;
             for (; i < steal_task_num; i++) {
                 if (!g_task_queues[next_tq_idx].try_dequeue(task)) {
                     break;
                 }
-                if (!g_task_queues[tls_tq_idx]
+                if (!g_task_queues[tq_idx]
                         .try_enqueue_no_notify(std::move(task))) {
-                    log_error("failed to enqueue task! tq idx: %u", tls_tq_idx);
+                    log_error("failed to enqueue task! tq idx: %u", tq_idx);
                     break;
                 }
             }
@@ -207,6 +207,7 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
                 return g_run_flag;
             }
         }
+        next_tq_idx = (next_tq_idx + 1) % gs_core_num;
         #endif
 
         {
@@ -224,10 +225,10 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
     };
 
     cppt_task_t& g_cur_task_c = g_executor->m_cur_task_c;
-    g_task_queues[tls_tq_idx].set_handlers(notify_handler, wait_handler);
+    g_task_queues[tq_idx].set_handlers(notify_handler, wait_handler);
 
     while (g_executor->m_turn_on && g_run_flag) {
-        if (g_task_queues[tls_tq_idx].dequeue(g_cur_task_c)) {
+        if (g_task_queues[tq_idx].dequeue(g_cur_task_c)) {
             g_executor->m_is_executing = true;
             auto co = g_cur_task_c.m_co;
             if (!co->is_started()) {
