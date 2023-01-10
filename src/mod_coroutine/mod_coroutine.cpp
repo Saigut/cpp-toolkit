@@ -299,6 +299,7 @@ void cppt_co_main_run()
         now_ms = util_now_ts_ms();
 
         // replace blocking executor
+        #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
         for (unsigned i = 0; i < gs_core_num; i++) {
             auto executor = g_executors[i];
             if (executor->m_is_executing) {
@@ -314,6 +315,7 @@ void cppt_co_main_run()
                 }
             }
         }
+        #endif
 
 //        if ((now_ms - pre_ms) > 5000) {
 //            printf("------------\n");
