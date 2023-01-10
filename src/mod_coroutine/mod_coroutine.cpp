@@ -182,14 +182,29 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
         cond_cv.notify_one();
     };
 
-    unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
-    auto wait_handler =
-            [&]()
-    {
-        // work stealing
-        #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
-//        #if 1
-        if (next_tq_idx != tq_idx) {
+    auto cv_wait = [&]() {
+        {
+            std::unique_lock<std::mutex> u_lock(cond_lock);
+            cond_cv.wait_for(u_lock, std::chrono::seconds(1), [&notified](){
+                if (notified) {
+                    return true;
+                }
+                return false;
+            });
+            notified = false;
+        }
+        return g_run_flag;
+    };
+    std::function<bool()> wait_handler;
+    if (gs_core_num > 1) {
+        unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
+        wait_handler = [&](){
+            // work stealing
+            #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
+//            #if 1
+            if (next_tq_idx == tq_idx) {
+                next_tq_idx = (next_tq_idx + 1) % gs_core_num;
+            }
             unsigned task_num = g_task_queues[next_tq_idx].get_size();
             if (task_num > 11) {
                 unsigned steal_task_num = std::min(task_num / 2, 10U);
@@ -210,26 +225,17 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
                     return g_run_flag;
                 }
             }
-        }
-        next_tq_idx = (next_tq_idx + 1) % gs_core_num;
-        #endif
+            next_tq_idx = (next_tq_idx + 1) % gs_core_num;
+            #endif
 
-        {
-            std::unique_lock<std::mutex> u_lock(cond_lock);
-            cond_cv.wait_for(u_lock, std::chrono::seconds(1), [&notified](){
-                if (notified) {
-                    return true;
-                }
-                return false;
-            });
-            notified = false;
-        }
-
-        return g_run_flag;
-    };
+            return cv_wait();
+        };
+    } else {
+        wait_handler = cv_wait;
+    }
 
     cppt_task_t& g_cur_task_c = g_executor->m_cur_task_c;
-    g_task_queues[tq_idx].set_handlers(notify_handler, wait_handler);
+    g_task_queues[tq_idx].set_handlers(notify_handler, std::move(wait_handler));
 
     while (g_executor->m_turn_on && g_run_flag) {
         if (g_task_queues[tq_idx].dequeue(g_cur_task_c)) {
