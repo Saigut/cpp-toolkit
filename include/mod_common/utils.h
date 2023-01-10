@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 
+#include <string>
 #include <functional>
 
 #include <mod_common/os_compat.h>
