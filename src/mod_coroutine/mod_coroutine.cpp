@@ -197,17 +197,14 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
     };
     std::function<bool()> wait_handler;
     if (gs_core_num > 1) {
-        unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
         wait_handler = [&](){
             // work stealing
             #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
 //            #if 1
-            if (next_tq_idx == tq_idx) {
-                next_tq_idx = (next_tq_idx + 1) % gs_core_num;
-            }
+            unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
             unsigned task_num = g_task_queues[next_tq_idx].get_size();
-            if (task_num > 11) {
-                unsigned steal_task_num = std::min(task_num / 2, 10U);
+            if (task_num > 0) {
+                unsigned steal_task_num = std::min(task_num / 2 + 1, 10U);
                 cppt_task_t task;
                 unsigned i = 0;
                 for (; i < steal_task_num; i++) {
@@ -225,7 +222,6 @@ static void cppt_co_main_run_thread(co_executor_sp executor)
                     return g_run_flag;
                 }
             }
-            next_tq_idx = (next_tq_idx + 1) % gs_core_num;
             #endif
 
             return cv_wait();
