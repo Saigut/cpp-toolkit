@@ -20,14 +20,14 @@ namespace cppt {
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
             ssize_t wrote_size;
             boost::asio::const_buffer out_buf{ str_buf, str_len };
-            auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_socket.async_write_some(out_buf, [&, co_cb](
+            auto wrap_func = [&](std::function<void()>&& resume_f) {
+                m_socket.async_write_some(out_buf, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
 //                    check_ec(ec, "write_some");
                     wrote_size = ec ? -1 : (ssize_t)wrote_b_num;
-                    co_cb();
+                    resume_f();
                 });
             };
             cppt::cor_yield(wrap_func);
@@ -44,14 +44,14 @@ namespace cppt {
         ssize_t read_some(uint8_t* recv_buf, size_t buf_sz) {
             ssize_t read_size;
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
-            auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_socket.async_read_some(in_buf, [&, co_cb](
+            auto wrap_func = [&](std::function<void()>&& resume_f) {
+                m_socket.async_read_some(in_buf, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t read_b_num)
                 {
 //                    check_ec(ec, "read_some");
                     read_size = ec ? -1 : (ssize_t)read_b_num;
-                    co_cb();
+                    resume_f();
                 });
             };
             cppt::cor_yield(wrap_func);
@@ -116,13 +116,13 @@ namespace cppt {
             boost::asio::ip::address addr = boost::asio::ip::make_address(addr_str);
             tcp::endpoint endpoint = tcp::endpoint(addr, port);
             auto socket_to_server = tcp::socket(m_io_ctx);
-            auto wrap_func = [&](std::function<void()>&& co_cb) {
+            auto wrap_func = [&](std::function<void()>&& resume_f) {
                 socket_to_server.async_connect(
                         endpoint,
-                        [&, co_cb](const boost::system::error_code& ec) {
+                        [&, resume_f](const boost::system::error_code& ec) {
                             check_ec(ec, "connect");
                             ret = ec ? -1 : 0;
-                            co_cb();
+                            resume_f();
                         });
             };
             cppt::cor_yield(wrap_func);
@@ -151,11 +151,11 @@ namespace cppt {
         cor_tcp_socket_t* accept(io_context& io_ctx) {
             int ret;
             tcp::socket client_socket(io_ctx);
-            auto wrap_func = [&](std::function<void()>&& co_cb) {
-                m_acceptor.async_accept(client_socket, [&, co_cb](const boost::system::error_code& ec) {
+            auto wrap_func = [&](std::function<void()>&& resume_f) {
+                m_acceptor.async_accept(client_socket, [&, resume_f](const boost::system::error_code& ec) {
                     check_ec(ec, "accept");
                     ret = ec ? -1 : 0;
-                    co_cb();
+                    resume_f();
                 });
             };
             cppt::cor_yield(wrap_func);
