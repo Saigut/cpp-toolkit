@@ -117,6 +117,9 @@ namespace cppt_impl {
 
     void cppt_co_t::join()
     {
+        if (!m_co_started) {
+            return;
+        }
         if (m_co_stopped) {
             return;
         }
