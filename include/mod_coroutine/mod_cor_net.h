@@ -1,5 +1,5 @@
-#ifndef CPP_TOOLKIT_MOD_CO_NET_H
-#define CPP_TOOLKIT_MOD_CO_NET_H
+#ifndef CPP_TOOLKIT_MOD_COR_NET_H
+#define CPP_TOOLKIT_MOD_COR_NET_H
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_context.hpp>
@@ -7,15 +7,15 @@
 #include <mod_common/os_compat.h>
 #include <mod_common/log.h>
 #include <mod_common/expect.h>
-#include "mod_coroutine.h"
+#include "mod_cor.hpp"
 
-namespace {
+namespace cppt {
     using boost::asio::ip::tcp;
     using boost::asio::io_context;
 
-    class cppt_co_tcp_socket {
+    class cor_tcp_socket_t {
     public:
-        cppt_co_tcp_socket(tcp::socket&& socket)
+        cor_tcp_socket_t(tcp::socket&& socket)
         : m_socket(std::move(socket)) {}
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
             ssize_t wrote_size;
@@ -30,11 +30,11 @@ namespace {
                     co_cb();
                 });
             };
-            cppt_co_yield(wrap_func);
+            cppt::cor_yield(wrap_func);
 //            auto timeout_func = [&](){
 //                m_socket.close();
 //            };
-//            int ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
 //            if (0 != ret) {
 //                log_error("async error occurred. ret: %d", ret);
 //                return -1;
@@ -54,11 +54,11 @@ namespace {
                     co_cb();
                 });
             };
-            cppt_co_yield(wrap_func);
+            cppt::cor_yield(wrap_func);
 //            auto timeout_func = [&](){
 //                m_socket.close();
 //            };
-//            int ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
 //            if (0 != ret) {
 //                log_error("async error occurred. ret: %d", ret);
 //                return -1;
@@ -106,12 +106,12 @@ namespace {
         tcp::socket m_socket;
     };
 
-    class cppt_co_tcp_socket_builder {
+    class cor_tcp_socket_builder {
     public:
-        explicit cppt_co_tcp_socket_builder(io_context& io_ctx)
+        explicit cor_tcp_socket_builder(io_context& io_ctx)
         : m_io_ctx(io_ctx), m_acceptor(io_ctx)
         {}
-        std::shared_ptr<cppt_co_tcp_socket> connect(const std::string& addr_str, uint16_t port) {
+        std::shared_ptr<cor_tcp_socket_t> connect(const std::string& addr_str, uint16_t port) {
             int ret = -1;
             boost::asio::ip::address addr = boost::asio::ip::make_address(addr_str);
             tcp::endpoint endpoint = tcp::endpoint(addr, port);
@@ -125,10 +125,10 @@ namespace {
                             co_cb();
                         });
             };
-            cppt_co_yield(wrap_func);
+            cppt::cor_yield(wrap_func);
 //            auto timeout_func = [&](){
 //            };
-//            ret = cppt_co_yield_timeout(wrap_func, 3000, timeout_func);
+//            ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
 //            if (0 != ret) {
 //                log_error("async error occurred. ret: %d", ret);
 //                return nullptr;
@@ -136,7 +136,7 @@ namespace {
             if (ret != 0) {
                 return nullptr;
             }
-            return std::make_shared<cppt_co_tcp_socket>(std::move(socket_to_server));
+            return std::make_shared<cor_tcp_socket_t>(std::move(socket_to_server));
         }
         bool listen(const std::string& local_addr_str, uint16_t local_port) {
             if (m_acceptor.is_open()) {
@@ -148,7 +148,7 @@ namespace {
             }
             return true;
         }
-        cppt_co_tcp_socket* accept(io_context& io_ctx) {
+        cor_tcp_socket_t* accept(io_context& io_ctx) {
             int ret;
             tcp::socket client_socket(io_ctx);
             auto wrap_func = [&](std::function<void()>&& co_cb) {
@@ -158,12 +158,12 @@ namespace {
                     co_cb();
                 });
             };
-            cppt_co_yield(wrap_func);
+            cppt::cor_yield(wrap_func);
             if (0 != ret) {
                 log_error("failed to accept!");
                 return nullptr;
             }
-            return new cppt_co_tcp_socket{std::move(client_socket)};
+            return new cor_tcp_socket_t{std::move(client_socket)};
         }
     private:
         int listen_internal(const std::string& local_addr_str, uint16_t local_port) {
@@ -190,4 +190,4 @@ namespace {
 }
 
 
-#endif //CPP_TOOLKIT_MOD_CO_NET_H
+#endif //CPP_TOOLKIT_MOD_COR_NET_H

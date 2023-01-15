@@ -8,7 +8,7 @@
 
 #include <mod_common/log.h>
 #include <mod_common/expect.h>
-#include <mod_coroutine/mod_coroutine.h>
+#include <mod_coroutine/mod_cor.hpp>
 
 
 /*
@@ -414,7 +414,7 @@ void prod_im_s_mod_main_operation::read_operation()
             }
         }
     };
-    cppt_co_yield(wrap_func);
+    cppt::cor_yield(wrap_func);
 }
 
 int prod_im_s_mod_main_operation::process_operation(prod_im_s_mod_main_msg* msg)
@@ -493,7 +493,7 @@ int prod_im_s_mod_main_operation::process_operation(prod_im_s_mod_main_msg* msg)
                 }
                 free_msg(msg);
             };
-            cppt_co_create(std::move(co_get_chat_msg));
+            cppt::cor_create(std::move(co_get_chat_msg));
             return 0;
         }
 
@@ -700,7 +700,7 @@ prod_im_s_mod_main_operation::co_func_get_chat_msg(
             }
         }
     };
-    cppt_co_yield(wrap_func);
+    cppt::cor_yield(wrap_func);
 
     ret = m_user_info.user_get_chat_msg_from(user_id, msg_index, *ret_list);
     if (0 != ret) {
@@ -718,6 +718,6 @@ void prod_im_s_mod_main::run()
             m_operation.read_operation();
         }
     };
-    cppt_co_create(co_im_s_main);
-    cppt_co_main_run();
+    cppt::cor_create(co_im_s_main);
+    cppt::cor_run();
 }

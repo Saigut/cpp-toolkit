@@ -1,7 +1,7 @@
 #include <app_test_http_client/app_test_http_client.hpp>
-#include <mod_coroutine/mod_coroutine.h>
+#include <mod_coroutine/mod_cor.hpp>
 #include <app_coroutine/io_context_pool.h>
-#include <mod_coroutine/mod_co_net.h>
+#include <mod_coroutine/mod_cor_net.h>
 
 
 static void asio_pool_thread(io_context_pool& io_ctx_pool)
@@ -11,7 +11,7 @@ static void asio_pool_thread(io_context_pool& io_ctx_pool)
 }
 static void my_co_net(io_context_pool& io_ctx_pool)
 {
-    cppt_co_tcp_socket_builder builder(io_ctx_pool.get_io_context());
+    cppt::cor_tcp_socket_builder builder(io_ctx_pool.get_io_context());
     auto peer_socket = builder.connect("127.0.0.1", 10666);
     if (!peer_socket) {
         log_error("connect failed!");
@@ -43,7 +43,7 @@ static void my_co_net(io_context_pool& io_ctx_pool)
 static void main_co(io_context_pool& io_ctx_pool)
 {
     for (int i = 0; i < 50; i++) {
-        cppt_co_create(my_co_net, std::ref(io_ctx_pool));
+        cppt::cor_create(my_co_net, std::ref(io_ctx_pool));
 //        auto id = cppt_co_awaitable_create(my_co_net, std::ref(io_ctx));
 //        cppt_co_await(id);
     }
@@ -55,7 +55,7 @@ int app_test_http_client(int argc, char** argv)
     std::thread asio_pool_thr{asio_pool_thread, std::ref(io_ctx_pool)};
     asio_pool_thr.detach();
 
-    cppt_co_create(main_co, std::ref(io_ctx_pool));
-    cppt_co_main_run();
+    cppt::cor_create(main_co, std::ref(io_ctx_pool));
+    cppt::cor_run();
     return 0;
 }

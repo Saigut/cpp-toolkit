@@ -4,8 +4,8 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/lexical_cast.hpp>
 #include <mod_common/log.h>
-#include <mod_coroutine/mod_coroutine.h>
-#include <mod_coroutine/mod_co_net.h>
+#include <mod_coroutine/mod_cor.hpp>
+#include <mod_coroutine/mod_cor_net.h>
 #include <app_coroutine/io_context_pool.h>
 
 
@@ -27,7 +27,7 @@ static void asio_pool_thread(io_context_pool& io_ctx_pool)
 
 static void my_co_net(io_context& io_ctx)
 {
-    cppt_co_tcp_socket_builder builder(io_ctx);
+    cppt::cor_tcp_socket_builder builder(io_ctx);
     auto peer_socket = builder.connect("127.0.0.1", 80);
     if (!peer_socket) {
         log_error("connect failed!");
@@ -59,7 +59,7 @@ func_return:
 static void my_co_net_main(io_context& io_ctx)
 {
     for (int i = 0; i < 50; i++) {
-        cppt_co_create(my_co_net, std::ref(io_ctx));
+        cppt::cor_create(my_co_net, std::ref(io_ctx));
 //        auto id = cppt_co_awaitable_create(my_co_net, std::ref(io_ctx));
 //        cppt_co_await(id);
     }
@@ -70,8 +70,8 @@ static void test_http_client()
     io_context io_ctx;
     std::thread asio_thr{asio_thread, std::ref(io_ctx)};
     asio_thr.detach();
-    cppt_co_create(my_co_net_main, std::ref(io_ctx));
-    cppt_co_main_run();
+    cppt::cor_create(my_co_net_main, std::ref(io_ctx));
+    cppt::cor_run();
 }
 
 struct header
@@ -162,7 +162,7 @@ do { \
 } while(false)
 
 // ret: 0 finished; -1 error; 1 no data;
-static int consume_header(request& req, cppt_co_tcp_socket& tcp_socket)
+static int consume_header(request& req, cppt::cor_tcp_socket_t& tcp_socket)
 {
     char c;
     size_t content_length_ = 0;
@@ -349,7 +349,7 @@ static void print_log_record(log_record& log)
 //    log_info("[t5,t6]: %" PRIu64 "us", get_ts_diff(log.t6, log.t5));
 }
 
-static void co_http_server_process_request(cppt_co_tcp_socket* tcp_socket,
+static void co_http_server_process_request(cppt::cor_tcp_socket_t* tcp_socket,
                                     log_record& logs)
 {
     int ret;
@@ -382,32 +382,32 @@ static void co_http_server_process_request(cppt_co_tcp_socket* tcp_socket,
 static void co_http_server_main(io_context& io_ctx)
 {
     log_record logs;
-    cppt_co_tcp_socket_builder builder(io_ctx);
+    cppt::cor_tcp_socket_builder builder(io_ctx);
     expect_ret(builder.listen("0.0.0.0", 10666));
     log_info("http server listening on: 0.0.0.0:10666");
     while (true) {
-        cppt_co_tcp_socket* peer_socket = builder.accept(io_ctx);
+        cppt::cor_tcp_socket_t* peer_socket = builder.accept(io_ctx);
         if (!peer_socket) {
             return;
         }
-        cppt_co_create(co_http_server_process_request, peer_socket, std::ref(logs));
+        cppt::cor_create(co_http_server_process_request, peer_socket, std::ref(logs));
     }
 }
 
 static void co_http_server_main2(io_context_pool& io_ctx_pool)
 {
     log_record logs;
-    cppt_co_tcp_socket_builder builder(io_ctx_pool.get_io_context());
+    cppt::cor_tcp_socket_builder builder(io_ctx_pool.get_io_context());
     expect_ret(builder.listen("0.0.0.0", 10666));
     log_info("http server listening on: 0.0.0.0:10666");
     while (true) {
-        cppt_co_tcp_socket* peer_socket = builder.accept(io_ctx_pool.get_io_context());
+        cppt::cor_tcp_socket_t* peer_socket = builder.accept(io_ctx_pool.get_io_context());
         if (!peer_socket) {
             log_error("failed to accept!");
             break;
         }
 //        logs.t1 = util_now_ts_us();
-        cppt_co_create(co_http_server_process_request, peer_socket, std::ref(logs));
+        cppt::cor_create(co_http_server_process_request, peer_socket, std::ref(logs));
     }
     log_info("http server quit.");
 }
@@ -417,14 +417,14 @@ static void test_http_server()
     io_context_pool io_ctx_pool{4};
     std::thread asio_pool_thr{asio_pool_thread, std::ref(io_ctx_pool)};
     asio_pool_thr.detach();
-    cppt_co_create(co_http_server_main2, std::ref(io_ctx_pool));
+    cppt::cor_create(co_http_server_main2, std::ref(io_ctx_pool));
 
 //    io_context io_ctx;
 //    std::thread asio_thr{ asio_thread, std::ref(io_ctx) };
 //    asio_thr.detach();
-//    cppt_co_create(co_http_server_main, std::ref(io_ctx));
+//    cppt::cor_create(co_http_server_main, std::ref(io_ctx));
 
-    cppt_co_main_run();
+    cppt::cor_run();
 }
 
 int app_coroutine(int argc, char** argv)

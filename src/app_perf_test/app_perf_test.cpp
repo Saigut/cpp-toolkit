@@ -9,7 +9,7 @@
 #include <boost/context/fiber.hpp>
 #include <mod_common/log.h>
 #include <mod_common/utils.h>
-#include <mod_coroutine/mod_coroutine.h>
+#include <mod_coroutine/mod_cor.hpp>
 #include "app_perf_test_internal.h"
 #include "clock.hpp"
 
@@ -506,7 +506,7 @@ const int switch_num = 100000;
 //            logs.t4 = util_now_ts_ns();
 //        };
 //        logs.t2 = util_now_ts_ns();
-//        cppt_co_yield(wrap_func);
+//        cppt::cor_yield(wrap_func);
 //        logs.t5 = util_now_ts_ns();
 //    }
 //    print_log_record_ns(logs);
@@ -530,7 +530,7 @@ const int switch_num = 100000;
 //        auto wrap_func = [](std::function<void()>&& co_cb) {
 //            co_cb();
 //        };
-//        cppt_co_yield(wrap_func);
+//        cppt::cor_yield(wrap_func);
 //    }
 //    logs.t2 = util_now_ts_us();
 //    print_log_record(logs);
@@ -542,7 +542,7 @@ const int switch_num = 100000;
 //        co_cb();
 //    };
 //    for (i = 0; i < switch_num; i++) {
-//        cppt_co_yield(wrap_func);
+//        cppt::cor_yield(wrap_func);
 //    }
 //    logs.t2 = util_now_ts_us();
 //    print_log_record(logs);
@@ -554,7 +554,7 @@ const int switch_num = 100000;
 //        co_cb();
 //    };
 //    for (i = 0; i < switch_num; i++) {
-//        cppt_co_yield(wrap_func3);
+//        cppt::cor_yield(wrap_func3);
 //    }
 //    logs.t2 = util_now_ts_us();
 //    print_log_record(logs);
@@ -562,8 +562,8 @@ const int switch_num = 100000;
 
 static void test_cppt_co()
 {
-//    cppt_co_create(cppt_co0);
-//    cppt_co_main_run();
+//    cppt::cor_create(cppt_co0);
+//    cppt::cor_run();
 }
 
 template< std::size_t Max, std::size_t Default, std::size_t Min >

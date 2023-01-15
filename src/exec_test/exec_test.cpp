@@ -1,6 +1,6 @@
 #include <iostream>
-#include <mod_coroutine/mod_coroutine.h>
-#include <mod_coroutine/mod_co_mutex.hpp>
+#include <mod_coroutine/mod_cor.hpp>
+#include <mod_coroutine/mod_cor_mutex.hpp>
 
 #include "ftxui/component/captured_mouse.hpp"  // for ftxui
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
@@ -278,7 +278,7 @@ int co_usleep(unsigned ts_us)
         };
         async_sleep(ts_us, async_sleep_cb);
     };
-    cppt_co_yield(wrap_func);
+    cppt::cor_yield(wrap_func);
     return sleep_result;
 }
 
@@ -291,7 +291,7 @@ void my_co1()
     log_info("3");
 }
 
-void my_co2(int n, cppt_co_sp wait_co)
+void my_co2(int n, cppt::cor_sp wait_co)
 {
     wait_co->join();
     log_info("11: %d", n);
@@ -303,8 +303,8 @@ void my_co2(int n, cppt_co_sp wait_co)
 
 void my_co0()
 {
-    auto co1 = cppt_co_create(my_co1);
-    cppt_co_create(my_co2, 3, co1);
+    auto co1 = cppt::cor_create(my_co1);
+    cppt::cor_create(my_co2, 3, co1);
     co1->join();
     co1->join();
     co1->join();
@@ -335,17 +335,17 @@ void cal_co()
 
 void cal_co_main()
 {
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
-    cppt_co_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
+    cppt::cor_create(cal_co);
 }
 
-void co_mutex_1(cppt_co_mutex_t& mutex)
+void co_mutex_1(cppt::cor_mutex_t& mutex)
 {
     log_info("1");
     log_info("2");
@@ -358,7 +358,7 @@ void co_mutex_1(cppt_co_mutex_t& mutex)
     log_info("6");
 }
 
-void co_mutex_2(cppt_co_mutex_t& mutex)
+void co_mutex_2(cppt::cor_mutex_t& mutex)
 {
     log_info("a");
     log_info("b");
@@ -373,19 +373,19 @@ void co_mutex_2(cppt_co_mutex_t& mutex)
 
 void co_main_mutex()
 {
-    cppt_co_mutex_t mutex;
-    auto co1 = cppt_co_create(co_mutex_1, std::ref(mutex));
-    auto co2 = cppt_co_create(co_mutex_2, std::ref(mutex));
+    cppt::cor_mutex_t mutex;
+    auto co1 = cppt::cor_create(co_mutex_1, std::ref(mutex));
+    auto co2 = cppt::cor_create(co_mutex_2, std::ref(mutex));
     co1->join();
     co2->join();
 }
 
 static int test_cppt_co(int argc, const char* argv[])
 {
-//    cppt_co_create(my_co0);
-//    cppt_co_create(cal_co_main);
-    cppt_co_create(co_main_mutex);
-    cppt_co_main_run();
+//    cppt::cor_create(my_co0);
+//    cppt::cor_create(cal_co_main);
+    cppt::cor_create(co_main_mutex);
+    cppt::cor_run();
     return 0;
 }
 
