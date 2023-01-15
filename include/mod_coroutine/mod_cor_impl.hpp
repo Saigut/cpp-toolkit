@@ -3,9 +3,9 @@
 
 #include <functional>
 #include <thread>
-#include <mod_common/utils.h>
+#include <mod_common/utils.hpp>
 #include <boost/context/continuation.hpp>
-#include <mod_atomic_queue/atomic_queue.h>
+#include <mod_atomic_queue/atomic_queue.hpp>
 
 namespace cppt_impl {
     using cppt_co_c_sp = std::shared_ptr<boost::context::continuation>;

@@ -1,9 +1,9 @@
-#include <mod_mempool/mod_mempool.h>
+#include <mod_mempool/mod_mempool.hpp>
 
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 
 
 int mempool::init()

@@ -3,7 +3,7 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <prod_im_server.grpc.pb.h>
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 
 #include "prod_im_server_mod_main.hpp"
 

@@ -1,9 +1,9 @@
-#include <app_asio_socket/app_asio_socket.h>
+#include <app_asio_socket/app_asio_socket.hpp>
 
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 
-#include "app_asio_socket_client.h"
-#include "app_asio_socket_server.h"
+#include "app_asio_socket_client.hpp"
+#include "app_asio_socket_server.hpp"
 
 static void print_usage()
 {

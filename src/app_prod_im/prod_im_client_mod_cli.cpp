@@ -7,8 +7,8 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/util/ref.hpp>
-#include <mod_common/expect.h>
-#include <mod_common/utils.h>
+#include <mod_common/expect.hpp>
+#include <mod_common/utils.hpp>
 
 #include "prod_im_client_mod_main.hpp"
 

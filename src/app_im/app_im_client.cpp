@@ -1,4 +1,4 @@
-#include "app_im_client.h"
+#include "app_im_client.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,8 +6,8 @@
 #include <thread>
 #include <ctime>
 
-#include <mod_queue/mod_queue.h>
-#include <mod_common/expect.h>
+#include <mod_queue/mod_queue.hpp>
+#include <mod_common/expect.hpp>
 
 #include <grpcpp/grpcpp.h>
 #include <cpt_im.grpc.pb.h>

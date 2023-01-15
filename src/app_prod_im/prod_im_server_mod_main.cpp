@@ -6,8 +6,8 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
-#include <mod_common/log.h>
-#include <mod_common/expect.h>
+#include <mod_common/log.hpp>
+#include <mod_common/expect.hpp>
 #include <mod_coroutine/mod_cor.hpp>
 
 

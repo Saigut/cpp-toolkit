@@ -1,10 +1,10 @@
-#include <app_chat/app_chat.h>
+#include <app_chat/app_chat.hpp>
 
 #include <stdio.h>
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 
-#include "app_chat_client.h"
-#include "app_chat_server.h"
+#include "app_chat_client.hpp"
+#include "app_chat_server.hpp"
 
 static void print_usage()
 {

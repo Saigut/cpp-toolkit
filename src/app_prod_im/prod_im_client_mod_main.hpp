@@ -6,7 +6,7 @@
 #include <string>
 
 #include "prod_im_client_mod_api_grpc.hpp"
-#include "prod_im_dt.h"
+#include "prod_im_dt.hpp"
 
 class prod_im_c_mod_main {
 public:

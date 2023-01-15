@@ -1,7 +1,7 @@
-#include <app_prod_im/app_prod_im.h>
+#include <app_prod_im/app_prod_im.hpp>
 
 #include <stdio.h>
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 
 #include "prod_im_client.hpp"
 #include "prod_im_server.hpp"

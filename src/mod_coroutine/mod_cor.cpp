@@ -7,7 +7,7 @@
 #include <condition_variable>
 #include <boost/context/continuation.hpp>
 #include <boost/asio/io_context.hpp>
-#include <mod_atomic_queue/atomic_queue.h>
+#include <mod_atomic_queue/atomic_queue.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <mod_np_queue/mod_np_queue.hpp>
 

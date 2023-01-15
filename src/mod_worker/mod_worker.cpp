@@ -1,7 +1,7 @@
-#include <mod_worker/mod_worker.h>
+#include <mod_worker/mod_worker.hpp>
 
 #include <mutex>
-#include <mod_common/expect.h>
+#include <mod_common/expect.hpp>
 
 /*
  * class Worker

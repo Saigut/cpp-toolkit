@@ -1,7 +1,7 @@
-#include <mod_ring_queue/mod_ring_queue.h>
+#include <mod_ring_queue/mod_ring_queue.hpp>
 
-#include <mod_common/log.h>
-#include <mod_mempool/mod_mempool.h>
+#include <mod_common/log.hpp>
+#include <mod_mempool/mod_mempool.hpp>
 
 
 bool ring_queue::empty()

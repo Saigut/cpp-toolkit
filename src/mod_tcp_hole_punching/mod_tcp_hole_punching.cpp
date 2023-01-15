@@ -1,10 +1,10 @@
-#include <mod_tcp_hole_punching/mod_tcp_hole_punching.h>
+#include <mod_tcp_hole_punching/mod_tcp_hole_punching.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_context.hpp>
 
-#include <mod_common/log.h>
-#include <mod_common/expect.h>
+#include <mod_common/log.hpp>
+#include <mod_common/expect.hpp>
 
 #define CONNECT_TO_IP "14.215.177.38"
 #define CONNECT_TO_PORT 80

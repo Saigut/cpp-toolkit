@@ -1,12 +1,12 @@
-#include <app_coroutine/app_coroutine.h>
+#include <app_coroutine/app_coroutine.hpp>
 
 #include <thread>
 #include <boost/asio/io_context.hpp>
 #include <boost/lexical_cast.hpp>
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 #include <mod_coroutine/mod_cor.hpp>
-#include <mod_coroutine/mod_cor_net.h>
-#include <app_coroutine/io_context_pool.h>
+#include <mod_coroutine/mod_cor_net.hpp>
+#include <app_coroutine/io_context_pool.hpp>
 
 
 using boost::asio::io_context;

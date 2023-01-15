@@ -1,5 +1,5 @@
 #include <iostream>
-#include <app_prod_im/app_prod_im.h>
+#include <app_prod_im/app_prod_im.hpp>
 
 static int program_main(int argc, char** argv)
 {

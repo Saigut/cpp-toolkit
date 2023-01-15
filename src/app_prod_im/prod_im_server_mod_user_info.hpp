@@ -5,7 +5,7 @@
 #include <memory>
 #include <map>
 #include <vector>
-#include "prod_im_dt.h"
+#include "prod_im_dt.hpp"
 
 class prod_im_s_mod_uinfo {
 private:

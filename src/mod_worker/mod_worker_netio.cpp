@@ -1,6 +1,6 @@
-#include <mod_worker/mod_worker_netio.h>
+#include <mod_worker/mod_worker_netio.hpp>
 
-#include <mod_common/expect.h>
+#include <mod_common/expect.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/deadline_timer.hpp>
 

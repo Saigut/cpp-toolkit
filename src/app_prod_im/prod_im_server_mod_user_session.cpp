@@ -1,6 +1,6 @@
 #include "prod_im_server_mod_user_session.hpp"
 
-#include <mod_common/log.h>
+#include <mod_common/log.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
 

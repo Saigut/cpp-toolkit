@@ -1,10 +1,10 @@
-#include "app_asio_socket_server.h"
+#include "app_asio_socket_server.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_context.hpp>
 
-#include <mod_common/log.h>
-#include <mod_common/expect.h>
+#include <mod_common/log.hpp>
+#include <mod_common/expect.hpp>
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::address;

@@ -1,6 +1,6 @@
-#include <mod_worker/mod_workutils.h>
+#include <mod_worker/mod_workutils.hpp>
 
-#include <mod_common/expect.h>
+#include <mod_common/expect.hpp>
 
 #define CHECK_YIELD_PARAM(_yield_param) \
 do { \

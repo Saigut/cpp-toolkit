@@ -1,8 +1,8 @@
 #include "prod_im_server.hpp"
 
 #include <thread>
-#include <mod_common/log.h>
-#include <mod_common/utils.h>
+#include <mod_common/log.hpp>
+#include <mod_common/utils.hpp>
 
 #include "prod_im_server_mod_main.hpp"
 #include "prod_im_server_mod_api_grpc.hpp"

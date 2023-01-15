@@ -1,4 +1,4 @@
-#include <mod_common/os_compat.h>
+#include <mod_common/os_compat.hpp>
 
 #include <thread>
 

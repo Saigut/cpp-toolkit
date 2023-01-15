@@ -5,7 +5,7 @@
 #include <string>
 #include <grpcpp/channel.h>
 #include <prod_im_server.grpc.pb.h>
-#include "prod_im_dt.h"
+#include "prod_im_dt.hpp"
 
 class call_im_server_api_grpc {
 public:

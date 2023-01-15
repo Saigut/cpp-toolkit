@@ -1,7 +1,7 @@
 #include "prod_im_server_mod_api_jsonrpc.hpp"
 
-#include <mod_common/log.h>
-#include <mod_common/expect.h>
+#include <mod_common/log.hpp>
+#include <mod_common/expect.hpp>
 
 #include "prod_im_server_mod_main.hpp"
 

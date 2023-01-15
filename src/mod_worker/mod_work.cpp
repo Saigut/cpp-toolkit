@@ -1,4 +1,4 @@
-#include <mod_worker/mod_work.h>
+#include <mod_worker/mod_work.hpp>
 
 
 /*

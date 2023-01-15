@@ -1,4 +1,4 @@
-#include "prod_im_helper.h"
+#include "prod_im_helper.hpp"
 #include "prod_im_server_mod_main.hpp"
 
 int im_s_op_msg_mpool::init()

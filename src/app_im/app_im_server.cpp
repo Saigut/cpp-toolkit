@@ -1,14 +1,14 @@
-#include "app_im_server.h"
+#include "app_im_server.hpp"
 
 #include <inttypes.h>
-#include <mod_common/expect.h>
+#include <mod_common/expect.hpp>
 
 #include <grpcpp/grpcpp.h>
 #include <cpt_im.grpc.pb.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
-#include <mod_worker/mod_worker.h>
+#include <mod_worker/mod_worker.hpp>
 
-#include "app_im_client.h"
+#include "app_im_client.hpp"
 
 using grpc::Channel;
 using grpc::Status;

@@ -1,7 +1,7 @@
 #include <app_test_http_client/app_test_http_client.hpp>
 #include <mod_coroutine/mod_cor.hpp>
-#include <app_coroutine/io_context_pool.h>
-#include <mod_coroutine/mod_cor_net.h>
+#include <app_coroutine/io_context_pool.hpp>
+#include <mod_coroutine/mod_cor_net.hpp>
 
 
 static void asio_pool_thread(io_context_pool& io_ctx_pool)

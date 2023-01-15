@@ -1,4 +1,4 @@
-#include <app_perf_test/app_perf_test.h>
+#include <app_perf_test/app_perf_test.hpp>
 
 #include <functional>
 #include <thread>
@@ -7,10 +7,10 @@
 #include <type_traits>
 #include <boost/context/continuation.hpp>
 #include <boost/context/fiber.hpp>
-#include <mod_common/log.h>
-#include <mod_common/utils.h>
+#include <mod_common/log.hpp>
+#include <mod_common/utils.hpp>
 #include <mod_coroutine/mod_cor.hpp>
-#include "app_perf_test_internal.h"
+#include "app_perf_test_internal.hpp"
 #include "clock.hpp"
 
 struct log_record {

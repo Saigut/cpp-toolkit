@@ -1,9 +1,9 @@
-#include <app_worker/app_worker.h>
-#include <mod_worker/mod_work.h>
-#include <mod_worker/mod_worker_netio.h>
+#include <app_worker/app_worker.hpp>
+#include <mod_worker/mod_work.hpp>
+#include <mod_worker/mod_worker_netio.hpp>
 
-#include <mod_common/expect.h>
-#include <mod_worker/mod_workutils.h>
+#include <mod_common/expect.hpp>
+#include <mod_worker/mod_workutils.hpp>
 
 /*#include <cstdlib>
 

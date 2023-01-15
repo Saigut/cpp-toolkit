@@ -2,7 +2,7 @@
 #define CPP_TOOLKIT_MOD_NP_QUEUE_HPP
 
 #include <functional>
-#include <mod_atomic_queue/atomic_queue.h>
+#include <mod_atomic_queue/atomic_queue.hpp>
 
 
 // Notify to polling queue。多写单读
