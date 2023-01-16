@@ -199,6 +199,34 @@ namespace cppt_impl {
             }
             return g_run_flag;
         };
+
+        cppt_task_t& g_cur_task_c = g_executor->m_cur_task_c;
+        auto exec_co = [&](){
+            g_executor->m_is_executing = true;
+            auto co = g_cur_task_c.m_co;
+            if (!co->is_started()) {
+                co->start_user_co();
+            } else if (co->can_resume()) {
+                if (g_cur_task_c.m_f_before_execution) {
+                    g_cur_task_c.m_f_before_execution();
+                    g_cur_task_c.m_f_before_execution = nullptr;
+                }
+                co->resume_user_co();
+            } else {
+                g_cur_task_c.m_co = nullptr;
+                g_executor->m_is_executing = false;
+                return;
+            }
+            if (g_cur_task_c.m_f_after_execution) {
+                g_cur_task_c.m_f_after_execution(g_cur_task_c.m_co);
+                g_cur_task_c.m_f_after_execution = nullptr;
+            } else {
+                g_cur_task_c.m_co = nullptr;
+            }
+            g_executor->m_is_executing = false;
+            g_executor->m_is_blocking = false;
+        };
+
         std::function<bool()> wait_handler;
         if (gs_core_num > 1) {
             wait_handler = [&](){
@@ -207,21 +235,8 @@ namespace cppt_impl {
 //                #if 1
                 unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
                 unsigned task_num = g_task_queues[next_tq_idx].get_size();
-                if (1 == task_num) {
-                    if (g_executors[next_tq_idx]->m_is_executing) {
-                        cppt_task_t task;
-                        if (g_task_queues[next_tq_idx].try_dequeue(task)) {
-                            if (g_task_queues[tq_idx]
-                                    .try_enqueue_no_notify(std::move(task))) {
-                                notified = false;
-                                return g_run_flag;
-                            } else {
-                                log_error("failed to enqueue task! tq idx: %u", tq_idx);
-                            }
-                        }
-                    }
-                } else if (task_num > 1) {
-                    unsigned steal_task_num = std::min(task_num / 2, 10U);
+                if (task_num > 1) {
+                    unsigned steal_task_num = std::min((task_num + 1) / 2, 10U);
                     cppt_task_t task;
                     unsigned i = 0;
                     for (; i < steal_task_num; i++) {
@@ -238,6 +253,12 @@ namespace cppt_impl {
                         notified = false;
                         return g_run_flag;
                     }
+                } else if (1 == task_num) {
+                    if (g_task_queues[next_tq_idx].try_dequeue(g_cur_task_c)) {
+                        exec_co();
+                        notified = false;
+                        return g_run_flag;
+                    }
                 }
                 #endif
 
@@ -247,34 +268,11 @@ namespace cppt_impl {
             wait_handler = cv_wait;
         }
 
-        cppt_task_t& g_cur_task_c = g_executor->m_cur_task_c;
         g_task_queues[tq_idx].set_handlers(notify_handler, std::move(wait_handler));
 
         while (g_executor->m_turn_on && g_run_flag) {
             if (g_task_queues[tq_idx].dequeue(g_cur_task_c)) {
-                g_executor->m_is_executing = true;
-                auto co = g_cur_task_c.m_co;
-                if (!co->is_started()) {
-                    co->start_user_co();
-                } else if (co->can_resume()) {
-                    if (g_cur_task_c.m_f_before_execution) {
-                        g_cur_task_c.m_f_before_execution();
-                        g_cur_task_c.m_f_before_execution = nullptr;
-                    }
-                    co->resume_user_co();
-                } else {
-                    g_cur_task_c.m_co = nullptr;
-                    g_executor->m_is_executing = false;
-                    continue;
-                }
-                if (g_cur_task_c.m_f_after_execution) {
-                    g_cur_task_c.m_f_after_execution(g_cur_task_c.m_co);
-                    g_cur_task_c.m_f_after_execution = nullptr;
-                } else {
-                    g_cur_task_c.m_co = nullptr;
-                }
-                g_executor->m_is_executing = false;
-                g_executor->m_is_blocking = false;
+                exec_co();
             }
         }
     }
