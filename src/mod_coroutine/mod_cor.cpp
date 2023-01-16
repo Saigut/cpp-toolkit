@@ -207,8 +207,21 @@ namespace cppt_impl {
 //                #if 1
                 unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
                 unsigned task_num = g_task_queues[next_tq_idx].get_size();
-                if (task_num > 0) {
-                    unsigned steal_task_num = std::min(task_num / 2 + 1, 10U);
+                if (1 == task_num) {
+                    if (g_executors[next_tq_idx]->m_is_executing) {
+                        cppt_task_t task;
+                        if (g_task_queues[next_tq_idx].try_dequeue(task)) {
+                            if (g_task_queues[tq_idx]
+                                    .try_enqueue_no_notify(std::move(task))) {
+                                notified = false;
+                                return g_run_flag;
+                            } else {
+                                log_error("failed to enqueue task! tq idx: %u", tq_idx);
+                            }
+                        }
+                    }
+                } else if (task_num > 1) {
+                    unsigned steal_task_num = std::min(task_num / 2, 10U);
                     cppt_task_t task;
                     unsigned i = 0;
                     for (; i < steal_task_num; i++) {
