@@ -389,6 +389,32 @@ static int test_cppt_co(int argc, const char* argv[])
     return 0;
 }
 
+class test_co_t {
+public:
+    void co_main(int i) {
+        auto co1 = cppt::cor_create(my_co1);
+        cppt::cor_create(my_co2, 3, co1);
+        co1->join();
+        co1->join();
+        co1->join();
+        co_usleep(333);
+        co1->join();
+        co1->join();
+        co1->join();
+    }
+};
+
+static int test_cppt_co_class(int argc, const char* argv[])
+{
+//    cppt::cor_create(my_co0);
+//    cppt::cor_create(cal_co_main);
+    test_co_t co;
+    cppt::cor_create(&test_co_t::co_main, &co, 1);
+    cppt::cor_run();
+    return 0;
+}
+
+
 static int program_main(int argc, const char* argv[])
 {
     int ret = -1;
@@ -399,7 +425,8 @@ static int program_main(int argc, const char* argv[])
 //    ret = test_html_like(argc, argv);
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
-    ret = test_cppt_co(argc, argv);
+//    ret = test_cppt_co(argc, argv);
+    ret = test_cppt_co_class(argc, argv);
     return ret;
 }
 

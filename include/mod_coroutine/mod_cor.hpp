@@ -13,24 +13,46 @@ namespace cppt {
 
     using cor_sp = cppt_impl::cor_sp;
 
-    template<typename Function, typename... Args>
-    cor_sp cor_create(Function& f, Args... args)
-    {
+    template<typename Func, typename... Args>
+    cor_sp cor_create_impl(Func&& func, Args&&... args) {
         auto params = std::make_tuple(std::forward<Args>(args)...);
         auto user_co = [=](){
-            cppt_impl::co_call_with_variadic_arg(f, params);
+            cppt_impl::co_call_with_variadic_arg(func, params);
         };
         return cppt_impl::cppt_co_create0(std::move(user_co));
     }
 
-    template<typename Function, typename... Args>
-    cor_sp cor_create(Function&& f, Args... args)
-    {
+//    template<typename Func, typename Obj, typename... Args>
+//    cor_sp cor_create_mf(Func&& func, Obj&& obj, Args&&... args) {
+//        return cor_create_impl(std::mem_fn(func), std::forward<Obj>(obj), std::forward<Args>(args)...);
+//    }
+
+    template<typename Func, typename... Args>
+    cor_sp cor_create(Func&& func, Args&&... args) {
+        if constexpr (std::is_member_function_pointer_v<std::remove_reference_t<Func>>) {
+//            return cor_create_mf(func, std::forward<Args>(args)...);
+            return cor_create_impl(std::mem_fn(func), std::forward<Args>(args)...);
+        } else {
+            return cor_create_impl(func, std::forward<Args>(args)...);
+        }
+    }
+
+    template<typename Func, typename... Args>
+    cor_sp cor_create_impl(Func& func, Args&&... args) {
         auto params = std::make_tuple(std::forward<Args>(args)...);
         auto user_co = [=](){
-            cppt_impl::co_call_with_variadic_arg(f, params);
+            cppt_impl::co_call_with_variadic_arg(func, params);
         };
         return cppt_impl::cppt_co_create0(std::move(user_co));
+    }
+
+    template<typename Func, typename... Args>
+    cor_sp cor_create(Func& func, Args&&... args) {
+        if constexpr (std::is_member_function_pointer<std::remove_reference_t<Func>>::value) {
+            return cor_create_impl(std::mem_fn(func), std::forward<Args>(args)...);
+        } else {
+            return cor_create_impl(func, std::forward<Args>(args)...);
+        }
     }
 
     // ret: 0, ok; -1 coroutine error

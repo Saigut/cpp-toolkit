@@ -161,7 +161,7 @@ static void save_func_lambda(Function& f, Args... args)
 {
     auto params = std::make_tuple(std::forward<Args>(args)...);
     auto user_co = [=](){
-        call_with_variadic_arg(f, params);
+        utils_call_with_variadic_arg(f, params);
     };
     g_func_lambda = std::move(user_co);
 }
