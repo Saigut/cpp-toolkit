@@ -13,8 +13,8 @@ namespace cppt {
     class cor_channel {
     public:
         explicit cor_channel();
-        int read(ELE_T& msg);
-        int write(ELE_T&& msg);
+        bool read(ELE_T& msg);
+        bool write(ELE_T&& msg);
 
     private:
         np_queue_t<ELE_T, SIZE> m_q;
@@ -54,12 +54,12 @@ namespace cppt {
     }
 
     template<class ELE_T, unsigned int SIZE>
-    int cor_channel<ELE_T, SIZE>::read(ELE_T& msg) {
+    bool cor_channel<ELE_T, SIZE>::read(ELE_T& msg) {
         return m_q.dequeue(msg);
     }
 
     template<class ELE_T, unsigned int SIZE>
-    int cor_channel<ELE_T, SIZE>::write(ELE_T&& msg) {
+    bool cor_channel<ELE_T, SIZE>::write(ELE_T&& msg) {
         return m_q.enqueue(std::move(msg));
     }
 }
