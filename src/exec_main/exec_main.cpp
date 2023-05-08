@@ -2,6 +2,7 @@
 #include <app_coroutine/app_coroutine.hpp>
 
 #include <httplib/httplib.h>
+#include <app_test_udp/app_test_udp.hpp>
 
 static int test_cpp_httplib(int argc, char** argv)
 {
@@ -20,8 +21,9 @@ static int test_cpp_httplib(int argc, char** argv)
 static int program_main(int argc, char** argv)
 {
     int ret = 0;
-    ret = app_coroutine(argc, argv);
+//    ret = app_coroutine(argc, argv);
 //    ret = test_cpp_httplib(argc, argv);
+    ret = app_test_udp(argc, argv);
     return ret;
 }
 

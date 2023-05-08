@@ -339,6 +339,11 @@ namespace cppt_impl {
         }
     }
 
+    boost::asio::io_context& cor_get_io_context_impl()
+    {
+        return g_io_ctx;
+    }
+
 // ret: 0, ok; -1 coroutine error
     int co_yield_impl(
             const std::function<void(std::function<void()>&& resume_f)>& wrapped_extern_func)
@@ -431,5 +436,10 @@ namespace cppt {
     void cor_run()
     {
         cppt_impl::co_run_impl();
+    }
+
+    boost::asio::io_context& cor_get_io_context()
+    {
+        return cppt_impl::cor_get_io_context_impl();
     }
 }

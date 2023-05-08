@@ -1,6 +1,7 @@
 #ifndef CPP_TOOLKIT_MOD_COR_HPP
 #define CPP_TOOLKIT_MOD_COR_HPP
 
+#include <boost/asio/io_context.hpp>
 #include "mod_cor_impl.hpp"
 
 namespace cppt {
@@ -66,6 +67,8 @@ namespace cppt {
             const std::function<void()>& f_cancel_operation);
 
     void cor_run();
+
+    boost::asio::io_context& cor_get_io_context();
 }
 
 #endif //CPP_TOOLKIT_MOD_COR_HPP
