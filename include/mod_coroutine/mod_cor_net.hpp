@@ -33,6 +33,16 @@ namespace cppt {
     public:
         cor_tcp_socket_t(tcp::socket&& socket)
         : m_socket(std::move(socket)) {}
+        ssize_t sync_write_some(uint8_t* str_buf, size_t str_len) {
+            boost::asio::const_buffer out_buf{ str_buf, str_len };
+            auto wrote_b_num = m_socket.write_some(out_buf);
+            return wrote_b_num > 0 ? (ssize_t)wrote_b_num : -1;
+        }
+        ssize_t sync_read_some(uint8_t* recv_buf, size_t buf_sz) {
+            boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
+            auto read_b_num = m_socket.read_some(in_buf);
+            return read_b_num > 0 ? (ssize_t)read_b_num : -1;
+        }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
             ssize_t wrote_size;
             boost::asio::const_buffer out_buf{ str_buf, str_len };
@@ -211,6 +221,16 @@ namespace cppt {
         cor_udp_socket_t(udp::socket&& socket, net_sock_addr_t& peer_sock_addr)
         : m_socket(std::move(socket)) {
             set_peer_endpoint(peer_sock_addr);
+        }
+        ssize_t sync_write_some(uint8_t* str_buf, size_t str_len) {
+            boost::asio::const_buffer out_buf{ str_buf, str_len };
+            auto wrote_b_num = m_socket.send_to(out_buf, m_peer_endpoint);
+            return wrote_b_num > 0 ? (ssize_t)wrote_b_num : -1;
+        }
+        ssize_t sync_read_some(uint8_t* recv_buf, size_t buf_sz) {
+            boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
+            auto read_b_num = m_socket.receive_from(in_buf, m_peer_endpoint);
+            return read_b_num > 0 ? (ssize_t)read_b_num : -1;
         }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
             ssize_t wrote_size;
