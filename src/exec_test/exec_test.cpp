@@ -1,6 +1,8 @@
 #include <iostream>
 #include <mod_coroutine/mod_cor.hpp>
 #include <mod_coroutine/mod_cor_mutex.hpp>
+#include <mod_time_wheel/mod_time_wheel.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include "ftxui/component/captured_mouse.hpp"  // for ftxui
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
@@ -414,6 +416,34 @@ static int test_cppt_co_class(int argc, const char* argv[])
     return 0;
 }
 
+static int test_tw(int argc, const char* argv[])
+{
+    time_wheel_t time_wheel(60);
+
+    time_wheel_task_t tw_task1(5, [](){
+        log_info("Expired 1.");
+    });
+    time_wheel_task_t tw_task2(20, [](){
+        log_info("Expired 2.");
+    });
+
+    time_wheel.add_tw_task(tw_task1);
+    time_wheel.add_tw_task(tw_task2);
+
+    boost::asio::io_context io;
+
+    boost::asio::steady_timer timer(io);
+    std::function<void(const boost::system::error_code&)> timer_cb = [&](const boost::system::error_code& ec){
+        time_wheel.tick();
+        timer.expires_after(boost::asio::chrono::seconds(1));
+        timer.async_wait(timer_cb);
+    };
+    timer.async_wait(timer_cb);
+
+    io.run();
+
+    return 0;
+}
 
 static int program_main(int argc, const char* argv[])
 {
@@ -426,7 +456,8 @@ static int program_main(int argc, const char* argv[])
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
 //    ret = test_cppt_co(argc, argv);
-    ret = test_cppt_co_class(argc, argv);
+//    ret = test_cppt_co_class(argc, argv);
+    ret = test_tw(argc, argv);
     return ret;
 }
 
