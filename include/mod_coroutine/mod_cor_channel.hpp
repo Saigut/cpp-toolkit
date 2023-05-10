@@ -38,10 +38,10 @@ namespace cppt {
         auto wait_handler =
                 [&]() {
                     m_cor_mutex.lock();
-                    auto wrap_func = [&](std::function<void()>&& resume_f) {
+                    auto wrap_func = [&](std::function<void(int)>&& resume_f) {
                         m_resume_f = std::move(resume_f);
                         if (m_notified) {
-                            m_resume_f();
+                            m_resume_f(0);
                             m_resume_f = nullptr;
                         }
                         m_cor_mutex.unlock();

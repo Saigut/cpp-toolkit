@@ -381,7 +381,7 @@ int prod_im_s_mod_main_operation::write_operation(prod_im_s_mod_main_msg* msg)
             auto temp_f = std::move(notify_to_read_op_func);
             notify_to_read_op_func = nullptr;
             // todo: think of checking result
-            temp_f();
+            temp_f(0);
         }
     } else {
         expect_ret_val(0 == m_op_queue.push(msg), -1);
@@ -402,13 +402,13 @@ void prod_im_s_mod_main_operation::read_operation()
         }
     }
 
-    auto wrap_func = [&](std::function<void()>&& co_cb) {
+    auto wrap_func = [&](std::function<void(int result)>&& co_cb) {
         m_op_msg_notification_on = true;
         {
             std::lock_guard lock(op_writer_lock);
             if (!m_op_queue.empty()) {
                 // todo: think of checking result
-                co_cb();
+                co_cb(0);
             } else {
                 notify_to_read_op_func = co_cb;
             }
@@ -635,7 +635,7 @@ int prod_im_s_mod_main_operation::client_send_chat_msg(prod_im_chat_msg& chat_ms
     if (find_rst != get_chat_msg_notify_func.end()) {
         while (!find_rst->second.empty()) {
             auto& cb = find_rst->second.front();
-            cb();
+            cb(0);
             find_rst->second.pop_front();
         }
     }
@@ -650,7 +650,7 @@ int prod_im_s_mod_main_operation::client_send_chat_msg(prod_im_chat_msg& chat_ms
         if (find_rst != get_chat_msg_notify_func.end()) {
             while (!find_rst->second.empty()) {
                 auto& cb = find_rst->second.front();
-                cb();
+                cb(0);
                 find_rst->second.pop_front();
             }
         }
@@ -685,12 +685,12 @@ prod_im_s_mod_main_operation::co_func_get_chat_msg(
         return ret_list;
     }
 
-    auto wrap_func = [this, user_id](std::function<void()>&& co_cb) {
+    auto wrap_func = [this, user_id](std::function<void(int result)>&& co_cb) {
         auto find_rst = get_chat_msg_notify_func.find(user_id);
         if (find_rst != get_chat_msg_notify_func.end()) {
             find_rst->second.push_back(std::move(co_cb));
         } else {
-            auto v_cb = std::list<std::function<void()>>();
+            auto v_cb = std::list<std::function<void(int)>>();
             v_cb.push_back(std::move(co_cb));
             auto rst = get_chat_msg_notify_func.insert({user_id, std::move(v_cb)});
             if (rst.second) {

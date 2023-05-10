@@ -138,11 +138,11 @@ private:
 
     std::mutex op_writer_lock;
     std::atomic<bool> m_op_msg_notification_on = false;
-    std::function<void()> notify_to_read_op_func = nullptr;
+    std::function<void(int)> notify_to_read_op_func = nullptr;
     im_s_op_msg_mpool m_op_mpool;
     ring_queue m_op_queue;
 
-    std::map<std::string, std::list<std::function<void()>>> get_chat_msg_notify_func;
+    std::map<std::string, std::list<std::function<void(int)>>> get_chat_msg_notify_func;
 };
 
 class prod_im_s_mod_main {

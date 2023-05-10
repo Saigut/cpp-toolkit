@@ -54,51 +54,51 @@ namespace cppt {
             return read_b_num > 0 ? (ssize_t)read_b_num : -1;
         }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
-            ssize_t wrote_size;
+            int wrote_size;
             boost::asio::const_buffer out_buf{ str_buf, str_len };
-            auto wrap_func = [&](std::function<void()>&& resume_f) {
+            auto wrap_func = [&](std::function<void(int result)>&& resume_f) {
                 m_socket.async_write_some(out_buf, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
 //                    check_ec(ec, "write_some");
                     wrote_size = ec ? -1 : (ssize_t)wrote_b_num;
-                    resume_f();
+                    resume_f(wrote_size);
                 });
             };
-            cppt::cor_yield(wrap_func);
-//            auto timeout_func = [&](){
-//                m_socket.close();
-//            };
-//            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
-//            if (0 != ret) {
-//                log_error("async error occurred. ret: %d", ret);
-//                return -1;
-//            }
+//            cppt::cor_yield(wrap_func);
+            auto timeout_func = [&](){
+                m_socket.close();
+            };
+            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
+            if (0 != ret) {
+                log_error("async error occurred. ret: %d", ret);
+                return -1;
+            }
             return wrote_size;
         }
         ssize_t read_some(uint8_t* recv_buf, size_t buf_sz) {
-            ssize_t read_size;
+            int read_size;
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
-            auto wrap_func = [&](std::function<void()>&& resume_f) {
+            auto wrap_func = [&](std::function<void(int result)>&& resume_f) {
                 m_socket.async_read_some(in_buf, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t read_b_num)
                 {
 //                    check_ec(ec, "read_some");
                     read_size = ec ? -1 : (ssize_t)read_b_num;
-                    resume_f();
+                    resume_f(read_size);
                 });
             };
-            cppt::cor_yield(wrap_func);
-//            auto timeout_func = [&](){
-//                m_socket.close();
-//            };
-//            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
-//            if (0 != ret) {
-//                log_error("async error occurred. ret: %d", ret);
-//                return -1;
-//            }
+//            cppt::cor_yield(wrap_func);
+            auto timeout_func = [&](){
+                m_socket.close();
+            };
+            int ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
+            if (0 != ret) {
+                log_error("async error occurred. ret: %d", ret);
+                return -1;
+            }
             return read_size;
         }
         bool write(uint8_t* buf, size_t data_sz) {
@@ -152,23 +152,23 @@ namespace cppt {
             boost::asio::ip::address addr = boost::asio::ip::make_address(addr_str);
             tcp::endpoint endpoint = tcp::endpoint(addr, port);
             auto socket_to_server = tcp::socket(m_io_ctx);
-            auto wrap_func = [&](std::function<void()>&& resume_f) {
+            auto wrap_func = [&](std::function<void(int result)>&& resume_f) {
                 socket_to_server.async_connect(
                         endpoint,
                         [&, resume_f](const boost::system::error_code& ec) {
                             check_ec(ec, "connect");
                             ret = ec ? -1 : 0;
-                            resume_f();
+                            resume_f(ret);
                         });
             };
-            cppt::cor_yield(wrap_func);
-//            auto timeout_func = [&](){
-//            };
-//            ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
-//            if (0 != ret) {
-//                log_error("async error occurred. ret: %d", ret);
-//                return nullptr;
-//            }
+//            cppt::cor_yield(wrap_func);
+            auto timeout_func = [&](){
+            };
+            ret = cppt::cor_yield(wrap_func, 3000, timeout_func);
+            if (0 != ret) {
+                log_error("async error occurred. ret: %d", ret);
+                return nullptr;
+            }
             if (ret != 0) {
                 return nullptr;
             }
@@ -187,11 +187,11 @@ namespace cppt {
         cor_tcp_socket_t* accept(io_context& io_ctx) {
             int ret;
             tcp::socket client_socket(io_ctx);
-            auto wrap_func = [&](std::function<void()>&& resume_f) {
+            auto wrap_func = [&](std::function<void(int result)>&& resume_f) {
                 m_acceptor.async_accept(client_socket, [&, resume_f](const boost::system::error_code& ec) {
                     check_ec(ec, "accept");
                     ret = ec ? -1 : 0;
-                    resume_f();
+                    resume_f(ret);
                 });
             };
             cppt::cor_yield(wrap_func);
@@ -253,32 +253,32 @@ namespace cppt {
             return read_b_num > 0 ? (ssize_t)read_b_num : -1;
         }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
-            ssize_t wrote_size;
+            int wrote_size;
             boost::asio::const_buffer out_buf{ str_buf, str_len };
-            auto wrap_func = [&, this](std::function<void()>&& resume_f) {
+            auto wrap_func = [&, this](std::function<void(int result)>&& resume_f) {
                 m_socket.async_send_to(out_buf, m_peer_endpoint, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
 //                    check_ec(ec, "write_some");
                     wrote_size = ec ? -1 : (ssize_t)wrote_b_num;
-                    resume_f();
+                    resume_f(wrote_size);
                 });
             };
             cppt::cor_yield(wrap_func);
             return wrote_size;
         }
         ssize_t read_some(uint8_t* recv_buf, size_t buf_sz) {
-            ssize_t read_size;
+            int read_size;
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
-            auto wrap_func = [&](std::function<void()>&& resume_f) {
+            auto wrap_func = [&](std::function<void(int result)>&& resume_f) {
                 m_socket.async_receive_from(in_buf, m_peer_endpoint, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t read_b_num)
                 {
 //                    check_ec(ec, "read_some");
                     read_size = ec ? -1 : (ssize_t)read_b_num;
-                    resume_f();
+                    resume_f(read_size);
                 });
             };
             cppt::cor_yield(wrap_func);

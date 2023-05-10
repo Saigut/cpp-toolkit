@@ -58,11 +58,11 @@ namespace cppt {
 
     // ret: 0, ok; -1 coroutine error
     int cor_yield(
-            const std::function<void(std::function<void()>&& resume_f)>& wrapped_extern_func);
+            const std::function<void(std::function<void(int yield_ret_val)>&& resume_f)>& wrapped_extern_func);
 
     // ret: 0, ok; 1 timeout
     int cor_yield(
-            const std::function<void(std::function<void()>&& resume_f)>& wrapped_extern_func,
+            const std::function<void(std::function<void(int yield_ret_val)>&& resume_f)>& wrapped_extern_func,
             unsigned int timeout_ms,
             const std::function<void()>& f_cancel_operation);
 

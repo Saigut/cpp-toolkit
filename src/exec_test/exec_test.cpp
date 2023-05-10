@@ -272,15 +272,17 @@ void async_sleep(unsigned ts_us, std::function<void(int result)> cb)
 
 int co_usleep(unsigned ts_us)
 {
-    int sleep_result;
-    auto wrap_func = [&](std::function<void()>&& co_cb) {
+    int sleep_result = -1;
+    auto wrap_func = [&](std::function<void(int result)>&& co_cb) {
         auto async_sleep_cb = [&, co_cb](int result) {
-            sleep_result = result;
-            co_cb();
+            co_cb(result);
         };
         async_sleep(ts_us, async_sleep_cb);
     };
-    cppt::cor_yield(wrap_func);
+    auto timeout_func = [&](){
+        log_info("Time expired.");
+    };
+    sleep_result = cppt::cor_yield(wrap_func, 3000, timeout_func);
     return sleep_result;
 }
 
@@ -305,6 +307,8 @@ void my_co2(int n, cppt::cor_sp wait_co)
 
 void my_co0()
 {
+    log_info("Start");
+    co_usleep(5000000);
     auto co1 = cppt::cor_create(my_co1);
     cppt::cor_create(my_co2, 3, co1);
     co1->join();
@@ -384,9 +388,9 @@ void co_main_mutex()
 
 static int test_cppt_co(int argc, const char* argv[])
 {
-//    cppt::cor_create(my_co0);
+    cppt::cor_create(my_co0);
 //    cppt::cor_create(cal_co_main);
-    cppt::cor_create(co_main_mutex);
+//    cppt::cor_create(co_main_mutex);
     cppt::cor_run();
     return 0;
 }
@@ -427,8 +431,8 @@ static int test_tw(int argc, const char* argv[])
         log_info("Expired 2.");
     });
 
-    time_wheel.add_tw_task(tw_task1);
-    time_wheel.add_tw_task(tw_task2);
+    time_wheel.add_tw_task(&tw_task1);
+    time_wheel.add_tw_task(&tw_task2);
 
     boost::asio::io_context io;
 
@@ -455,9 +459,9 @@ static int program_main(int argc, const char* argv[])
 //    ret = test_html_like(argc, argv);
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
-//    ret = test_cppt_co(argc, argv);
+    ret = test_cppt_co(argc, argv);
 //    ret = test_cppt_co_class(argc, argv);
-    ret = test_tw(argc, argv);
+//    ret = test_tw(argc, argv);
     return ret;
 }
 
