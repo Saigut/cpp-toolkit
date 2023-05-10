@@ -35,12 +35,22 @@ namespace cppt {
         : m_socket(std::move(socket)) {}
         ssize_t sync_write_some(uint8_t* str_buf, size_t str_len) {
             boost::asio::const_buffer out_buf{ str_buf, str_len };
-            auto wrote_b_num = m_socket.write_some(out_buf);
+            size_t wrote_b_num = 0;
+            try {
+                wrote_b_num = m_socket.write_some(out_buf);
+            } catch (...) {
+                ;
+            }
             return wrote_b_num > 0 ? (ssize_t)wrote_b_num : -1;
         }
         ssize_t sync_read_some(uint8_t* recv_buf, size_t buf_sz) {
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
-            auto read_b_num = m_socket.read_some(in_buf);
+            size_t read_b_num = 0;
+            try {
+                read_b_num = m_socket.read_some(in_buf);
+            } catch (...) {
+                ;
+            }
             return read_b_num > 0 ? (ssize_t)read_b_num : -1;
         }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
@@ -224,12 +234,22 @@ namespace cppt {
         }
         ssize_t sync_write_some(uint8_t* str_buf, size_t str_len) {
             boost::asio::const_buffer out_buf{ str_buf, str_len };
-            auto wrote_b_num = m_socket.send_to(out_buf, m_peer_endpoint);
+            size_t wrote_b_num = 0;
+            try {
+                wrote_b_num = m_socket.send_to(out_buf, m_peer_endpoint);
+            } catch (...) {
+                ;
+            }
             return wrote_b_num > 0 ? (ssize_t)wrote_b_num : -1;
         }
         ssize_t sync_read_some(uint8_t* recv_buf, size_t buf_sz) {
             boost::asio::mutable_buffer in_buf{ recv_buf, buf_sz };
-            auto read_b_num = m_socket.receive_from(in_buf, m_peer_endpoint);
+            size_t read_b_num = 0;
+            try {
+                read_b_num = m_socket.receive_from(in_buf, m_peer_endpoint);
+            } catch (...) {
+                ;
+            }
             return read_b_num > 0 ? (ssize_t)read_b_num : -1;
         }
         ssize_t write_some(uint8_t* str_buf, size_t str_len) {
