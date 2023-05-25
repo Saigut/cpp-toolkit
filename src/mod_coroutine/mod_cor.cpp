@@ -365,7 +365,20 @@ namespace cppt_impl {
         return g_io_ctx;
     }
 
-// ret: 0, ok; -1 coroutine error
+    int co_yield_impl()
+    {
+        if (!g_executor->m_executor_c) {
+            return -1;
+        }
+        auto wrap_func = [&, tq_idx(g_executor->m_tq_idx)](cor_sp co) {
+            cppt_co_add_ptr(co, tq_idx);
+        };
+        g_executor->m_cur_task_c.m_f_after_execution = wrap_func;
+        g_executor->m_executor_c = g_executor->m_executor_c.resume();
+        return 0;
+    }
+
+    // ret: 0, ok; -1 coroutine error
     int co_yield_impl(
             const std::function<void(std::function<void(int result)>&& resume_f)>& wrapped_extern_func)
     {
@@ -385,7 +398,7 @@ namespace cppt_impl {
         return result;
     }
 
-// ret: 0, ok; 1 timeout; -1 coroutine error
+    // ret: 0, ok; 1 timeout; -1 coroutine error
     int co_yield_impl(
             const std::function<void(std::function<void(int result)>&& resume_f)>& wrapped_extern_func,
             unsigned int timeout_ms,
@@ -449,6 +462,12 @@ namespace cppt_impl {
 }
 
 namespace cppt {
+
+    // ret: 0, ok; -1 coroutine error
+    int cor_yield()
+    {
+        return cppt_impl::co_yield_impl();
+    }
 
     // ret: 0, ok; -1 coroutine error
     int cor_yield(

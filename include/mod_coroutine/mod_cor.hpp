@@ -57,6 +57,9 @@ namespace cppt {
     }
 
     // ret: 0, ok; -1 coroutine error
+    int cor_yield();
+
+    // ret: 0, ok; -1 coroutine error
     int cor_yield(
             const std::function<void(std::function<void(int yield_ret_val)>&& resume_f)>& wrapped_extern_func);
 
