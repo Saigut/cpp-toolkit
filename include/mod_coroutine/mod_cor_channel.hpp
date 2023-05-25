@@ -9,7 +9,7 @@
 
 namespace cppt {
 
-    template <class ELE_T, unsigned SIZE = 2048>
+    template <class ELE_T, unsigned SIZE = NP_QUEUE_DEF_SZ>
     class cor_channel {
     public:
         explicit cor_channel();
@@ -17,41 +17,11 @@ namespace cppt {
         bool write(ELE_T&& msg);
 
     private:
-        np_queue_t<ELE_T, SIZE> m_q;
-        cppt::cor_mutex_t m_cor_mutex;
-        std::function<void()> m_resume_f = nullptr;
-        bool m_notified = false;
+        np_queue_cor_t<ELE_T, SIZE> m_q;
     };
 
     template<class ELE_T, unsigned int SIZE>
-    cor_channel<ELE_T, SIZE>::cor_channel() {
-        auto notify_handler =
-                [&]() {
-                    m_notified = true;
-                    m_cor_mutex.lock();
-                    if (m_resume_f) {
-                        m_resume_f();
-                        m_resume_f = nullptr;
-                    }
-                    m_cor_mutex.unlock();
-                };
-        auto wait_handler =
-                [&]() {
-                    m_cor_mutex.lock();
-                    auto wrap_func = [&](std::function<void(int)>&& resume_f) {
-                        m_resume_f = std::move(resume_f);
-                        if (m_notified) {
-                            m_resume_f(0);
-                            m_resume_f = nullptr;
-                        }
-                        m_cor_mutex.unlock();
-                    };
-                    cppt::cor_yield(wrap_func);
-                    m_notified = false;
-                    return true;
-                };
-        m_q.set_handlers(notify_handler, wait_handler);
-    }
+    cor_channel<ELE_T, SIZE>::cor_channel() {}
 
     template<class ELE_T, unsigned int SIZE>
     bool cor_channel<ELE_T, SIZE>::read(ELE_T& msg) {
@@ -60,7 +30,7 @@ namespace cppt {
 
     template<class ELE_T, unsigned int SIZE>
     bool cor_channel<ELE_T, SIZE>::write(ELE_T&& msg) {
-        return m_q.enqueue(std::move(msg));
+        return m_q.try_enqueue(std::move(msg));
     }
 }
 

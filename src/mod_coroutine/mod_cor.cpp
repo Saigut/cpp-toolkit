@@ -89,10 +89,14 @@ namespace cppt_impl {
 
     void cppt_co_t::start_user_co()
     {
+        bool expected = false;
+        if (!m_co_started.compare_exchange_strong(expected, true)) {
+            return;
+        }
+
         *m_c = context::callcc([&](context::continuation && c) {
             /// Fixme: thread_local g_executor may cause bugs?
             g_executor->m_executor_c = std::move(c);
-            m_co_started = true;
             m_user_co();
             m_co_stopped = true;
             cppt_co_wait_queue_ele_t ele;
@@ -182,7 +186,7 @@ namespace cppt_impl {
     static void cppt_co_main_run_thread(co_executor_sp executor)
     {
         char thr_name[16];
-        util_bind_thread_to_core(executor->m_tq_idx);
+//        util_bind_thread_to_core(executor->m_tq_idx);
         snprintf(thr_name, sizeof(thr_name), "co_%02u", executor->m_tq_idx);
         util_thread_set_self_name(thr_name);
 
@@ -246,7 +250,7 @@ namespace cppt_impl {
         if (gs_core_num > 1) {
             wait_handler = [&](){
                 // work stealing
-                #if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
+                #if !defined(CPPT_COR_NO_WORKSTEAL) && (!(defined(_MSC_VER) && !defined(__INTEL_COMPILER)))
 //                #if 1
                 unsigned next_tq_idx = (tq_idx + 1) % gs_core_num;
                 unsigned task_num = g_task_queues[next_tq_idx].get_size();
@@ -331,7 +335,7 @@ namespace cppt_impl {
             now_ms = util_now_ts_ms();
 
             // replace blocking executor
-#if !(defined(_MSC_VER) && !defined(__INTEL_COMPILER))
+#if !defined(CPPT_COR_NO_WORKSTEAL) && (!(defined(_MSC_VER) && !defined(__INTEL_COMPILER)))
             for (unsigned i = 0; i < gs_core_num; i++) {
                 auto executor = g_executors[i];
                 if (executor->m_is_executing) {

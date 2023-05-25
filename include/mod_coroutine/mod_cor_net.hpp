@@ -323,21 +323,38 @@ namespace cppt {
         }
         bool set_peer_endpoint(net_sock_addr_t& sock_addr) {
             auto local_endpoint = m_socket.local_endpoint();
+            boost::asio::ip::address peer_addr;
             if (udp::v4() == local_endpoint.protocol()) {
                 expect_ret_val(CPPT_NETADDR_TYPE_IP4 == sock_addr.addr.type, false);
                 auto& ip4 = sock_addr.addr.ip4;
                 boost::asio::ip::address_v4::bytes_type bytes;
                 std::copy(std::begin(ip4), std::end(ip4), bytes.begin());
-                m_peer_endpoint.address(boost::asio::ip::address_v4(bytes));
+                peer_addr = boost::asio::ip::address_v4(bytes);
             } else {
                 expect_ret_val(CPPT_NETADDR_TYPE_IP6 == sock_addr.addr.type, false);
                 auto& ip6 = sock_addr.addr.ip6;
                 boost::asio::ip::address_v6::bytes_type bytes;
                 std::copy(std::begin(ip6), std::end(ip6), bytes.begin());
-                m_peer_endpoint.address(boost::asio::ip::address_v6(bytes));
+                peer_addr = boost::asio::ip::address_v6(bytes);
             }
+            m_peer_endpoint.address(peer_addr);
             m_peer_endpoint.port(sock_addr.port);
             return true;
+        }
+        std::shared_ptr<net_sock_addr_t> get_peer_endpoint() {
+            auto ret_addr = std::make_shared<net_sock_addr_t>();
+            auto proto = m_peer_endpoint.protocol();
+            if (udp::v4() == proto) {
+                ret_addr->addr.type = CPPT_NETADDR_TYPE_IP4;
+                auto bytes = m_peer_endpoint.address().to_v4().to_bytes();
+                std::copy(bytes.begin(), bytes.end(), ret_addr->addr.ip4);
+            } else {
+                ret_addr->addr.type = CPPT_NETADDR_TYPE_IP6;
+                auto bytes = m_peer_endpoint.address().to_v6().to_bytes();
+                std::copy(bytes.begin(), bytes.end(), ret_addr->addr.ip6);
+            }
+            ret_addr->port = m_peer_endpoint.port();
+            return ret_addr;
         }
     private:
         udp::socket m_socket;

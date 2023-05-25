@@ -7,6 +7,9 @@
 #include <boost/context/continuation.hpp>
 #include <mod_atomic_queue/atomic_queue.hpp>
 
+
+//#define CPPT_COR_NO_WORKSTEAL
+
 namespace cppt_impl {
     using cppt_co_c_sp = std::shared_ptr<boost::context::continuation>;
     struct cppt_co_wait_queue_ele_t {
@@ -34,7 +37,7 @@ namespace cppt_impl {
     private:
         cppt_co_c_sp m_c;
         std::function<void()> m_user_co;
-        bool m_co_started = false;
+        std::atomic<bool> m_co_started = false;
         std::atomic<bool> m_co_stopped = false;
         cppt_co_wait_queue_t m_wait_cos;
     };
