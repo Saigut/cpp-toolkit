@@ -224,7 +224,7 @@ private:
     cppt::cor_mutex_t m_cor_mutex;
     std::mutex m_thr_mutex;
     std::condition_variable m_thr_cond_cv;
-    std::function<void()> m_resume_f = nullptr;
+    std::function<void(int)> m_resume_f = nullptr;
     bool m_notified = false;
 };
 
@@ -247,7 +247,7 @@ std::function<void()> np_queue_cor_t<ELE_T, SIZE>::get_notify_handler_cor_r_thr_
         m_notified = true;
         m_thr_mutex.lock();
         if (m_resume_f) {
-            m_resume_f();
+            m_resume_f(0);
             m_resume_f = nullptr;
         }
         m_thr_mutex.unlock();
@@ -258,11 +258,11 @@ template<class ELE_T, unsigned int SIZE>
 std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor_r_thr_w()
 {
     return [this](){
-        auto wrap_func = [this](std::function<void()>&& resume_f) {
+        auto wrap_func = [this](std::function<void(int)>&& resume_f) {
             m_thr_mutex.lock();
             m_resume_f = std::move(resume_f);
             if (m_notified) {
-                m_resume_f();
+                m_resume_f(0);
                 m_resume_f = nullptr;
             }
             m_thr_mutex.unlock();
@@ -286,7 +286,7 @@ std::function<void()> np_queue_cor_t<ELE_T, SIZE>::get_notify_handler_cor()
         m_notified = true;
         m_cor_mutex.lock();
         if (m_resume_f) {
-            m_resume_f();
+            m_resume_f(0);
             m_resume_f = nullptr;
         }
         m_cor_mutex.unlock();
@@ -298,10 +298,10 @@ std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor()
 {
     return [this](){
         m_cor_mutex.lock();
-        auto wrap_func = [&](std::function<void()> resume_f) {
+        auto wrap_func = [&](std::function<void(int)> resume_f) {
             m_resume_f = std::move(resume_f);
             if (m_notified) {
-                m_resume_f();
+                m_resume_f(0);
                 m_resume_f = nullptr;
             }
             m_cor_mutex.unlock();
