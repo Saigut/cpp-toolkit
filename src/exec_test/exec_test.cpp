@@ -1,8 +1,11 @@
 #include <iostream>
+#include <map>
+#include <iomanip>
 #include <mod_coroutine/mod_cor.hpp>
 #include <mod_coroutine/mod_cor_mutex.hpp>
 #include <mod_time_wheel/mod_time_wheel.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <mod_atomic_queue/atomic_queue.hpp>
 
 #include "ftxui/component/captured_mouse.hpp"  // for ftxui
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
@@ -449,6 +452,361 @@ static int test_tw(int argc, const char* argv[])
     return 0;
 }
 
+class TestObject {
+public:
+    TestObject() {
+        std::cout << "Object created in thread: " << std::this_thread::get_id() << std::endl;
+    }
+
+    ~TestObject() {
+        std::cout << "Destructor called in thread: " << std::this_thread::get_id() << std::endl;
+    }
+};
+
+int test_destructor(int argc, const char* argv[])
+{
+    std::cout << "Main thread: " << std::this_thread::get_id() << std::endl;
+
+    TestObject* obj = new TestObject();
+
+    std::thread workerThread([&obj]() {
+        std::cout << "Worker thread: " << std::this_thread::get_id() << std::endl;
+        delete obj;
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        std::cout << "2222222222 \n";
+    });
+
+    workerThread.join();
+
+    return 0;
+}
+
+int test_sorted_map(int argc, const char* argv[])
+{
+    int xor_num = 9;
+
+    // 替换比较函数，使得 map 按照 key 的异或值排序
+    auto cmp = [&xor_num](int a, int b) {
+        return (a ^ xor_num) < (b ^ xor_num);
+    };
+    std::map<int, std::string, decltype(cmp)> num_map(cmp);
+
+    num_map.insert({1, "one"});
+    num_map.insert({2, "two"});
+    num_map.insert({3, "three"});
+    num_map.insert({4, "four"});
+    num_map.insert({5, "five"});
+    num_map.insert({6, "six"});
+    num_map.insert({7, "seven"});
+    num_map.insert({8, "eight"});
+
+    // 遍历 num_map
+    for (auto & it : num_map) {
+        // 以十六进制大写、保留两位数字、并且带着"0x"前缀的格式打印key的值
+        std::cout << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << it.first << " ";
+        // 以十六进制大写、保留两位数字、并且带着"0x"前缀的格式打印key与xor_num异或的值
+        std::cout << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (it.first ^ xor_num) << " ";
+        // 打印value的值
+        std::cout << it.second << std::endl;
+    }
+
+    return 0;
+}
+
+int fib(int n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+class para_queue_t {
+public:
+    struct ele_t {
+        std::mutex value_lock;
+        std::condition_variable value_cv;
+        bool has_value = false;
+        std::pair<int, int> value;
+    };
+
+    para_queue_t() : m_array_queue(m_queue_size) {}
+
+    void push(std::pair<int, int>&& value, size_t value_number) {
+        size_t cur_write_idx = value_number % m_queue_size;
+        auto& ele = m_array_queue[cur_write_idx];
+        std::unique_lock lock(ele.value_lock);
+        ele.value_cv.wait(lock, [&]() {
+            if (value_number - m_read_cnt >= m_queue_size) {
+                return false;
+            }
+            if (ele.has_value) {
+                return false;
+            }
+            return true;
+        });
+        ele.has_value = true;
+        ele.value = std::move(value);
+        ele.value_cv.notify_all();
+    }
+
+    std::pair<int, int> pop() {
+        size_t cur_read_idx = m_read_cnt % m_queue_size;
+        auto& ele = m_array_queue[cur_read_idx];
+        std::unique_lock lock(ele.value_lock);
+        ele.value_cv.wait(lock, [&]() { return ele.has_value; });
+        ele.has_value = false;
+        m_read_cnt++;
+        ele.value_cv.notify_one();
+        return std::move(ele.value);
+    }
+
+private:
+    const size_t m_queue_size = 100;
+    std::vector<ele_t> m_array_queue;
+    size_t m_read_cnt = 0;
+};
+
+void worker_old(std::queue<std::pair<int, int>>& tasks, std::queue<std::pair<int, int>>& results, std::mutex& tasks_mutex, std::mutex& results_mutex, std::condition_variable& cv, int& next_result) {
+    while (true) {
+        std::unique_lock<std::mutex> task_lock(tasks_mutex);
+        if (tasks.empty()) {
+            return;
+        }
+        auto task = tasks.front();
+        tasks.pop();
+        task_lock.unlock();
+
+        int task_number = task.first;
+        int n = task.second;
+        int result = fib(n);
+
+        std::unique_lock<std::mutex> result_lock(results_mutex);
+        cv.wait(result_lock, [&]() { return task_number == next_result; });
+        results.push({task_number, result});
+        next_result++;
+        result_lock.unlock();
+        cv.notify_all();
+    }
+}
+
+struct Task {
+    int id;
+    int value;
+
+    Task() : id(0), value(0) {}
+    Task(int id, int value) : id(id), value(value) {}
+};
+
+bool validate_results(std::queue<std::pair<int, int>>& results) {
+    // 预先计算的 10 到 19 的斐波那契值
+    int fib_values[] = {55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181};
+
+    int expected_task_number = 0;
+    while (!results.empty()) {
+        auto result = results.front();
+        results.pop();
+
+        // 检查任务编号是否按顺序排列
+        if (result.first != expected_task_number) {
+            std::cerr << "Error: Task number out of order. Expected " << expected_task_number << ", got " << result.first << '\n';
+            return false;
+        }
+
+        // 检查结果值是否正确
+        int expected_result = fib_values[result.first % 10]; // 从预先计算的数组中获取期望的结果
+        if (result.second != expected_result) {
+            std::cerr << "Error: Incorrect result for task number " << result.first << ". Expected " << expected_result << ", got " << result.second << '\n';
+            return false;
+        }
+
+        expected_task_number++;
+    }
+
+    return true;
+}
+
+int test_fib_single_thr(int argc, const char* argv[])
+{
+    std::cout << "Preparing tasks...\n";
+
+    // 创建任务队列
+    std::queue<std::pair<int, int>> tasks;
+    for (int i = 0; i < 10000000; i++) {
+        int n = 10 + (i % 10); // 10 到 19 之间的数字
+        tasks.push({i, n}); // 任务编号和要计算的数字
+    }
+
+    // 创建结果队列
+    std::queue<std::pair<int, int>> results;
+
+    std::cout << "Processing tasks...\n";
+
+    // 记录开始时间
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // 执行任务
+    while (!tasks.empty()) {
+        auto task = tasks.front();
+        tasks.pop();
+        int task_number = task.first;
+        int n = task.second;
+        int result = fib(n);
+        results.push({task_number, result});
+    }
+
+    // 记录结束时间
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // 计算耗时
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Total time taken by " << results.size() << " tasks: " << duration.count() << " milliseconds" << std::endl;
+
+    // 验证结果
+    std::cout << "Validating result...\n";
+    if (validate_results(results)) {
+        std::cout << "All results are correct and in order.\n";
+    } else {
+        std::cerr << "Validation failed.\n";
+    }
+
+    return 0;
+}
+
+int test_fib_multiple_thr(int argc, const char* argv[])
+{
+    std::cout << "Preparing tasks...\n";
+
+    // 创建任务队列
+    std::queue<std::pair<int, int>> tasks;
+    for (int i = 0; i < 10000000; i++) {
+        int n = 10 + (i % 10); // 10 到 19 之间的数字
+        tasks.push({i, n}); // 任务编号和要计算的数字
+    }
+
+    // 创建结果队列
+    std::queue<std::pair<int, int>> results;
+
+    // 创建互斥锁和条件变量
+    std::mutex tasks_mutex;
+    std::mutex results_mutex;
+    std::condition_variable cv;
+    int next_result = 0;
+
+    std::cout << "Processing tasks...\n";
+
+    // 记录开始时间
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // 创建工作线程
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 4; i++) {
+        threads.push_back(std::thread(worker_old, std::ref(tasks), std::ref(results), std::ref(tasks_mutex), std::ref(results_mutex), std::ref(cv), std::ref(next_result)));
+    }
+
+    // 等待所有线程完成
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // 记录结束时间
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // 计算耗时
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Total time taken by " << results.size() << " tasks: " << duration.count() << " milliseconds" << std::endl;
+
+    // 验证结果
+    std::cout << "Validating result...\n";
+    if (validate_results(results)) {
+        std::cout << "All results are correct and in order.\n";
+    } else {
+        std::cerr << "Validation failed.\n";
+    }
+
+    return 0;
+}
+
+constexpr size_t queue_capacity = 10000000; // 队列容量
+using TaskQueue = atomic_queue::AtomicQueue2<Task, queue_capacity>;
+
+// 工作线程函数
+void worker(TaskQueue& task_queue, para_queue_t& results) {
+    Task task;
+    while (task_queue.try_pop(task)) {
+        int n = task.value;
+        results.push({task.id, fib(n)}, task.id);
+    }
+}
+
+int test_fib_multiple_thr_2(int argc, const char* argv[])
+{
+    const size_t num_tasks = 10000000; // 一千万个任务
+    const size_t num_threads = 4;
+
+    std::cout << "Preparing tasks...\n";
+
+    // 创建任务队列并预先放入任务
+    auto task_queue = std::make_unique<TaskQueue>();
+    Task task;
+    for (size_t i = 0; i < num_tasks; ++i) {
+        task.id = i;
+        task.value = 10 + (i % 10);
+        task_queue->push(task);
+    }
+
+    // 创建结果队列
+    para_queue_t results;
+
+    std::cout << "Processing tasks...\n";
+
+    // 记录开始时间
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // 创建工作线程
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < num_threads; ++i) {
+        threads.push_back(std::thread(worker, std::ref(*task_queue), std::ref(results)));
+    }
+
+    // 提取结果
+    std::queue<std::pair<int, int>> result_queue;
+    size_t results_extracted = 0;
+    while (results_extracted < num_tasks) {
+        result_queue.push(results.pop());
+        results_extracted++;
+    }
+
+    // 等待所有线程完成
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // 记录结束时间
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // 计算耗时
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Total time taken by " << result_queue.size() << " tasks: " << duration.count() << " milliseconds" << std::endl;
+
+    // 验证结果
+    std::cout << "Validating result...\n";
+    if (validate_results(result_queue)) {
+        std::cout << "All results are correct and in order.\n";
+    } else {
+        std::cerr << "Validation failed.\n";
+    }
+
+    return 0;
+}
+
+int test_fib(int argc, const char* argv[])
+{
+    test_fib_single_thr(argc, argv);
+    test_fib_multiple_thr(argc, argv);
+    test_fib_multiple_thr_2(argc, argv);
+    return 0;
+}
+
 static int program_main(int argc, const char* argv[])
 {
     int ret = -1;
@@ -459,9 +817,12 @@ static int program_main(int argc, const char* argv[])
 //    ret = test_html_like(argc, argv);
 //    ret = test_window(argc, argv);
 //    ret = test_button(argc, argv);
-    ret = test_cppt_co(argc, argv);
+//    ret = test_cppt_co(argc, argv);
 //    ret = test_cppt_co_class(argc, argv);
 //    ret = test_tw(argc, argv);
+//    ret = test_destructor(argc, argv);
+//    ret = test_sorted_map(argc, argv);
+    ret = test_fib(argc, argv);
     return ret;
 }
 
