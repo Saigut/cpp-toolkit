@@ -224,6 +224,44 @@ namespace cppt {
         tcp::acceptor m_acceptor;
     };
 
+    class cor_udp_socket_ep_t {
+    public:
+        bool set_peer_endpoint(net_sock_addr_t& sock_addr) {
+            boost::asio::ip::address peer_addr;
+            if (CPPT_NETADDR_TYPE_IP4 == sock_addr.addr.type) {
+                auto& ip4 = sock_addr.addr.ip4;
+                boost::asio::ip::address_v4::bytes_type bytes;
+                std::copy(std::begin(ip4), std::end(ip4), bytes.begin());
+                peer_addr = boost::asio::ip::address_v4(bytes);
+            } else {
+                expect_ret_val(CPPT_NETADDR_TYPE_IP6 == sock_addr.addr.type, false);
+                auto& ip6 = sock_addr.addr.ip6;
+                boost::asio::ip::address_v6::bytes_type bytes;
+                std::copy(std::begin(ip6), std::end(ip6), bytes.begin());
+                peer_addr = boost::asio::ip::address_v6(bytes);
+            }
+            m_endpoint.address(peer_addr);
+            m_endpoint.port(sock_addr.port);
+            return true;
+        }
+        std::shared_ptr<net_sock_addr_t> get_peer_endpoint() {
+            auto ret_addr = std::make_shared<net_sock_addr_t>();
+            auto proto = m_endpoint.protocol();
+            if (udp::v4() == proto) {
+                ret_addr->addr.type = CPPT_NETADDR_TYPE_IP4;
+                auto bytes = m_endpoint.address().to_v4().to_bytes();
+                std::copy(bytes.begin(), bytes.end(), ret_addr->addr.ip4);
+            } else {
+                ret_addr->addr.type = CPPT_NETADDR_TYPE_IP6;
+                auto bytes = m_endpoint.address().to_v6().to_bytes();
+                std::copy(bytes.begin(), bytes.end(), ret_addr->addr.ip6);
+            }
+            ret_addr->port = m_endpoint.port();
+            return ret_addr;
+        }
+        udp::endpoint m_endpoint;
+    };
+
     class cor_udp_socket_t {
     public:
         explicit cor_udp_socket_t(udp::socket&& socket)
@@ -237,6 +275,16 @@ namespace cppt {
             size_t wrote_b_num = 0;
             try {
                 wrote_b_num = m_socket.send_to(out_buf, m_peer_endpoint);
+            } catch (...) {
+                ;
+            }
+            return wrote_b_num > 0 ? (ssize_t)wrote_b_num : -1;
+        }
+        ssize_t sync_write_some(uint8_t* str_buf, size_t str_len, cor_udp_socket_ep_t& peer_ep) {
+            boost::asio::const_buffer out_buf{ str_buf, str_len };
+            size_t wrote_b_num = 0;
+            try {
+                wrote_b_num = m_socket.send_to(out_buf, peer_ep.m_endpoint);
             } catch (...) {
                 ;
             }
@@ -257,6 +305,22 @@ namespace cppt {
             boost::asio::const_buffer out_buf{ str_buf, str_len };
             auto wrap_func = [&, this](std::function<void(int result)>&& resume_f) {
                 m_socket.async_send_to(out_buf, m_peer_endpoint, [&, resume_f](
+                        const boost::system::error_code& ec,
+                        std::size_t wrote_b_num)
+                {
+//                    check_ec(ec, "write_some");
+                    wrote_size = ec ? -1 : (ssize_t)wrote_b_num;
+                    resume_f(wrote_size);
+                });
+            };
+            cppt::cor_yield(wrap_func);
+            return wrote_size;
+        }
+        ssize_t write_some(uint8_t* str_buf, size_t str_len, cor_udp_socket_ep_t& peer_ep) {
+            int wrote_size;
+            boost::asio::const_buffer out_buf{ str_buf, str_len };
+            auto wrap_func = [&, this](std::function<void(int result)>&& resume_f) {
+                m_socket.async_send_to(out_buf, peer_ep.m_endpoint, [&, resume_f](
                         const boost::system::error_code& ec,
                         std::size_t wrote_b_num)
                 {
