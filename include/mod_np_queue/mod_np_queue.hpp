@@ -15,7 +15,7 @@ private:
 public:
     explicit np_queue_t() {}
     np_queue_t(std::function<void()>&& notify_handler,
-               std::function<bool()>&& waiting_handler)
+               std::function<bool(unsigned int)>&& waiting_handler)
                : m_notify_handler(notify_handler),
                  m_waiting_handler(waiting_handler) {}
     np_queue_t(np_queue_t<ELE_T, SIZE>&& other) noexcept {
@@ -29,13 +29,14 @@ public:
         }
     }
     void set_handlers(std::function<void()> notify_handler,
-                      std::function<bool()> waiting_handler);
+                      std::function<bool(unsigned int)> waiting_handler);
     void set_alloc_handlers(std::function<ELE_T()>&& ele_alloc_handler,
                             std::function<void(ELE_T)>&& ele_free_handler);
     bool enqueue(ELE_T&& p);
     bool try_enqueue(ELE_T&& p);
     bool try_enqueue_no_notify(ELE_T&& p);
     bool dequeue(ELE_T& p);
+    bool dequeue(ELE_T& p, unsigned int timeout_ms);
     bool try_dequeue(ELE_T& p);
 
     ELE_T alloc_ele();
@@ -55,7 +56,7 @@ protected:
 
     // 读到队列为空时即调用 m_waiting_handler。不可为 null
     // ret: true, 继续 dequeue; false, 不 dequeue 了。
-    std::function<bool()> m_waiting_handler = nullptr;
+    std::function<bool(unsigned int timeout_ms)> m_waiting_handler = nullptr;
 
     std::function<ELE_T()> m_ele_alloc_handler = nullptr;
     std::function<void(ELE_T)> m_ele_free_handler = nullptr;
@@ -64,7 +65,7 @@ protected:
 template <class ELE_T, unsigned SIZE>
 void np_queue_t<ELE_T, SIZE>::set_handlers(
         std::function<void()> notify_handler,
-        std::function<bool()> waiting_handler)
+        std::function<bool(unsigned int)> waiting_handler)
 {
     m_notify_handler = notify_handler;
     m_waiting_handler = waiting_handler;
@@ -158,7 +159,31 @@ bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p)
             m_is_notify_mode = false;
             return false;
         }
-    } while(m_waiting_handler());
+    } while(m_waiting_handler(0));
+
+    m_is_notify_mode = false;
+    return false;
+}
+
+template <class ELE_T, unsigned SIZE>
+bool np_queue_t<ELE_T, SIZE>::dequeue(ELE_T& p, unsigned int timeout_ms)
+{
+    if (m_queue.try_pop(p)) {
+        return true;
+    }
+
+    m_is_notify_mode = true;
+    do {
+        m_notified = false;
+        if (m_queue.try_pop(p)) {
+            m_is_notify_mode = false;
+            return true;
+        }
+        if (!m_waiting_handler) {
+            m_is_notify_mode = false;
+            return false;
+        }
+    } while(m_waiting_handler(timeout_ms));
 
     m_is_notify_mode = false;
     return false;
@@ -205,6 +230,7 @@ public:
     bool enqueue(ELE_T&& p);
     bool try_enqueue(ELE_T&& p);
     bool dequeue(ELE_T& p);
+    bool dequeue(ELE_T& p, unsigned int timeout_ms);
     bool try_dequeue(ELE_T& p);
 
     ELE_T alloc_ele();
@@ -214,11 +240,11 @@ public:
 
 private:
     std::function<void()> get_notify_handler_cor();
-    std::function<bool()> get_wait_handler_cor();
+    std::function<bool(unsigned int)> get_wait_handler_cor();
     std::function<void()> get_notify_handler_cor_r_thr_w();
-    std::function<bool()> get_wait_handler_cor_r_thr_w();
+    std::function<bool(unsigned int)> get_wait_handler_cor_r_thr_w();
     std::function<void()> get_notify_handler_thr_r_cor_w();
-    std::function<bool()> get_wait_handler_thr_r_cor_w();
+    std::function<bool(unsigned int)> get_wait_handler_thr_r_cor_w();
 
     np_queue_t<ELE_T, SIZE> m_q;
     cppt::cor_mutex_t m_cor_mutex;
@@ -255,9 +281,9 @@ std::function<void()> np_queue_cor_t<ELE_T, SIZE>::get_notify_handler_cor_r_thr_
 }
 
 template<class ELE_T, unsigned int SIZE>
-std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor_r_thr_w()
+std::function<bool(unsigned int)> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor_r_thr_w()
 {
-    return [this](){
+    return [this](unsigned int timeout_ms){
         auto wrap_func = [this](std::function<void(int)>&& resume_f) {
             m_thr_mutex.lock();
             m_resume_f = std::move(resume_f);
@@ -267,7 +293,13 @@ std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor_r_thr_w(
             }
             m_thr_mutex.unlock();
         };
-        cppt::cor_yield(wrap_func);
+        auto timeout_func = [](){};
+        int ret = cppt::cor_yield(wrap_func, timeout_ms, timeout_func);
+        if (1 == ret) {
+            // timeout
+            m_notified = false;
+            return false;
+        }
         m_notified = false;
         return true;
     };
@@ -294,9 +326,9 @@ std::function<void()> np_queue_cor_t<ELE_T, SIZE>::get_notify_handler_cor()
 }
 
 template<class ELE_T, unsigned int SIZE>
-std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor()
+std::function<bool(unsigned int)> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor()
 {
-    return [this](){
+    return [this](unsigned int timeout_ms){
         m_cor_mutex.lock();
         auto wrap_func = [&](std::function<void(int)> resume_f) {
             m_resume_f = std::move(resume_f);
@@ -306,7 +338,13 @@ std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_cor()
             }
             m_cor_mutex.unlock();
         };
-        cppt::cor_yield(wrap_func);
+        auto timeout_func = [](){};
+        int ret = cppt::cor_yield(wrap_func, timeout_ms, timeout_func);
+        if (1 == ret) {
+            // timeout
+            m_notified = false;
+            return false;
+        }
         m_notified = false;
         return true;
     };
@@ -323,12 +361,15 @@ std::function<void()> np_queue_cor_t<ELE_T, SIZE>::get_notify_handler_thr_r_cor_
 }
 
 template<class ELE_T, unsigned int SIZE>
-std::function<bool()> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_thr_r_cor_w()
+std::function<bool(unsigned int)> np_queue_cor_t<ELE_T, SIZE>::get_wait_handler_thr_r_cor_w()
 {
-    return [this](){
+    return [this](unsigned int timeout_ms){
         {
+            if (0 == timeout_ms) {
+                timeout_ms = 3000;
+            }
             std::unique_lock<std::mutex> u_lock(m_thr_mutex);
-            m_thr_cond_cv.wait_for(u_lock, std::chrono::seconds(1), [this](){
+            m_thr_cond_cv.wait_for(u_lock, std::chrono::milliseconds(timeout_ms), [this](){
                 if (m_notified) {
                     return true;
                 }
@@ -369,6 +410,12 @@ template<class ELE_T, unsigned int SIZE>
 bool np_queue_cor_t<ELE_T, SIZE>::dequeue(ELE_T& p)
 {
     return m_q.dequeue(p);
+}
+
+template<class ELE_T, unsigned int SIZE>
+bool np_queue_cor_t<ELE_T, SIZE>::dequeue(ELE_T& p, unsigned int timeout_ms)
+{
+    return m_q.dequeue(p, timeout_ms);
 }
 
 template<class ELE_T, unsigned int SIZE>

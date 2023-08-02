@@ -14,6 +14,7 @@ namespace cppt {
     public:
         explicit cor_channel();
         bool read(ELE_T& msg);
+        bool read(ELE_T& msg, unsigned int timeout_ms);
         bool write(ELE_T&& msg);
 
     private:
@@ -26,6 +27,11 @@ namespace cppt {
     template<class ELE_T, unsigned int SIZE>
     bool cor_channel<ELE_T, SIZE>::read(ELE_T& msg) {
         return m_q.dequeue(msg);
+    }
+
+    template<class ELE_T, unsigned int SIZE>
+    bool cor_channel<ELE_T, SIZE>::read(ELE_T& msg, unsigned int timeout_ms) {
+        return m_q.dequeue(msg, timeout_ms);
     }
 
     template<class ELE_T, unsigned int SIZE>

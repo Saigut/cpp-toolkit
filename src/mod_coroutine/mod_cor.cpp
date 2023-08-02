@@ -205,10 +205,10 @@ namespace cppt_impl {
                     cond_cv.notify_one();
                 };
 
-        auto cv_wait = [&]() {
+        auto cv_wait = [&](unsigned int timeout_ms) {
             {
                 std::unique_lock<std::mutex> u_lock(cond_lock);
-                cond_cv.wait_for(u_lock, std::chrono::seconds(1), [&notified](){
+                cond_cv.wait_for(u_lock, std::chrono::milliseconds (timeout_ms), [&notified](){
                     if (notified) {
                         return true;
                     }
@@ -246,9 +246,9 @@ namespace cppt_impl {
             g_executor->m_is_blocking = false;
         };
 
-        std::function<bool()> wait_handler;
+        std::function<bool(unsigned int)> wait_handler;
         if (gs_core_num > 1) {
-            wait_handler = [&](){
+            wait_handler = [&](unsigned int timeout_ms){
                 // work stealing
                 #if !defined(CPPT_COR_NO_WORKSTEAL) && (!(defined(_MSC_VER) && !defined(__INTEL_COMPILER)))
 //                #if 1
@@ -281,7 +281,7 @@ namespace cppt_impl {
                 }
                 #endif
 
-                return cv_wait();
+                return cv_wait(1000);
             };
         } else {
             wait_handler = cv_wait;
@@ -424,7 +424,7 @@ namespace cppt_impl {
 
         auto wrap_func = [&, tq_idx(g_executor->m_tq_idx)](cor_sp co) {
             wrapped_extern_func([&, co, tq_idx](int _result){
-                std::function<void()> f_before = [&](){
+                std::function<void()> f_before = [&, mutex_tw_task](){
                     // stop timer
                     std::lock_guard lock(*mutex_tw_task);
                     if (tw_task_buf) {
@@ -446,7 +446,7 @@ namespace cppt_impl {
                 /// Fixme: how to do when executing queue is full?
                 cppt_co_add_sptr_f_before(co, f_before, tq_idx);
             });
-            gs_time_wheel.add_tw_task(tw_task, [&](){
+            gs_time_wheel.add_tw_task(tw_task, [&, mutex_tw_task](){
                 std::lock_guard lock(*mutex_tw_task);
                 gs_tw_task_pool->free(tw_task_buf);
                 tw_task_buf = nullptr;
