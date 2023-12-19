@@ -62,7 +62,7 @@ macro(setup_conan)
                 endif()
 
                 # conan install command
-                set(V_conan_cmd ${V_conan_cmd} install ${V_conanfile} ${V_conan_s_compiler} ${V_conan_s_compiler_ver} ${V_conan_s_compiler_cppstd} ${V_conan_s_compiler_rt} ${V_conan_s_build_type} --build=missing)
+                set(V_conan_cmd ${V_conan_cmd} install ${V_conanfile} ${V_conan_s_compiler} ${V_conan_s_compiler_ver} ${V_conan_s_compiler_cppstd} ${V_conan_s_compiler_rt} ${V_conan_s_build_type} --build=missing --install-folder=${CMAKE_BINARY_DIR})
                 string(REPLACE ";" " " V_conan_cmd_str "${V_conan_cmd}")
                 message("Executing: ${V_conan_cmd_str}")
                 execute_process(COMMAND ${V_conan_cmd})
