@@ -53,7 +53,7 @@ jobs:
         python-version: '3'
 
     - name: Install Conan
-      run: pip install conan==1.52
+      run: pip install conan==1.59
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
