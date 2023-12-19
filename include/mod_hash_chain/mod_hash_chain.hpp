@@ -2,6 +2,7 @@
 #define CPP_TOOLKIT_MOD_HASH_CHAIN_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <vector>
 
 
