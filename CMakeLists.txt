@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 project(cpp-toolkit C CXX)
 
 # Include
-set(GV_other_dir z_other)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${GV_other_dir}/cmake")
+set(GV_extra_dir extra)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${GV_extra_dir}/cmake")
 include(common_var)
 include(helper)
 include(compiler)
@@ -24,10 +24,11 @@ macro(setup_conan)
         set(V_conan_gen_files
             "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
         set(V_conanfile
-            "${PROJECT_SOURCE_DIR}/${GV_other_dir}/conanfile.txt")
+            "${PROJECT_SOURCE_DIR}/${GV_extra_dir}/conanfile.txt")
         if (NOT EXISTS ${V_conanfile})
             message(WARNING "${V_conanfile} is not found!" )
         else()
+            # TODO: conanbuildinfo.cmake should be a target, and should be removed when cleaning the project
             if (${V_conanfile} IS_NEWER_THAN ${V_conan_gen_files})
                 file(REMOVE ${V_conan_gen_files})
 
@@ -84,19 +85,19 @@ macro(setup_build_environment)
     ### set_product_options()
 
     # Paths
-    set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
+    set(GV_external_dir ${GV_extra_dir}/external/${CMAKE_CXX_COMPILER_ID})
     message("External library path: ${GV_external_dir}")
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
     include_directories(
         include
-        ${GV_other_dir}/gen/grpc/cpp
+        ${GV_extra_dir}/gen/grpc/cpp
         ${CONAN_INCLUDE_DIRS}
         ${GV_external_dir_a}/include
     )
     ## Libraries
     link_directories(
-        ${GV_other_dir}/gen/lib
+        ${GV_extra_dir}/gen/lib
         ${CONAN_LIB_DIRS}
         ${GV_external_dir_a}/lib
     )
@@ -105,14 +106,14 @@ macro(setup_build_environment)
 endmacro()
 
 macro(setup_directries)
-    set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_other_dir}/gen)
+    set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_extra_dir}/gen)
     set(V_dir_gen_grpc ${V_dir_gen}/grpc)
     set(V_dir_gen_grpc_cpp ${V_dir_gen}/grpc/cpp)
     set(V_dir_gen_lib ${V_dir_gen}/lib)
     add_custom_command(
         OUTPUT "${V_dir_gen}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen}
-        DEPENDS "${PROJECT_SOURCE_DIR}/${GV_other_dir}"
+        DEPENDS "${PROJECT_SOURCE_DIR}/${GV_extra_dir}"
     )
     add_custom_target(GT_dir_gen DEPENDS "${V_dir_gen}")
     add_custom_command(
@@ -137,7 +138,7 @@ endmacro()
 
 macro(setup_grpc_target)
     # Target T_gen_grpc, for every proto file, generate code to gen/pb/
-    set(V_dir_grpc_proto_r ${GV_other_dir}/code_to_gen/protos)
+    set(V_dir_grpc_proto_r ${GV_extra_dir}/code_to_gen/protos)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 

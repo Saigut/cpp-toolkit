@@ -8,8 +8,8 @@ cmake-build-*
 
 build/*
 build_*
-z_other/external/*
-!z_other/external/CMakeLists.txt
-z_other/package/*
-z_other/gen/*
-z_other/venv/*
+extra/external/*
+!extra/external/CMakeLists.txt
+extra/package/*
+extra/gen/*
+extra/venv/*
