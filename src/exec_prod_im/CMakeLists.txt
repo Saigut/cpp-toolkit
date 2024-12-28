@@ -8,5 +8,4 @@ target_link_libraries(${V_program_name}
     cpp_toolkit
     ${GV_gen_grpc_cpp_lib_bname}
     ${V_dep_libs})
-target_link_boost_libraries(${V_program_name} boost_thread boost_context boost_atomic boost_chrono boost_date_time boost_program_options)
-target_link_libraries(${V_program_name} ${PLATFORM_LINK_LIB})
+target_link_libraries(${V_program_name} ftxui::ftxui grpc::grpc boost::boost ${PLATFORM_LINK_LIB})

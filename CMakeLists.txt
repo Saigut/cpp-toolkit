@@ -22,51 +22,75 @@ macro(setup_conan)
     else()
         message("Found conan: ${V_conan_cmd}")
         set(V_conan_gen_files
-            "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+            "${CMAKE_BINARY_DIR}/build/generators/conan_toolchain.cmake")
         set(V_conanfile
             "${PROJECT_SOURCE_DIR}/${GV_extra_dir}/conanfile.txt")
         if (NOT EXISTS ${V_conanfile})
             message(WARNING "${V_conanfile} is not found!" )
         else()
-            # TODO: conanbuildinfo.cmake should be a target, and should be removed when cleaning the project
             if (${V_conanfile} IS_NEWER_THAN ${V_conan_gen_files})
                 file(REMOVE ${V_conan_gen_files})
 
-                # set up compiler settings
+                # Set up compiler settings
                 set(V_conan_s_compiler "")
                 set(V_conan_s_compiler_ver "")
                 set(V_conan_s_compiler_cppstd "")
                 set(V_conan_s_compiler_rt "")
                 set(V_conan_s_build_type "")
+
                 if (NOT V_conan_compiler STREQUAL "")
-                    set(V_conan_s_compiler "-scompiler=${V_conan_compiler}")
-                    set(V_conan_s_compiler_ver "-scompiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}")
+                    set(V_conan_s_compiler "-s:a" "compiler=${V_conan_compiler}")
+                    set(V_conan_s_compiler_ver "-s:a" "compiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}")
+
                     if (V_conan_compiler STREQUAL "msvc")
+                        # Handle MSVC-specific version formatting
                         string(SUBSTRING "${CMAKE_CXX_COMPILER_VERSION_MINOR}" 0 1 V_tmp_number)
-                        set(V_conan_s_compiler_ver "${V_conan_s_compiler_ver}${V_tmp_number}")
-                        set(V_conan_s_compiler_cppstd "-scompiler.cppstd=14")
-                        set(V_conan_s_compiler_rt "-scompiler.runtime=dynamic")
-                    else()
-                        if ("${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "")
-                        elseif("${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "0")
-                        else()
-#                            set(V_conan_s_compiler_ver "${V_conan_s_compiler_ver}.${CMAKE_CXX_COMPILER_VERSION_MINOR}")
-                        endif ()
+                        set(V_conan_s_compiler_ver "-s:a" "compiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}${V_tmp_number}")
+                        set(V_conan_s_compiler_cppstd "-s:a" "compiler.cppstd=${CMAKE_CXX_STANDARD}")
+                        set(V_conan_s_compiler_rt "-s:a" "compiler.runtime=dynamic")
+                    elseif (NOT "${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "")
+                        # Optionally handle non-MSCV compilers if needed
                     endif()
                 endif()
 
-                # set up build_type
+                # Set up build type
                 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
                     set(V_conan_s_build_type "-sbuild_type=Debug")
                 else()
                     set(V_conan_s_build_type "-sbuild_type=Release")
                 endif()
 
-                # conan install command
-                set(V_conan_cmd ${V_conan_cmd} install ${V_conanfile} ${V_conan_s_compiler} ${V_conan_s_compiler_ver} ${V_conan_s_compiler_cppstd} ${V_conan_s_compiler_rt} ${V_conan_s_build_type} --build=missing --install-folder=${CMAKE_BINARY_DIR})
-                string(REPLACE ";" " " V_conan_cmd_str "${V_conan_cmd}")
+                # Prepare the conan install command
+                set(V_conan_cmd "D:/Program Files/Python313/Scripts/conan.exe")
+                set(V_conan_args install
+                    "${V_conanfile}"
+                    ${V_conan_s_compiler}
+                    ${V_conan_s_compiler_ver}
+                    ${V_conan_s_compiler_cppstd}
+                    ${V_conan_s_compiler_rt}
+                    ${V_conan_s_build_type}
+                    "--build=missing"
+                    "-of=${CMAKE_BINARY_DIR}"
+                    )
+
+                # Debug: Show the constructed command
+                string(REPLACE ";" " " V_conan_cmd_str "${V_conan_cmd} ${V_conan_args}")
                 message("Executing: ${V_conan_cmd_str}")
-                execute_process(COMMAND ${V_conan_cmd})
+
+                # Execute the conan install command
+                execute_process(
+                    COMMAND ${V_conan_cmd} ${V_conan_args}
+                    RESULT_VARIABLE result
+                    OUTPUT_VARIABLE output
+                    ERROR_VARIABLE error
+                )
+
+                # Debug: Check the results
+                if (result)
+                    message(FATAL_ERROR "Conan install failed: ${error}")
+                else()
+                    message("Conan install succeeded: ${output}")
+                endif()
             endif()
         endif()
     endif()
@@ -77,9 +101,15 @@ macro(setup_build_environment)
 #    conan_basic_setup()
 
     setup_conan()
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+#    add_definitions(${CONAN_DEFINES})
 
-    add_definitions(${CONAN_DEFINES})
+    find_package(gRPC REQUIRED)
+    find_package(Boost REQUIRED)
+    find_package(ftxui REQUIRED)
+    find_package(json-c REQUIRED)
+    find_package(httplib REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    find_package(OpenSSL REQUIRED)
 
     ## Setup product options
     ### set_product_options()
@@ -92,14 +122,20 @@ macro(setup_build_environment)
     include_directories(
         include
         ${GV_extra_dir}/gen/grpc/cpp
-        ${CONAN_INCLUDE_DIRS}
-        ${GV_external_dir_a}/include
+        ${absl_INCLUDE_DIRS}
+        ${protobuf_INCLUDE_DIRS}
+        ${gRPC_INCLUDE_DIRS}
+        ${Boost_INCLUDE_DIRS}
+        ${ftxui_INCLUDE_DIRS}
+        ${json-c_INCLUDE_DIRS}
+        ${httplib_INCLUDE_DIRS}
+        ${nlohmann_json_INCLUDE_DIRS}
+#        ${GV_external_dir_a}/include
     )
     ## Libraries
     link_directories(
         ${GV_extra_dir}/gen/lib
-        ${CONAN_LIB_DIRS}
-        ${GV_external_dir_a}/lib
+#        ${GV_external_dir_a}/lib
     )
     ## Output
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -142,16 +178,14 @@ macro(setup_grpc_target)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 
-    set(V_bin_search_path ${CONAN_BIN_DIRS})
-#    set(V_bin_search_path ${GV_external_dir_a}/bin)
     unset(V_ptotoc_cmd CACHE)
-    find_program(V_ptotoc_cmd protoc PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
+    get_target_property(V_ptotoc_cmd protobuf::protoc IMPORTED_LOCATION)
     if (NOT V_ptotoc_cmd)
         message(FATAL_ERROR "protoc is not found!" )
     endif()
     message("Found protoc: ${V_ptotoc_cmd}")
     unset(V_ptotoc_cpp_plugin CACHE)
-    find_program(V_ptotoc_cpp_plugin grpc_cpp_plugin PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
+    get_target_property(V_ptotoc_cpp_plugin gRPC::grpc_cpp_plugin IMPORTED_LOCATION)
     if (NOT V_ptotoc_cpp_plugin)
         message(FATAL_ERROR "grpc_cpp_plugin is not found!")
     endif()

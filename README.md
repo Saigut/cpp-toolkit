@@ -2,14 +2,20 @@
 Here put some cross-platform tools for convenience of C++ development. And also as a good sample for building C++ project.
 
 ## Dependency
-1. Install conan package manager
+1. Install conan 2.x package manager
 2. Adjust installation location of conan packages
-    ```shell
-    # show
-    conan config get storage.path
-    # change
-    conan config set storage.path=<your path>
-    ```
+   
+   ```
+   conan cache clean
+   ```
+   
+   Windows: C:\Users\<your_username>\.conan2\global.conf
+   Linux/MacOS: ~/.conan2/global.conf
+   
+   ```shell
+   core.cache:storage_path = xxxx
+   core.download:download_cache = xxxx
+   ```
 
 ## Build
 ```shell

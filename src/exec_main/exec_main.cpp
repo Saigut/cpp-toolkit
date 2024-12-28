@@ -8,7 +8,8 @@ static int test_cpp_httplib(int argc, char** argv)
 {
     // HTTPS
     // openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
-    httplib::SSLServer svr("./cert.pem", "./key.pem");
+//    httplib::SSLServer svr("./cert.pem", "./key.pem");
+    httplib::Server svr;
 
     svr.Get("/hi", [](const httplib::Request& req, httplib::Response& res) {
         res.set_content("Hello World!", "text/plain");
