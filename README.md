@@ -9,7 +9,7 @@ Here put some cross-platform tools for convenience of C++ development. And also 
    conan cache clean
    ```
    
-   Windows: C:\Users\<your_username>\.conan2\global.conf
+   Windows: C:\Users\<your_username>\.conan2\global.conf  
    Linux/MacOS: ~/.conan2/global.conf
    
    ```shell
@@ -25,9 +25,3 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . --parallel --config Release
 ```
-**Caution:** `conan install` maybe failed when `cmake ..` running, causing by compiler settings. Then you can refer to below settings for conan config file (eg: `~/.conan/profiles/default`, `[settings]` section, with gcc 9 and using c++11 ABI)
-   ```
-   compiler=gcc
-   compiler.version=9
-   compiler.libcxx=libstdc++11
-   ```

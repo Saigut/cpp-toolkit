@@ -1,0 +1,10 @@
+
+set(V_program_name test_qt)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+add_executable(${V_program_name} exec_main.cpp)
+if(WIN32)
+    target_link_options(${V_program_name} PRIVATE /SUBSYSTEM:WINDOWS)
+endif()
+target_link_libraries(${V_program_name} qt::qt cpp_toolkit ${PLATFORM_LINK_LIB})

@@ -61,7 +61,6 @@ macro(setup_conan)
                 endif()
 
                 # Prepare the conan install command
-                set(V_conan_cmd "D:/Program Files/Python313/Scripts/conan.exe")
                 set(V_conan_args install
                     "${V_conanfile}"
                     ${V_conan_s_compiler}
@@ -78,19 +77,7 @@ macro(setup_conan)
                 message("Executing: ${V_conan_cmd_str}")
 
                 # Execute the conan install command
-                execute_process(
-                    COMMAND ${V_conan_cmd} ${V_conan_args}
-                    RESULT_VARIABLE result
-                    OUTPUT_VARIABLE output
-                    ERROR_VARIABLE error
-                )
-
-                # Debug: Check the results
-                if (result)
-                    message(FATAL_ERROR "Conan install failed: ${error}")
-                else()
-                    message("Conan install succeeded: ${output}")
-                endif()
+                execute_process(COMMAND ${V_conan_cmd} ${V_conan_args})
             endif()
 
             ## Required by conan
@@ -114,6 +101,7 @@ macro(setup_build_environment)
     find_package(httplib REQUIRED)
     find_package(nlohmann_json REQUIRED)
     find_package(OpenSSL REQUIRED)
+    find_package(Qt5 REQUIRED)
 
     ## Setup product options
     ### set_product_options()
