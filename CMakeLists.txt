@@ -92,6 +92,10 @@ macro(setup_conan)
                     message("Conan install succeeded: ${output}")
                 endif()
             endif()
+
+            ## Required by conan
+            cmake_policy(SET CMP0091 NEW)
+            include(${V_conan_gen_files})
         endif()
     endif()
 endmacro()
@@ -120,21 +124,13 @@ macro(setup_build_environment)
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
     include_directories(
-        include
-        ${GV_extra_dir}/gen/grpc/cpp
-        ${absl_INCLUDE_DIRS}
-        ${protobuf_INCLUDE_DIRS}
-        ${gRPC_INCLUDE_DIRS}
-        ${Boost_INCLUDE_DIRS}
-        ${ftxui_INCLUDE_DIRS}
-        ${json-c_INCLUDE_DIRS}
-        ${httplib_INCLUDE_DIRS}
-        ${nlohmann_json_INCLUDE_DIRS}
+#        include
+#        ${GV_extra_dir}/gen/grpc/cpp
 #        ${GV_external_dir_a}/include
     )
     ## Libraries
     link_directories(
-        ${GV_extra_dir}/gen/lib
+#        ${GV_extra_dir}/gen/lib
 #        ${GV_external_dir_a}/lib
     )
     ## Output
@@ -221,6 +217,8 @@ macro(setup_grpc_target)
 
     set(GV_gen_grpc_cpp_lib_bname gen_grpc_cpp_src)
     add_library(${GV_gen_grpc_cpp_lib_bname} STATIC ${GV_gen_cpp_grpc_srcs})
+    target_include_directories(${GV_gen_grpc_cpp_lib_bname} PUBLIC ${V_dir_gen_grpc_cpp})
+    target_link_libraries(${GV_gen_grpc_cpp_lib_bname} grpc::grpc)
     add_dependencies(${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src)
     set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
     set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
@@ -255,8 +253,13 @@ macro(setup_targets)
 
     # Library in one
     add_library(cpp_toolkit STATIC ${GV_cpp_toolkit_src})
+    target_link_libraries(cpp_toolkit
+        ${GV_gen_grpc_cpp_lib_bname}
+        httplib::httplib ftxui::ftxui nlohmann_json::nlohmann_json
+        grpc::grpc boost::boost)
+    target_include_directories(${GV_gen_grpc_cpp_lib_bname} PUBLIC include)
     set_target_properties(cpp_toolkit PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
-    add_dependencies(cpp_toolkit GT_gen_grpc_src GT_dir_gen_lib)
+    add_dependencies(cpp_toolkit ${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src GT_dir_gen_lib)
 
     # Main executable
     foreach(one_dir ${GV_all_exec})

@@ -13,6 +13,7 @@ CMakeDeps
 CMakeToolchain
 
 [layout]
+# Generate in {-of=<path>}/build/generator
 cmake_layout
 
 [options]

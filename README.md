@@ -21,8 +21,9 @@ Here put some cross-platform tools for convenience of C++ development. And also 
 ```shell
 mkdir build
 cd build
-cmake ..
-cmake --build . --parallel
+# You can specify your compiler and generator in blow command
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --parallel --config Release
 ```
 **Caution:** `conan install` maybe failed when `cmake ..` running, causing by compiler settings. Then you can refer to below settings for conan config file (eg: `~/.conan/profiles/default`, `[settings]` section, with gcc 9 and using c++11 ABI)
    ```
