@@ -23,8 +23,12 @@ macro(setup_conan)
         message(WARNING "conan is not found!" )
     else()
         message("Found conan: ${V_conan_cmd}")
-        set(V_conan_gen_files
-            "${CMAKE_BINARY_DIR}/build/generators/conan_toolchain.cmake")
+        if(CMAKE_CONFIGURATION_TYPES)  # Multi-configuration
+            set(V_conan_gen_files "${CMAKE_BINARY_DIR}/build/generators/conan_toolchain.cmake")
+        else()  # Single-configuration
+            set(V_conan_gen_files "${CMAKE_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/generators/conan_toolchain.cmake")
+        endif()
+        message("Conan toolchain file: ${V_conan_gen_files}")
         set(V_conanfile
             "${PROJECT_SOURCE_DIR}/${GV_extra_dir}/conanfile.txt")
         if (NOT EXISTS ${V_conanfile})
@@ -60,9 +64,9 @@ macro(setup_conan)
 
                 # Set up build type
                 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-                    set(V_conan_s_build_type "-sbuild_type=Debug")
+                    set(V_conan_s_build_type "-s:a" "build_type=Debug")
                 else()
-                    set(V_conan_s_build_type "-sbuild_type=Release")
+                    set(V_conan_s_build_type "-s:a" "build_type=Release")
                 endif()
 
                 # Prepare the conan install command
@@ -88,7 +92,9 @@ macro(setup_conan)
 
             ## Required by conan
             cmake_policy(SET CMP0091 NEW)
+            set(CMAKE_OSX_SYSROOT_RIGHT "${CMAKE_OSX_SYSROOT}")
             include(${V_conan_gen_files})
+            set(CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT_RIGHT}" CACHE PATH "Sysroot for macOS" FORCE)
         endif()
     endif()
 endmacro()
@@ -107,7 +113,7 @@ macro(setup_build_environment)
     find_package(httplib REQUIRED)
     find_package(nlohmann_json REQUIRED)
     find_package(OpenSSL REQUIRED)
-    find_package(Qt5 REQUIRED)
+    find_package(Qt6 REQUIRED)
 
     ## Setup product options
     ### set_product_options()

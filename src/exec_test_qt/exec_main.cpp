@@ -20,7 +20,17 @@
 #include <QMessageBox>
 #include <QtPlugin>
 
-Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+
+#ifdef Q_OS_MAC
+Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)  // macOS 平台
+#elif defined(Q_OS_WIN)
+Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)  // Windows 平台
+#elif defined(Q_OS_LINUX)
+Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)  // Linux 平台
+#else
+#error "Unsupported platform!"
+#endif
+
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
