@@ -11,6 +11,8 @@ include(compiler)
 #include(external_lib)
 
 macro(setup_platform_environment)
+    set(ENV{LANG} "en_US.UTF-8")
+    set(ENV{LC_ALL} "en_US.UTF-8")
     ## Setup compilation options
     compiler_set_compilation_options()
 endmacro()
@@ -35,6 +37,7 @@ macro(setup_conan)
                 set(V_conan_s_compiler "")
                 set(V_conan_s_compiler_ver "")
                 set(V_conan_s_compiler_cppstd "")
+                set(V_conan_s_compiler_libcxx "")
                 set(V_conan_s_compiler_rt "")
                 set(V_conan_s_build_type "")
 
@@ -48,6 +51,8 @@ macro(setup_conan)
                         set(V_conan_s_compiler_ver "-s:a" "compiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}${V_tmp_number}")
                         set(V_conan_s_compiler_cppstd "-s:a" "compiler.cppstd=${CMAKE_CXX_STANDARD}")
                         set(V_conan_s_compiler_rt "-s:a" "compiler.runtime=dynamic")
+                    elseif (V_conan_compiler STREQUAL "gcc")
+                        set(V_conan_s_compiler_libcxx "-s:a" "compiler.libcxx=libstdc++11")
                     elseif (NOT "${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "")
                         # Optionally handle non-MSCV compilers if needed
                     endif()
@@ -66,6 +71,7 @@ macro(setup_conan)
                     ${V_conan_s_compiler}
                     ${V_conan_s_compiler_ver}
                     ${V_conan_s_compiler_cppstd}
+                    ${V_conan_s_compiler_libcxx}
                     ${V_conan_s_compiler_rt}
                     ${V_conan_s_build_type}
                     "--build=missing"
