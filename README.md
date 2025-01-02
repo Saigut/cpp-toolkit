@@ -3,7 +3,16 @@ Here put some cross-platform tools for convenience of C++ development. And also 
 
 ## Dependency
 1. Install conan 2.x package manager
-2. Adjust installation location of conan packages
+   eg, `pip install conan`
+2. Install cmake
+   eg, `pip install cmake`
+3. Install python numpy for boost
+   eg, `pip install numpy`
+4. Prepare c++ toolchain  
+   Windows: msvc  
+   Linux: gcc or clang  
+   Macos: apple-clang
+5. Adjust installation location of conan packages
    
    ```
    conan cache clean
