@@ -726,7 +726,7 @@ int test_fib_multiple_thr(int argc, const char* argv[])
     return 0;
 }
 
-constexpr size_t queue_capacity = 10000000; // 队列容量
+constexpr size_t queue_capacity = 1000000; // 队列容量
 using TaskQueue = atomic_queue::AtomicQueue2<Task, queue_capacity>;
 
 // 工作线程函数
@@ -740,7 +740,7 @@ void worker(TaskQueue& task_queue, para_queue_t& results) {
 
 int test_fib_multiple_thr_2(int argc, const char* argv[])
 {
-    const size_t num_tasks = 10000000; // 一千万个任务
+    const size_t num_tasks = 1000000; // 一百万个任务
     const size_t num_threads = 4;
 
     std::cout << "Preparing tasks...\n";

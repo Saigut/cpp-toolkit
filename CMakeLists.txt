@@ -3,14 +3,16 @@ cmake_minimum_required(VERSION 3.12)
 project(cpp-toolkit C CXX)
 
 # Include
-set(GV_other_dir z_other)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${GV_other_dir}/cmake")
+set(GV_extra_dir extra)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${GV_extra_dir}/cmake")
 include(common_var)
 include(helper)
 include(compiler)
 #include(external_lib)
 
 macro(setup_platform_environment)
+    set(ENV{LANG} "en_US.UTF-8")
+    set(ENV{LC_ALL} "en_US.UTF-8")
     ## Setup compilation options
     compiler_set_compilation_options()
 endmacro()
@@ -21,52 +23,78 @@ macro(setup_conan)
         message(WARNING "conan is not found!" )
     else()
         message("Found conan: ${V_conan_cmd}")
-        set(V_conan_gen_files
-            "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+        if(CMAKE_CONFIGURATION_TYPES)  # Multi-configuration
+            set(V_conan_gen_files "${CMAKE_BINARY_DIR}/build/generators/conan_toolchain.cmake")
+        else()  # Single-configuration
+            set(V_conan_gen_files "${CMAKE_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/generators/conan_toolchain.cmake")
+        endif()
+        message("Conan toolchain file: ${V_conan_gen_files}")
         set(V_conanfile
-            "${PROJECT_SOURCE_DIR}/${GV_other_dir}/conanfile.txt")
+            "${PROJECT_SOURCE_DIR}/${GV_extra_dir}/conanfile.txt")
         if (NOT EXISTS ${V_conanfile})
             message(WARNING "${V_conanfile} is not found!" )
         else()
             if (${V_conanfile} IS_NEWER_THAN ${V_conan_gen_files})
                 file(REMOVE ${V_conan_gen_files})
 
-                # set up compiler settings
+                # Set up compiler settings
                 set(V_conan_s_compiler "")
                 set(V_conan_s_compiler_ver "")
                 set(V_conan_s_compiler_cppstd "")
+                set(V_conan_s_compiler_libcxx "")
                 set(V_conan_s_compiler_rt "")
                 set(V_conan_s_build_type "")
+
                 if (NOT V_conan_compiler STREQUAL "")
-                    set(V_conan_s_compiler "-scompiler=${V_conan_compiler}")
-                    set(V_conan_s_compiler_ver "-scompiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}")
+                    set(V_conan_s_compiler "-s:a" "compiler=${V_conan_compiler}")
+                    set(V_conan_s_compiler_ver "-s:a" "compiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}")
+
                     if (V_conan_compiler STREQUAL "msvc")
+                        # Handle MSVC-specific version formatting
                         string(SUBSTRING "${CMAKE_CXX_COMPILER_VERSION_MINOR}" 0 1 V_tmp_number)
-                        set(V_conan_s_compiler_ver "${V_conan_s_compiler_ver}${V_tmp_number}")
-                        set(V_conan_s_compiler_cppstd "-scompiler.cppstd=14")
-                        set(V_conan_s_compiler_rt "-scompiler.runtime=dynamic")
-                    else()
-                        if ("${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "")
-                        elseif("${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "0")
-                        else()
-#                            set(V_conan_s_compiler_ver "${V_conan_s_compiler_ver}.${CMAKE_CXX_COMPILER_VERSION_MINOR}")
-                        endif ()
+                        set(V_conan_s_compiler_ver "-s:a" "compiler.version=${CMAKE_CXX_COMPILER_VERSION_MAJOR}${V_tmp_number}")
+                        set(V_conan_s_compiler_cppstd "-s:a" "compiler.cppstd=${CMAKE_CXX_STANDARD}")
+                        set(V_conan_s_compiler_rt "-s:a" "compiler.runtime=dynamic")
+                    elseif (V_conan_compiler STREQUAL "gcc")
+                        set(V_conan_s_compiler_libcxx "-s:a" "compiler.libcxx=libstdc++11")
+                    elseif (NOT "${CMAKE_CXX_COMPILER_VERSION_MINOR}" STREQUAL "")
+                        # Optionally handle non-MSCV compilers if needed
                     endif()
                 endif()
 
-                # set up build_type
+                # Set up build type
                 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-                    set(V_conan_s_build_type "-sbuild_type=Debug")
+                    set(V_conan_s_build_type "-s:a" "build_type=Debug")
                 else()
-                    set(V_conan_s_build_type "-sbuild_type=Release")
+                    set(V_conan_s_build_type "-s:a" "build_type=Release")
                 endif()
 
-                # conan install command
-                set(V_conan_cmd ${V_conan_cmd} install ${V_conanfile} ${V_conan_s_compiler} ${V_conan_s_compiler_ver} ${V_conan_s_compiler_cppstd} ${V_conan_s_compiler_rt} ${V_conan_s_build_type} --build=missing --install-folder=${CMAKE_BINARY_DIR})
-                string(REPLACE ";" " " V_conan_cmd_str "${V_conan_cmd}")
+                # Prepare the conan install command
+                set(V_conan_args install
+                    "${V_conanfile}"
+                    ${V_conan_s_compiler}
+                    ${V_conan_s_compiler_ver}
+                    ${V_conan_s_compiler_cppstd}
+                    ${V_conan_s_compiler_libcxx}
+                    ${V_conan_s_compiler_rt}
+                    ${V_conan_s_build_type}
+                    "--build=missing"
+                    "-of=${CMAKE_BINARY_DIR}"
+                    )
+
+                # Debug: Show the constructed command
+                string(REPLACE ";" " " V_conan_cmd_str "${V_conan_cmd} ${V_conan_args}")
                 message("Executing: ${V_conan_cmd_str}")
-                execute_process(COMMAND ${V_conan_cmd})
+
+                # Execute the conan install command
+                execute_process(COMMAND ${V_conan_cmd} ${V_conan_args})
             endif()
+
+            ## Required by conan
+            cmake_policy(SET CMP0091 NEW)
+            set(CMAKE_OSX_SYSROOT_RIGHT "${CMAKE_OSX_SYSROOT}")
+            include(${V_conan_gen_files})
+            set(CMAKE_OSX_SYSROOT "${CMAKE_OSX_SYSROOT_RIGHT}" CACHE PATH "Sysroot for macOS" FORCE)
         endif()
     endif()
 endmacro()
@@ -76,43 +104,48 @@ macro(setup_build_environment)
 #    conan_basic_setup()
 
     setup_conan()
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+#    add_definitions(${CONAN_DEFINES})
 
-    add_definitions(${CONAN_DEFINES})
+    find_package(gRPC REQUIRED)
+    find_package(Boost REQUIRED)
+    find_package(ftxui REQUIRED)
+    find_package(json-c REQUIRED)
+    find_package(httplib REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    find_package(OpenSSL REQUIRED)
+    find_package(Qt6 REQUIRED)
 
     ## Setup product options
     ### set_product_options()
 
     # Paths
-    set(GV_external_dir ${GV_other_dir}/external/${CMAKE_CXX_COMPILER_ID})
+    set(GV_external_dir ${GV_extra_dir}/external/${CMAKE_CXX_COMPILER_ID})
     message("External library path: ${GV_external_dir}")
     get_filename_component(GV_external_dir_a ${GV_external_dir} ABSOLUTE)
     ## Headers
     include_directories(
-        include
-        ${GV_other_dir}/gen/grpc/cpp
-        ${CONAN_INCLUDE_DIRS}
-        ${GV_external_dir_a}/include
+#        include
+#        ${GV_extra_dir}/gen/grpc/cpp
+#        ${GV_external_dir_a}/include
     )
     ## Libraries
     link_directories(
-        ${GV_other_dir}/gen/lib
-        ${CONAN_LIB_DIRS}
-        ${GV_external_dir_a}/lib
+#        ${GV_extra_dir}/gen/lib
+#        ${GV_external_dir_a}/lib
     )
     ## Output
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endmacro()
 
 macro(setup_directries)
-    set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_other_dir}/gen)
+    set(V_dir_gen ${PROJECT_SOURCE_DIR}/${GV_extra_dir}/gen)
     set(V_dir_gen_grpc ${V_dir_gen}/grpc)
     set(V_dir_gen_grpc_cpp ${V_dir_gen}/grpc/cpp)
     set(V_dir_gen_lib ${V_dir_gen}/lib)
     add_custom_command(
         OUTPUT "${V_dir_gen}"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${V_dir_gen}
-        DEPENDS "${PROJECT_SOURCE_DIR}/${GV_other_dir}"
+        DEPENDS "${PROJECT_SOURCE_DIR}/${GV_extra_dir}"
     )
     add_custom_target(GT_dir_gen DEPENDS "${V_dir_gen}")
     add_custom_command(
@@ -137,20 +170,18 @@ endmacro()
 
 macro(setup_grpc_target)
     # Target T_gen_grpc, for every proto file, generate code to gen/pb/
-    set(V_dir_grpc_proto_r ${GV_other_dir}/code_to_gen/protos)
+    set(V_dir_grpc_proto_r ${GV_extra_dir}/code_to_gen/protos)
     get_filename_component(V_dir_grpc_proto_a ${V_dir_grpc_proto_r} ABSOLUTE)
     file(GLOB V_all_proto_files "${V_dir_grpc_proto_r}/*.proto")
 
-    set(V_bin_search_path ${CONAN_BIN_DIRS})
-#    set(V_bin_search_path ${GV_external_dir_a}/bin)
     unset(V_ptotoc_cmd CACHE)
-    find_program(V_ptotoc_cmd protoc PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
+    get_target_property(V_ptotoc_cmd protobuf::protoc IMPORTED_LOCATION)
     if (NOT V_ptotoc_cmd)
         message(FATAL_ERROR "protoc is not found!" )
     endif()
     message("Found protoc: ${V_ptotoc_cmd}")
     unset(V_ptotoc_cpp_plugin CACHE)
-    find_program(V_ptotoc_cpp_plugin grpc_cpp_plugin PATHS ${V_bin_search_path} NO_DEFAULT_PATH)
+    get_target_property(V_ptotoc_cpp_plugin gRPC::grpc_cpp_plugin IMPORTED_LOCATION)
     if (NOT V_ptotoc_cpp_plugin)
         message(FATAL_ERROR "grpc_cpp_plugin is not found!")
     endif()
@@ -186,6 +217,8 @@ macro(setup_grpc_target)
 
     set(GV_gen_grpc_cpp_lib_bname gen_grpc_cpp_src)
     add_library(${GV_gen_grpc_cpp_lib_bname} STATIC ${GV_gen_cpp_grpc_srcs})
+    target_include_directories(${GV_gen_grpc_cpp_lib_bname} PUBLIC ${V_dir_gen_grpc_cpp})
+    target_link_libraries(${GV_gen_grpc_cpp_lib_bname} grpc::grpc)
     add_dependencies(${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src)
     set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
     set_target_properties(${GV_gen_grpc_cpp_lib_bname} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
@@ -220,8 +253,13 @@ macro(setup_targets)
 
     # Library in one
     add_library(cpp_toolkit STATIC ${GV_cpp_toolkit_src})
+    target_link_libraries(cpp_toolkit
+        ${GV_gen_grpc_cpp_lib_bname}
+        httplib::httplib ftxui::ftxui nlohmann_json::nlohmann_json
+        grpc::grpc boost::boost)
+    target_include_directories(${GV_gen_grpc_cpp_lib_bname} PUBLIC include)
     set_target_properties(cpp_toolkit PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${V_dir_gen_lib}")
-    add_dependencies(cpp_toolkit GT_gen_grpc_src GT_dir_gen_lib)
+    add_dependencies(cpp_toolkit ${GV_gen_grpc_cpp_lib_bname} GT_gen_grpc_src GT_dir_gen_lib)
 
     # Main executable
     foreach(one_dir ${GV_all_exec})
