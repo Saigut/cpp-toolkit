@@ -58,6 +58,10 @@ jobs:
       with:
         python-version: '3.8'
 
+    - name: Install OpenGL (Only for ubuntu)
+      if: contains(matrix.os, 'ubuntu')
+      run: sudo apt-get update && sudo apt-get install -y libgl-dev libgl1-mesa-dev
+
     - name: Install Conan
       run: |
         pip install conan==2.11.0

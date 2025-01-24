@@ -69,8 +69,6 @@ macro(setup_conan)
                     set(V_conan_s_build_type "-s:a" "build_type=Release")
                 endif()
 
-                set(V_conan_c_pm "-c" "tools.system.package_manager:mode=install")
-
                 # Prepare the conan install command
                 set(V_conan_args install
                     "${V_conanfile}"
@@ -80,7 +78,6 @@ macro(setup_conan)
                     ${V_conan_s_compiler_libcxx}
                     ${V_conan_s_compiler_rt}
                     ${V_conan_s_build_type}
-                    ${V_conan_c_pm}
                     "--build=missing"
                     "-of=${CMAKE_BINARY_DIR}"
                     )
