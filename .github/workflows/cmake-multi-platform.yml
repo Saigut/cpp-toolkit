@@ -36,6 +36,19 @@ jobs:
           - os: macos-15
             c_compiler: clang
             cpp_compiler: clang++
+        exclude:
+          - os: windows-2019
+            c_compiler: gcc
+          - os: windows-2019
+            c_compiler: clang
+          - os: ubuntu-22.04
+            c_compiler: cl
+          - os: ubuntu-22.04
+            c_compiler: clang
+          - os: macos-15
+            c_compiler: cl
+          - os: macos-15
+            c_compiler: gcc
 
     steps:
     - uses: actions/checkout@v3
@@ -46,7 +59,9 @@ jobs:
         python-version: '3.8'
 
     - name: Install Conan
-      run: pip install conan==2.11.0
+      run: |
+        pip install conan==2.11.0
+        conan profile detect
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
