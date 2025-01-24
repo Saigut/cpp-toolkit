@@ -53,6 +53,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Validate build type
+      if: matrix.build_type == ''
+      run: |
+        echo "Error: matrix.build_type is empty. Please set a valid build type (e.g., Release, Debug)."
+        exit 1
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -96,9 +102,8 @@ jobs:
         -S ${{ github.workspace }}
 
     - name: Build
-      # Build your program with the given configuration.
-      run: |
-        cmake --build ${{ steps.strings.outputs.build-output-dir }}
+      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
