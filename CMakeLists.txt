@@ -69,6 +69,12 @@ macro(setup_conan)
                     set(V_conan_s_build_type "-s:a" "build_type=Release")
                 endif()
 
+                if (NOT CMAKE_GENERATOR STREQUAL "")
+                    set(V_conan_cmake_generator
+                        "-c:a"
+                        "tools.cmake.cmaketoolchain:generator=${CMAKE_GENERATOR}")
+                endif()
+
                 # Prepare the conan install command
                 set(V_conan_args install
                     "${V_conanfile}"
@@ -78,6 +84,7 @@ macro(setup_conan)
                     ${V_conan_s_compiler_libcxx}
                     ${V_conan_s_compiler_rt}
                     ${V_conan_s_build_type}
+                    ${V_conan_cmake_generator}
                     "--build=missing"
                     "-of=${CMAKE_BINARY_DIR}"
                     )
@@ -276,3 +283,4 @@ endmacro()
 # TODO   Write utils.cmake, put some useful general functions
 
 main_func()
+
